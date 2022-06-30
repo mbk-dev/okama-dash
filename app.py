@@ -20,7 +20,8 @@ ccy_list = [x.split(".", 1)[0] for x in inflation_list]
 
 today_str = pd.Timestamp.today().strftime('%Y-%m')
 
-app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
 
 
 @lru_cache()
