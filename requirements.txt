@@ -1,0 +1,6 @@
+dash
+dash_daq
+pandas
+okama
+plotly
+# flask_caching

@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "okama-dash"
+version = "0.1.0"
+description = "okama Dash frontend"
+authors = ["Sergey Kikevich <sergey@rostsber.ru>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "okama_dash"}]
+
+[tool.poetry.dependencies]
+python = ">=3.7, <4.0.0"
+okama = "^1.2.0"
+dash = "^2.5.1"
+dash-daq = "^0.5.0"
+plotly = "^5.9.0"
+dash-bootstrap-components = "^1.2.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
