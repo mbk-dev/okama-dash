@@ -12,10 +12,11 @@ python = ">=3.7, <4.0.0"
 okama = "^1.2.0"
 dash = "^2.5.1"
 dash-daq = "^0.5.0"
-plotly = "^5.9.0"
 dash-bootstrap-components = "^1.2.0"
-gunicorn = "^20.1.0"
+plotly = "^5.9.0"
 
+[tool.poetry.dev-dependencies]
+gunicorn = "^20.1.0"
 
 [build-system]
 requires = ["poetry-core"]
