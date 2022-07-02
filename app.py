@@ -1,103 +1,54 @@
 import warnings
-from functools import lru_cache
 
-from dash import Dash, dcc, html, dash_table
+import dash
+from dash import html, dash_table
 from dash.dependencies import Input, Output, State
-import dash_daq as daq
+import dash_bootstrap_components as dbc
 
 import plotly.express as px
 import plotly.graph_objects as go
+
 import pandas as pd
-
-import dash_bootstrap_components as dbc
-
 import okama as ok
+
+from cards.asset_list_controls import card_controls
+from cards.statistics_table import card_table
+from cards.wealth_indexes_chart import card_graf
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-inflation_list = ok.symbols_in_namespace('INFL').symbol.tolist()
-ccy_list = [x.split(".", 1)[0] for x in inflation_list]
-
-today_str = pd.Timestamp.today().strftime('%Y-%m')
-
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
-
-@lru_cache()
-def get_symbols() -> list:
-    """
-    Get all available symbols (tickers) from assets namespaces.
-    """
-    namespaces = ['US', 'LSE', 'MOEX', 'INDX', 'COMM', 'FX', 'CC']
-    list_of_symbols = [ok.symbols_in_namespace(ns) for ns in namespaces]
-    classifier_df = pd.concat(list_of_symbols,
-                          axis=0,
-                          join="outer",
-                          copy="false",
-                          ignore_index=True)
-    return classifier_df.symbol.to_list()
-
-
-app.layout = dbc.Container([
-    html.H1(
-        children='Assets Wealth Indexes',
-        style={
-            'textAlign': 'center',
-            # 'color': colors['text']
-        }
+card_assets_info = dbc.Card(
+    dbc.CardBody(
+        [
+            html.Div("Assets description will be here...")
+        ]
     ),
-
-    html.Div([
-        html.Div([
-            html.Label("Tickers to compare"),
-            dcc.Dropdown(
-                options=get_symbols(),
-                value=['SPY.US', 'BND.US'],
-                multi=True,
-                placeholder="Select assets",
-                id='symbols-list'
-            )], style={'width': '48%', 'display': 'inline-block'}),
-        # html.Br(),
-        html.Div([
-            html.Label("Base currency"),
-            dcc.Dropdown(
-                options=ccy_list,
-                value='USD',
-                multi=False,
-                placeholder="Select a base currency",
-                id='base-currency'
-            )], style={'width': '48%', 'float': 'right', 'display': 'inline-block'}),
-        html.Div([
-            "First Date: ",
-            dcc.Input(id='first-date', value='2000-01', type='text'),
-            "Last Date: ",
-            dcc.Input(id='last-date', value=today_str, type='text'),
-            html.P(
-                html.Button(id='submit-button-state', n_clicks=0, children='Submit')
-            ),
-        ], style={'width': '98%', 'display': 'inline-block'})
-    ]),
-
-    dcc.Loading(
-        id="loading-1",
-        type="default",
-        children=html.Div(id="loading-output-1",
-                          children=[
-                              dcc.Graph(id='wealth-indexes'),
-                              daq.BooleanSwitch(id='logarithmic-scale-switch',
-                                                on=False,
-                                                label="Logarithmic Y-Scale",
-                                                labelPosition="bottom"),
-                              html.H4(children='Statistics table'),
-                              html.Div(id="describe-table"),
-                          ]
-                          )
+    class_name="mb-3",
     )
 
-],
-    # style={'width': '98%', 'display': 'inline-block'},
-    fluid=True,
+app.layout = dbc.Container(
+    [
+        html.H1("Compare Assets"),
+        html.Hr(),
+
+        dbc.Row(
+            [
+                dbc.Col(card_controls, width=8),
+                dbc.Col(card_assets_info, width=4),
+            ]
+        ),
+        dbc.Row(
+            dbc.Col(card_graf, md=12),
+            align="center"
+        ),
+        dbc.Row(
+            dbc.Col(card_table, md=12),
+            align="center"),
+    ],
+    # fluid=True,
 )
 
 
@@ -166,4 +117,4 @@ def update_graf(n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_va
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, port=8050)
