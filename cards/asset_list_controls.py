@@ -61,14 +61,11 @@ card_controls = dbc.Card(
 
                 ]
             ),
-            # html.P(
-            #     html.Button(id='submit-button-state', n_clicks=0, children='Submit')
-            # ),
             html.Div(
                 [
                     dbc.Button(children="Compare", id='submit-button-state', n_clicks=0, color="primary"),
                 ],
-                className="d-grid gap-2 col-1 mx-auto",
+                className="d-grid gap-2 col-1 mx-auto p-3",
             )
 
         ]
