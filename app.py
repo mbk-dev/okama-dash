@@ -12,6 +12,7 @@ import pandas as pd
 import okama as ok
 
 from cards.asset_list_controls import card_controls
+from cards.assets_names import card_assets_info
 from cards.statistics_table import card_table
 from cards.wealth_indexes_chart import card_graf
 
@@ -20,15 +21,6 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
-card_assets_info = dbc.Card(
-    dbc.CardBody(
-        [
-            html.Div("Assets description will be here...")
-        ]
-    ),
-    class_name="mb-3",
-    )
-
 app.layout = dbc.Container(
     [
         html.H1("Compare Assets"),
@@ -36,8 +28,8 @@ app.layout = dbc.Container(
 
         dbc.Row(
             [
-                dbc.Col(card_controls, width=8),
-                dbc.Col(card_assets_info, width=4),
+                dbc.Col(card_controls, width=7),
+                dbc.Col(card_assets_info, width=5),
             ]
         ),
         dbc.Row(
@@ -54,6 +46,7 @@ app.layout = dbc.Container(
 
 @app.callback(
     Output(component_id='wealth-indexes', component_property='figure'),
+    Output(component_id='assets-names', component_property='children'),
     Output(component_id='describe-table', component_property='children'),
     Input(component_id='submit-button-state', component_property='n_clicks'),
     State(component_id='symbols-list', component_property='value'),
@@ -67,10 +60,10 @@ def update_graf(n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_va
     al = ok.AssetList(symbols, first_date=fd_value, last_date=ld_value, ccy=ccy, inflation=True)
     df = al.wealth_indexes
     ind = df.index.to_timestamp('D')
-    table = al.describe().iloc[:-4, :]  # there is a problem with dates '2020-08' in the last 4 rows
+    statistics_table = al.describe().iloc[:-4, :]  # there is a problem with dates '2020-08' in the last 4 rows
     columns = [
         dict(id=i, name=i, type='numeric', format=dash_table.FormatTemplate.percentage(2))
-        for i in table.columns
+        for i in statistics_table.columns
     ]
     fig = px.line(df, x=ind, y=df.columns[:-1],
                   log_y=on,
@@ -108,12 +101,25 @@ def update_graf(n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_va
         # )
     )
 
-    table = dash_table.DataTable(
-        data=table.to_dict(orient='records'),
-        columns=columns,
-        # page_size=4
+    names_df = (pd.DataFrame.from_dict(al.names, orient='index').
+                reset_index(drop=False).
+                rename(columns={"index": "Ticker", 0: "Long name"})[["Ticker", "Long name"]]
+                )
+    names_table = dash_table.DataTable(
+        data=names_df.to_dict(orient='records'),
+        style_data={
+            'whiteSpace': 'normal',
+            'height': 'auto',
+        },
+        page_size=4
     )
-    return fig, table
+
+    statistics_table = dash_table.DataTable(
+        data=statistics_table.to_dict(orient='records'),
+        columns=columns,
+        style_table={'overflowX': 'auto'}
+    )
+    return fig, names_table, statistics_table
 
 
 if __name__ == '__main__':
