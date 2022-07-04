@@ -4,7 +4,7 @@ from dash import html
 card_assets_info = dbc.Card(
     dbc.CardBody(
         [
-            html.H4(children="Assets names"),
+            html.H5(children="Assets names"),
             html.Div(id="assets-names"),
         ]
     ),
