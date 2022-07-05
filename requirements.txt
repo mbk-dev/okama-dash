@@ -3,4 +3,4 @@ dash_daq
 pandas
 okama
 plotly
-# flask_caching
+flask_caching

@@ -1,9 +1,11 @@
 import warnings
 
 import dash
-from dash import html, dash_table
+from dash import html, dash_table, dcc
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
+
+from flask_caching import Cache
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -11,15 +13,105 @@ import plotly.graph_objects as go
 import pandas as pd
 import okama as ok
 
-from cards.asset_list_controls import card_controls
-from cards.assets_names import card_assets_info
-from cards.statistics_table import card_table
-from cards.wealth_indexes_chart import card_graf
+# from application.cards.asset_list_controls import card_controls
+from application.cards.assets_names import card_assets_info
+from application.cards.statistics_table import card_table
+from application.cards.wealth_indexes_chart import card_graf
+
+import application.inflation as inflation
+
+import application.settings as settings
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
+
+cache = Cache(app.server, config={
+    'CACHE_TYPE': 'filesystem',
+    'CACHE_DIR': 'cache-directory',
+    'CACHE_DEFAULT_TIMEOUT': 300
+})
+
+
+@cache.memoize(timeout=2592000)
+def get_symbols() -> list:
+    """
+    Get all available symbols (tickers) from assets namespaces.
+    """
+    namespaces = ['US', 'LSE', 'MOEX', 'INDX', 'COMM', 'FX', 'CC']
+    list_of_symbols = [ok.symbols_in_namespace(ns).symbol for ns in namespaces]
+    classifier_df = pd.concat(list_of_symbols,
+                          axis=0,
+                          join="outer",
+                          copy="false",
+                          ignore_index=True)
+    return classifier_df.to_list()
+
+
+today_str = pd.Timestamp.today().strftime('%Y-%m')
+
+card_controls = dbc.Card(
+    dbc.CardBody(
+        [
+            html.H5("Settings", className="card-title"),
+            html.Div([
+                html.Label("Tickers to compare"),
+                dcc.Dropdown(
+                    options=get_symbols(),
+                    value=settings.default_symbols,
+                    multi=True,
+                    placeholder="Select assets",
+                    id='symbols-list'
+                )],
+            ),
+            html.Div(
+                [
+                    html.Label("Base currency"),
+                    dcc.Dropdown(
+                        options=inflation.get_currency_list(),
+                        value='USD',
+                        multi=False,
+                        placeholder="Select a base currency",
+                        id='base-currency'
+                    )
+                ],
+            ),
+            html.Div(
+                [
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                [
+                                    html.Label("First Date"),
+                                    dbc.Input(id='first-date', value='2000-01', type='text'),
+                                    dbc.FormText("Format: YYYY-MM"),
+                                ]
+                            ),
+                            dbc.Col(
+                                [
+                                    html.Label("Last Date"),
+                                    dbc.Input(id='last-date', value=today_str, type='text'),
+                                    dbc.FormText("Format: YYYY-MM"),
+                                ]
+                            )
+                        ]
+                    )
+
+                ]
+            ),
+            html.Div(
+                [
+                    dbc.Button(children="Compare", id='submit-button-state', n_clicks=0, color="primary"),
+                ],
+                className="d-grid gap-2 col-1 mx-auto p-3",
+            )
+
+        ]
+    ),
+    class_name="mb-3",
+)
+
 
 app.layout = dbc.Container(
     [
@@ -40,7 +132,6 @@ app.layout = dbc.Container(
             dbc.Col(card_table, md=12),
             align="center"),
     ],
-    # fluid=True,
 )
 
 
@@ -55,6 +146,7 @@ app.layout = dbc.Container(
     State(component_id='last-date', component_property='value'),
     Input(component_id='logarithmic-scale-switch', component_property='on'),
 )
+@cache.memoize(timeout=86400)
 def update_graf(n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str, on: bool):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     al = ok.AssetList(symbols, first_date=fd_value, last_date=ld_value, ccy=ccy, inflation=True)
