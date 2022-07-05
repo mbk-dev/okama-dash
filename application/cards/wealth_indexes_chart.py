@@ -5,7 +5,7 @@ from dash import html, dcc
 card_graf = dbc.Card(
     dbc.CardBody(
         [
-            html.Div(
+            dcc.Loading(
                 [
                     dcc.Graph(id='wealth-indexes'),
                     daq.BooleanSwitch(id='logarithmic-scale-switch',
@@ -13,7 +13,6 @@ card_graf = dbc.Card(
                                       label="Logarithmic Y-Scale",
                                       labelPosition="bottom"),
                 ],
-                id="loading-output-1",
             )
         ]
     ),
