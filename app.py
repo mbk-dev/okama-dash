@@ -24,7 +24,10 @@ import application.settings as settings
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__,
+                title="okama widgets",
+                update_title="Loading okama ...",
+                external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
 cache = Cache(app.server, config={
