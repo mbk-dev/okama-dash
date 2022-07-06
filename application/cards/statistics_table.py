@@ -6,10 +6,11 @@ card_table = dbc.Card(
         [
             html.Div(
                 [
-                    html.H4(children='Statistics table'),
+                    html.H4(children="Statistics table"),
                     html.Div(id="describe-table"),
                 ]
             )
         ]
-    ), class_name="mb-3"
+    ),
+    class_name="mb-3",
 )

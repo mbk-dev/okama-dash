@@ -7,14 +7,16 @@ card_graf = dbc.Card(
         [
             dcc.Loading(
                 [
-                    dcc.Graph(id='wealth-indexes'),
-                    daq.BooleanSwitch(id='logarithmic-scale-switch',
-                                      on=False,
-                                      label="Logarithmic Y-Scale",
-                                      labelPosition="bottom"),
+                    dcc.Graph(id="wealth-indexes"),
+                    daq.BooleanSwitch(
+                        id="logarithmic-scale-switch",
+                        on=False,
+                        label="Logarithmic Y-Scale",
+                        labelPosition="bottom",
+                    ),
                 ],
             )
         ]
     ),
-    class_name="mb-3"
+    class_name="mb-3",
 )
