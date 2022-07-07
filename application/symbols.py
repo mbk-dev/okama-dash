@@ -1,7 +1,20 @@
-from flask_caching import Cache
-
 import pandas as pd
 import okama as ok
+
+from application import cache
+
+
+@cache.memoize(timeout=2592000)
+def get_symbols() -> list:
+    """
+    Get all available symbols (tickers) from assets namespaces.
+    """
+    namespaces = ["US", "LSE", "MOEX", "INDX", "COMM", "FX", "CC"]
+    list_of_symbols = [ok.symbols_in_namespace(ns).symbol for ns in namespaces]
+    classifier_df = pd.concat(
+        list_of_symbols, axis=0, join="outer", copy="false", ignore_index=True
+    )
+    return classifier_df.to_list()
 
 
 def get_symbols_names() -> dict:
