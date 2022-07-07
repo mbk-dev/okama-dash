@@ -12,32 +12,33 @@ import pandas as pd
 import okama as ok
 
 from application import cache
-from application.cards.asset_list_controls import card_controls
-from application.cards.assets_names import card_assets_info
-from application.cards.statistics_table import card_table
-from application.cards.wealth_indexes_chart import card_graf
+from application.cards_compare.asset_list_controls import card_controls
+from application.cards_compare.assets_names import card_assets_info
+from application.cards_compare.statistics_table import card_table
+from application.cards_compare.wealth_indexes_chart import card_graf_compare
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
 dash.register_page(__name__,
                    path='/',
                    title='Compare financial assets : okama',
+                   name='Compare assets',
                    description="Okama widget to compare financial assets properties: rate of return, risk, CVAR, drawdowns",
                    )
 
 layout = dbc.Container(
     [
-        html.H1("Compare Assets"),
-        html.Hr(),
         dbc.Row(
             [
                 dbc.Col(card_controls, lg=7),
                 dbc.Col(card_assets_info, lg=5),
             ]
         ),
-        dbc.Row(dbc.Col(card_graf, width=12), align="center"),
+        dbc.Row(dbc.Col(card_graf_compare, width=12), align="center"),
         dbc.Row(dbc.Col(card_table, width=12), align="center"),
     ],
+    class_name="mt-2",
+    fluid=False,
 )
 
 
@@ -53,7 +54,7 @@ layout = dbc.Container(
     Input(component_id="logarithmic-scale-switch", component_property="on"),
 )
 @cache.memoize(timeout=86400)
-def update_graf(
+def update_graf_compare(
     n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str, on: bool
 ):
     symbols = (

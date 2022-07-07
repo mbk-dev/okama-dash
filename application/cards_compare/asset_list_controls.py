@@ -15,7 +15,7 @@ today_str = pd.Timestamp.today().strftime("%Y-%m")
 card_controls = dbc.Card(
     dbc.CardBody(
         [
-            html.H5("Settings", className="card-title"),
+            html.H5("Compare Assets", className="card-title"),
             html.Div(
                 [
                     html.Label("Tickers to compare"),
