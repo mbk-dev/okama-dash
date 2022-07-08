@@ -38,7 +38,7 @@ layout = dbc.Container(
         dbc.Row(dbc.Col(card_table, width=12), align="center"),
     ],
     class_name="mt-2",
-    fluid=False,
+    fluid="md",
 )
 
 

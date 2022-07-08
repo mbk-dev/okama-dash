@@ -32,7 +32,7 @@ layout = dbc.Container(
         dbc.Row(dbc.Col(card_graf_compare, width=12), align="center"),
     ],
     class_name="mt-2",
-    fluid=False,
+    fluid="md",
 )
 
 
