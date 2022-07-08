@@ -20,7 +20,7 @@ from application.cards_compare.wealth_indexes_chart import card_graf_compare
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
 dash.register_page(__name__,
-                   path='/',
+                   path='/compare',
                    title='Compare financial assets : okama',
                    name='Compare assets',
                    description="Okama widget to compare financial assets properties: rate of return, risk, CVAR, drawdowns",

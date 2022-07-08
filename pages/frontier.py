@@ -15,7 +15,7 @@ from application.cards_efficient_frontier.ef_assets_names import card_assets_inf
 from application.cards_efficient_frontier.ef_chart import card_graf_compare
 
 dash.register_page(__name__,
-                   path='/frontier',
+                   path='/',
                    title='Efficient Frontier : okama',
                    name='Efficient Frontier',
                    description="Efficient Frontier for the investment portfolios",
