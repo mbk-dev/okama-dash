@@ -4,9 +4,9 @@ from dash import html, dcc
 
 import pandas as pd
 
-from application import settings as settings, inflation as inflation
-from application.symbols import get_symbols
-from application import cache
+from common import settings as settings, inflation as inflation
+from common.symbols import get_symbols
+from common import cache
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -15,16 +15,16 @@ today_str = pd.Timestamp.today().strftime("%Y-%m")
 card_controls = dbc.Card(
     dbc.CardBody(
         [
-            html.H5("Efficient Frontier", className="card-title"),
+            html.H5("Compare Assets", className="card-title"),
             html.Div(
                 [
-                    html.Label("Tickers in the Efficient Frontier"),
+                    html.Label("Tickers to compare"),
                     dcc.Dropdown(
                         options=get_symbols(),
                         value=settings.default_symbols,
                         multi=True,
                         placeholder="Select assets",
-                        id="ef-symbols-list",
+                        id="symbols-list",
                     ),
                 ],
             ),
@@ -36,7 +36,7 @@ card_controls = dbc.Card(
                         value="USD",
                         multi=False,
                         placeholder="Select a base currency",
-                        id="ef-base-currency",
+                        id="base-currency",
                     ),
                 ],
             ),
@@ -48,7 +48,7 @@ card_controls = dbc.Card(
                                 [
                                     html.Label("First Date"),
                                     dbc.Input(
-                                        id="ef-first-date", value="2000-01", type="text"
+                                        id="first-date", value="2000-01", type="text"
                                     ),
                                     dbc.FormText("Format: YYYY-MM"),
                                 ]
@@ -57,7 +57,7 @@ card_controls = dbc.Card(
                                 [
                                     html.Label("Last Date"),
                                     dbc.Input(
-                                        id="ef-last-date", value=today_str, type="text"
+                                        id="last-date", value=today_str, type="text"
                                     ),
                                     dbc.FormText("Format: YYYY-MM"),
                                 ]
@@ -69,13 +69,13 @@ card_controls = dbc.Card(
             html.Div(
                 [
                     dbc.Button(
-                        children="Get the Efficient Frontier",
-                        id="ef-submit-button-state",
+                        children="Compare",
+                        id="submit-button-state",
                         n_clicks=0,
                         color="primary",
                     ),
                 ],
-                style={"text-align": "center"},
+                style={"text-align":"center"},
                 className="p-3",
             ),
         ]

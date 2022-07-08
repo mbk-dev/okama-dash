@@ -1,7 +1,7 @@
 import pandas as pd
 import okama as ok
 
-from application import cache
+from common import cache
 
 
 @cache.memoize(timeout=2592000)

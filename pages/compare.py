@@ -1,7 +1,7 @@
 import warnings
 
 import dash
-from dash import html, dash_table, callback
+from dash import dash_table, callback
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
@@ -11,11 +11,12 @@ import plotly.graph_objects as go
 import pandas as pd
 import okama as ok
 
-from application import cache
-from application.cards_compare.asset_list_controls import card_controls
-from application.cards_compare.assets_names import card_assets_info
-from application.cards_compare.statistics_table import card_table
-from application.cards_compare.wealth_indexes_chart import card_graf_compare
+from common import cache
+from common.cards_compare.asset_list_controls import card_controls
+from common.cards_compare.assets_names import card_assets_info
+from common.cards_compare.statistics_table import card_table
+from common.cards_compare.wealth_indexes_chart import card_graf_compare
+from common.mobile_screens import adopt_small_screens
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -44,9 +45,11 @@ layout = dbc.Container(
 
 @callback(
     Output(component_id="wealth-indexes", component_property="figure"),
+    Output(component_id="wealth-indexes", component_property="config"),
     Output(component_id="assets-names", component_property="children"),
     Output(component_id="describe-table", component_property="children"),
-    Input(component_id="submit-button-state", component_property="n_clicks"),
+    Input(component_id="store", component_property="data"), # screen
+    Input(component_id="submit-button-state", component_property="n_clicks"),  # n_clicks
     State(component_id="symbols-list", component_property="value"),
     State(component_id="base-currency", component_property="value"),
     State(component_id="first-date", component_property="value"),
@@ -55,7 +58,7 @@ layout = dbc.Container(
 )
 @cache.memoize(timeout=86400)
 def update_graf_compare(
-    n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str, on: bool
+    screen, n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str, on: bool
 ):
     symbols = (
         selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
@@ -119,7 +122,9 @@ def update_graf_compare(
         #     color="RebeccaPurple"
         # )
     )
-
+    # Change layout for mobile screens
+    fig, config = adopt_small_screens(fig, screen)
+    # Get Assets Names
     names_df = (
         pd.DataFrame.from_dict(al.names, orient="index")
         .reset_index(drop=False)
@@ -139,4 +144,4 @@ def update_graf_compare(
         columns=columns,
         style_table={"overflowX": "auto"},
     )
-    return fig, names_table, statistics_table
+    return fig, config, names_table, statistics_table

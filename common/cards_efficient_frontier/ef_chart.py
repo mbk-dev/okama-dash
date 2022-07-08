@@ -1,7 +1,7 @@
 import dash_bootstrap_components as dbc
 from dash import dcc
 
-card_graf_compare = dbc.Card(
+card_graf = dbc.Card(
     dbc.CardBody(
         [
             dcc.Loading(

@@ -1,5 +1,5 @@
 import dash
-from dash import html, callback, dash_table
+from dash import callback, dash_table
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
@@ -9,10 +9,10 @@ import pandas as pd
 
 import okama as ok
 
-from application import cache
-from application.cards_efficient_frontier.ef_controls import card_controls
-from application.cards_efficient_frontier.ef_assets_names import card_assets_info
-from application.cards_efficient_frontier.ef_chart import card_graf_compare
+from common.cards_efficient_frontier.ef_controls import card_controls
+from common.cards_efficient_frontier.ef_assets_names import card_assets_info
+from common.cards_efficient_frontier.ef_chart import card_graf
+from common.mobile_screens import adopt_small_screens
 
 dash.register_page(__name__,
                    path='/',
@@ -29,7 +29,7 @@ layout = dbc.Container(
                 dbc.Col(card_assets_info, lg=5),
             ]
         ),
-        dbc.Row(dbc.Col(card_graf_compare, width=12), align="center"),
+        dbc.Row(dbc.Col(card_graf, width=12), align="center"),
     ],
     class_name="mt-2",
     fluid="md",
@@ -38,7 +38,9 @@ layout = dbc.Container(
 
 @callback(
     Output(component_id="ef-graf", component_property="figure"),
+    Output(component_id="ef-graf", component_property="config"),
     Output(component_id="ef-assets-names", component_property="children"),
+    Input(component_id="store", component_property="data"),
     Input(component_id="ef-submit-button-state", component_property="n_clicks"),
     State(component_id="ef-symbols-list", component_property="value"),
     State(component_id="ef-base-currency", component_property="value"),
@@ -47,7 +49,7 @@ layout = dbc.Container(
 )
 # @cache.memoize(timeout=86400)
 def update_graf(
-    n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str
+    screen, n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str
 ):
     symbols = (
         selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
@@ -95,11 +97,6 @@ def update_graf(
             marker=dict(size=8, color="grey"),
         )
     )
-    # fig.add_annotation(x=x_cml[1], y=y_cml[1],
-    #                    text="MSR",
-    #                    showarrow=True,
-    #                    arrowhead=1)
-    # Assets
     df = pd.concat([ef_object.mean_return, ef_object.risk_annual], axis=1, join="outer", copy="false", ignore_index=False)
     try:
         df.drop([ef_object.inflation], axis=0, inplace=True)
@@ -124,7 +121,8 @@ def update_graf(
         xaxis_title="Risk (standard deviation)",
         yaxis_title="Rate of return (arithmetic mean)",
     )
-
+    # Change layout for mobile screens
+    fig, config = adopt_small_screens(fig, screen)
     # Get assets names
     names_df = (
         pd.DataFrame.from_dict(ef_object.names, orient="index")
@@ -139,4 +137,4 @@ def update_graf(
         },
         page_size=4,
     )
-    return fig, names_table
+    return fig, config, names_table
