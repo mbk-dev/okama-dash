@@ -1,6 +1,11 @@
+import re
+
 import dash
 import dash_bootstrap_components as dbc
 from dash import html, dcc
+from dash.dependencies import Input, Output, State
+
+from dash.exceptions import PreventUpdate
 
 import pandas as pd
 
@@ -11,6 +16,8 @@ from common import cache
 app = dash.get_app()
 cache.init_app(app.server)
 
+options = get_symbols()
+
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 card_controls = dbc.Card(
     dbc.CardBody(
@@ -20,7 +27,7 @@ card_controls = dbc.Card(
                 [
                     html.Label("Tickers in the Efficient Frontier"),
                     dcc.Dropdown(
-                        options=get_symbols(),
+                        options=options,
                         value=settings.default_symbols,
                         multi=True,
                         placeholder="Select assets",
@@ -82,3 +89,17 @@ card_controls = dbc.Card(
     ),
     class_name="mb-3",
 )
+
+#
+# @app.callback(
+#     Output("ef-symbols-list", "options"),
+#     Input("ef-symbols-list", "search_value"),
+#     State("ef-symbols-list", "value"),
+# )
+# def update_options(search_value, value):
+#     if not search_value:
+#         raise PreventUpdate
+#     opt_list = [
+#         o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (value or [])
+#     ]
+#     return opt_list

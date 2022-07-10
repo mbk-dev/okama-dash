@@ -12,6 +12,12 @@ def adopt_small_screens(fig, screen: dict):
                 x=1),
             margin=dict(l=0, r=0, t=20, b=20),
         )
+        fig.update_yaxes(
+            # tickangle=90,
+            title_text="Rate of Return",
+            # title_font={"size": 8},
+            title_standoff=0
+            )
         config = {'displayModeBar': False,
                   'displaylogo': False}
     else:
