@@ -12,6 +12,7 @@ import pandas as pd
 import okama as ok
 
 from common import cache
+from common.assets_names_dash_table import get_assets_names
 from common.cards_compare.asset_list_controls import card_controls
 from common.cards_compare.assets_names import card_assets_info
 from common.cards_compare.statistics_table import card_table
@@ -116,29 +117,12 @@ def update_graf_compare(
     fig.update_layout(
         xaxis_title="Date",
         legend_title="Assets",
-        # font=dict(
-        #     family="Courier New, monospace",
-        #     size=18,
-        #     color="RebeccaPurple"
-        # )
     )
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
-    # Get Assets Names
-    names_df = (
-        pd.DataFrame.from_dict(al.names, orient="index")
-        .reset_index(drop=False)
-        .rename(columns={"index": "Ticker", 0: "Long name"})[["Ticker", "Long name"]]
-    )
-    names_table = dash_table.DataTable(
-        data=names_df.to_dict(orient="records"),
-        style_data={
-            "whiteSpace": "normal",
-            "height": "auto",
-        },
-        page_size=4,
-    )
-
+    # Assets Names
+    names_table = get_assets_names(al)
+    # AL statistics
     statistics_table = dash_table.DataTable(
         data=statistics_table.to_dict(orient="records"),
         columns=columns,

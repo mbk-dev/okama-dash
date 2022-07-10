@@ -1,5 +1,5 @@
 import dash
-from dash import callback, dash_table
+from dash import callback
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
@@ -9,6 +9,7 @@ import pandas as pd
 
 import okama as ok
 
+from common.assets_names_dash_table import get_assets_names
 from common.cards_efficient_frontier.ef_controls import card_controls
 from common.cards_efficient_frontier.ef_assets_names import card_assets_info
 from common.cards_efficient_frontier.ef_chart import card_graf
@@ -46,6 +47,7 @@ layout = dbc.Container(
     State(component_id="ef-base-currency", component_property="value"),
     State(component_id="ef-first-date", component_property="value"),
     State(component_id="ef-last-date", component_property="value"),
+    # Input(component_id="ef-return-type-checklist-input", component_property="value"),
 )
 # @cache.memoize(timeout=86400)
 def update_graf(
@@ -62,19 +64,34 @@ def update_graf(
         n_points=40,
         full_frontier=True
     )
+    fig = make_ef_figure(ef_object)
+    # Change layout for mobile screens
+    fig, config = adopt_small_screens(fig, screen)
+    # Get assets names
+    names_table = get_assets_names(ef_object)
+    return fig, config, names_table
+
+
+def make_ef_figure(ef_object, rf_return: float = 0):
     ef = ef_object.ef_points * 100
-    # TODO: insert correct rf_return variable
-    rf_return = 0
     tg = ef_object.get_tangency_portfolio(rf_return)
     x_cml, y_cml = [0, tg["Risk"] * 100], [rf_return, tg["Mean_return"] * 100]
-
     fig = go.Figure(data=go.Scatter(
         x=ef["Risk"],
         y=ef["Mean return"],
         mode="lines",
-        name="Efficient Frontier"
+        name="Efficient Frontier - arithmetic mean"
     ))
-    # fig.update_layout(height=800)
+    # CAGR
+    fig.add_trace(
+        go.Scatter(
+            x=ef["Risk"],
+            y=ef["CAGR"],
+            mode='lines',
+            name='Efficient Frontier - geometric mean',
+            # line=dict(width=.5, color='green'),
+        )
+    )
     # CML line
     fig.add_trace(
         go.Scatter(
@@ -97,7 +114,8 @@ def update_graf(
             marker=dict(size=8, color="grey"),
         )
     )
-    df = pd.concat([ef_object.mean_return, ef_object.risk_annual], axis=1, join="outer", copy="false", ignore_index=False)
+    df = pd.concat([ef_object.mean_return, ef_object.risk_annual], axis=1, join="outer", copy="false",
+                   ignore_index=False)
     try:
         df.drop([ef_object.inflation], axis=0, inplace=True)
     except:
@@ -119,22 +137,6 @@ def update_graf(
     fig.update_layout(
         height=800,
         xaxis_title="Risk (standard deviation)",
-        yaxis_title="Rate of return (arithmetic mean)",
+        yaxis_title="Rate of Return",
     )
-    # Change layout for mobile screens
-    fig, config = adopt_small_screens(fig, screen)
-    # Get assets names
-    names_df = (
-        pd.DataFrame.from_dict(ef_object.names, orient="index")
-        .reset_index(drop=False)
-        .rename(columns={"index": "Ticker", 0: "Long name"})[["Ticker", "Long name"]]
-    )
-    names_table = dash_table.DataTable(
-        data=names_df.to_dict(orient="records"),
-        style_data={
-            "whiteSpace": "normal",
-            "height": "auto",
-        },
-        page_size=4,
-    )
-    return fig, config, names_table
+    return fig
