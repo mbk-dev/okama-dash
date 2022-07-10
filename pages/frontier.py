@@ -10,9 +10,9 @@ import pandas as pd
 import okama as ok
 
 from common.assets_names_dash_table import get_assets_names
-from common.cards_efficient_frontier.ef_controls import card_controls
-from common.cards_efficient_frontier.ef_assets_names import card_assets_info
-from common.cards_efficient_frontier.ef_chart import card_graf
+from pages.cards_efficient_frontier.ef_assets_names import card_assets_info
+from pages.cards_efficient_frontier.ef_chart import card_graf
+from pages.cards_efficient_frontier.ef_controls import card_controls
 from common.mobile_screens import adopt_small_screens
 
 dash.register_page(__name__,

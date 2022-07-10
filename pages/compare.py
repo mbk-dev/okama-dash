@@ -13,11 +13,11 @@ import okama as ok
 
 from common import cache
 from common.assets_names_dash_table import get_assets_names
-from common.cards_compare.asset_list_controls import card_controls
-from common.cards_compare.assets_names import card_assets_info
-from common.cards_compare.statistics_table import card_table
-from common.cards_compare.wealth_indexes_chart import card_graf_compare
 from common.mobile_screens import adopt_small_screens
+from pages.cards_compare.asset_list_controls import card_controls
+from pages.cards_compare.assets_names import card_assets_info
+from pages.cards_compare.statistics_table import card_table
+from pages.cards_compare.wealth_indexes_chart import card_graf_compare
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
