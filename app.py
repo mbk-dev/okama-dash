@@ -12,15 +12,7 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 app = dash.Dash(
     __name__,
     use_pages=True,
-    # title="okama widgets",
     update_title="Loading okama ...",
-    # meta_tags=[
-    #     {"name": "title", "content": "okama widgets"},
-    #     {
-    #         "name": "description",
-    #         "content": "Okama widget to compare financial assets properties: rate of return, risk, CVAR, drawdowns",
-    #     },
-    # ],
     external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP],
 )
 server = app.server

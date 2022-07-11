@@ -1,10 +1,12 @@
 import dash_bootstrap_components as dbc
 from dash import html
 
-card_assets_info = dbc.Card(
+card_ef_info = dbc.Card(
     dbc.CardBody(
         [
-            html.H5(children="Assets names"),
+            html.H5("Information"),
+            html.Div(id="ef-info"),
+            html.H5("Assets names"),
             html.Div(id="ef-assets-names"),
         ]
     ),

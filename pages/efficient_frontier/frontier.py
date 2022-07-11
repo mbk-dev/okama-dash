@@ -10,8 +10,8 @@ import pandas as pd
 
 import okama as ok
 
-from common.assets_names_dash_table import get_assets_names
-from pages.efficient_frontier.cards_efficient_frontier.ef_assets_names import card_assets_info
+from common.info_dash_table import get_assets_names, get_info
+from pages.efficient_frontier.cards_efficient_frontier.ef_info import card_ef_info
 from pages.efficient_frontier.cards_efficient_frontier.ef_chart import card_graf
 from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
 from common.mobile_screens import adopt_small_screens
@@ -28,7 +28,7 @@ layout = dbc.Container(
         dbc.Row(
             [
                 dbc.Col(card_controls, lg=7),
-                dbc.Col(card_assets_info, lg=5),
+                dbc.Col(card_ef_info, lg=5),
             ]
         ),
         dbc.Row(dbc.Col(card_graf, width=12), align="center"),
@@ -41,7 +41,9 @@ layout = dbc.Container(
 @callback(
     Output(component_id="ef-graf", component_property="figure"),
     Output(component_id="ef-graf", component_property="config"),
+    Output(component_id="ef-info", component_property="children"),
     Output(component_id="ef-assets-names", component_property="children"),
+    # Inputs
     Input(component_id="store", component_property="data"),
     # Main input for EF
     Input(component_id="ef-submit-button-state", component_property="n_clicks"),
@@ -82,9 +84,10 @@ def update_ef_cards(
     fig = make_ef_figure(ef_object, ef_options)
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
-    # Get assets names
+    # Get EF info
+    info_table = get_info(ef_object)
     names_table = get_assets_names(ef_object)
-    return fig, config, names_table
+    return fig, config, info_table, names_table
 
 
 def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
@@ -127,10 +130,6 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
     ror_df = ef_object.mean_return if ef_options['ror'] == "Arithmetic" else ef_object.get_cagr()
     df = pd.concat([ror_df, ef_object.risk_annual], axis=1, join="outer", copy="false",
                    ignore_index=False)
-    # try:
-    #     df.drop([ef_object.inflation], axis=0, inplace=True)
-    # except:
-    #     pass
     df *= 100
     df.rename(columns={0: "Return", 1: "Risk"}, inplace=True)
     df.reset_index(drop=False, inplace=True)
