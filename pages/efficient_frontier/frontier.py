@@ -1,4 +1,5 @@
 import dash
+import okama
 from dash import callback
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
@@ -10,9 +11,9 @@ import pandas as pd
 import okama as ok
 
 from common.assets_names_dash_table import get_assets_names
-from pages.cards_efficient_frontier.ef_assets_names import card_assets_info
-from pages.cards_efficient_frontier.ef_chart import card_graf
-from pages.cards_efficient_frontier.ef_controls import card_controls
+from pages.efficient_frontier.cards_efficient_frontier.ef_assets_names import card_assets_info
+from pages.efficient_frontier.cards_efficient_frontier.ef_chart import card_graf
+from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
 from common.mobile_screens import adopt_small_screens
 
 dash.register_page(__name__,
@@ -42,16 +43,25 @@ layout = dbc.Container(
     Output(component_id="ef-graf", component_property="config"),
     Output(component_id="ef-assets-names", component_property="children"),
     Input(component_id="store", component_property="data"),
+    # Main input for EF
     Input(component_id="ef-submit-button-state", component_property="n_clicks"),
     State(component_id="ef-symbols-list", component_property="value"),
     State(component_id="ef-base-currency", component_property="value"),
     State(component_id="ef-first-date", component_property="value"),
     State(component_id="ef-last-date", component_property="value"),
+    # Options
+    State(component_id="rate-of-return-options", component_property="value"),
+    State(component_id="cml-option", component_property="value"),
+    State(component_id="risk-free-rate-option", component_property="value")
     # Input(component_id="ef-return-type-checklist-input", component_property="value"),
 )
 # @cache.memoize(timeout=86400)
-def update_graf(
-    screen, n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str
+def update_ef_cards(
+        screen, n_clicks,
+        # Main input
+        selected_symbols: list, ccy: str, fd_value: str, ld_value: str,
+        # Options
+        ror_option: str, cml_option: str, rf_rate: float
 ):
     symbols = (
         selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
@@ -64,7 +74,12 @@ def update_graf(
         n_points=40,
         full_frontier=True
     )
-    fig = make_ef_figure(ef_object)
+    ef_options = dict(
+        ror=ror_option,
+        cml=cml_option,
+        rf_rate=rf_rate
+    )
+    fig = make_ef_figure(ef_object, ef_options)
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
     # Get assets names
@@ -72,54 +87,50 @@ def update_graf(
     return fig, config, names_table
 
 
-def make_ef_figure(ef_object, rf_return: float = 0):
+def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
     ef = ef_object.ef_points * 100
-    tg = ef_object.get_tangency_portfolio(rf_return)
-    x_cml, y_cml = [0, tg["Risk"] * 100], [rf_return, tg["Mean_return"] * 100]
-    fig = go.Figure(data=go.Scatter(
-        x=ef["Risk"],
-        y=ef["Mean return"],
-        mode="lines",
-        name="Efficient Frontier - arithmetic mean"
-    ))
-    # CAGR
-    fig.add_trace(
-        go.Scatter(
+
+    fig = go.Figure(
+        data=go.Scatter(
             x=ef["Risk"],
-            y=ef["CAGR"],
-            mode='lines',
-            name='Efficient Frontier - geometric mean',
-            # line=dict(width=.5, color='green'),
-        )
-    )
+            y=ef["Mean return"] if ef_options['ror'] == "Arithmetic" else ef["CAGR"],
+            mode="lines",
+            name=f"Efficient Frontier - {ef_options['ror']} mean"
+        ))
     # CML line
-    fig.add_trace(
-        go.Scatter(
-            x=x_cml,
-            y=y_cml,
-            mode='lines',
-            name='Capital Market Line (CML)',
-            line=dict(width=.5, color='green'),
+    if ef_options['cml'] == "On":
+        rf_rate = ef_options['rf_rate']
+        tg = ef_object.get_tangency_portfolio(rf_rate / 100)
+        x_cml, y_cml = [0, tg["Risk"] * 100], [rf_rate, tg["Mean_return"] * 100]
+        fig.add_trace(
+            go.Scatter(
+                x=x_cml,
+                y=y_cml,
+                mode='lines',
+                name='Capital Market Line (CML)',
+                line=dict(width=.5, color='green'),
+            )
         )
-    )
-    # Tangency portfolio
-    fig.add_trace(
-        go.Scatter(
-            x=[x_cml[1]],
-            y=[y_cml[1]],
-            mode='markers+text',
-            text="MSR",
-            textposition="top left",
-            name='Tangency portfolio (MSR)',
-            marker=dict(size=8, color="grey"),
+        # Tangency portfolio
+        fig.add_trace(
+            go.Scatter(
+                x=[x_cml[1]],
+                y=[y_cml[1]],
+                mode='markers+text',
+                text="MSR",
+                textposition="top left",
+                name='Tangency portfolio (MSR)',
+                marker=dict(size=8, color="grey"),
+            )
         )
-    )
-    df = pd.concat([ef_object.mean_return, ef_object.risk_annual], axis=1, join="outer", copy="false",
+    # Assets Risk-Return points
+    ror_df = ef_object.mean_return if ef_options['ror'] == "Arithmetic" else ef_object.get_cagr()
+    df = pd.concat([ror_df, ef_object.risk_annual], axis=1, join="outer", copy="false",
                    ignore_index=False)
-    try:
-        df.drop([ef_object.inflation], axis=0, inplace=True)
-    except:
-        pass
+    # try:
+    #     df.drop([ef_object.inflation], axis=0, inplace=True)
+    # except:
+    #     pass
     df *= 100
     df.rename(columns={0: "Return", 1: "Risk"}, inplace=True)
     df.reset_index(drop=False, inplace=True)

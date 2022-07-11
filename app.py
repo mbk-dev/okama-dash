@@ -21,7 +21,7 @@ app = dash.Dash(
     #         "content": "Okama widget to compare financial assets properties: rate of return, risk, CVAR, drawdowns",
     #     },
     # ],
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP],
 )
 server = app.server
 
