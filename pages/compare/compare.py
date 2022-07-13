@@ -11,7 +11,6 @@ import plotly.graph_objects as go
 import pandas as pd
 import okama as ok
 
-from common import cache
 from common.info_dash_table import get_assets_names, get_info
 from common.mobile_screens import adopt_small_screens
 from pages.compare.cards_compare.asset_list_controls import card_controls
@@ -58,20 +57,20 @@ layout = dbc.Container(
     State(component_id="base-currency", component_property="value"),
     State(component_id="first-date", component_property="value"),
     State(component_id="last-date", component_property="value"),
+    # Options
+    State(component_id="al-inflation-option", component_property="value"),
     # Logarithmic scale button
     Input(component_id="logarithmic-scale-switch", component_property="on"),
 )
-# @cache.memoize(timeout=86400)
 def update_graf_compare(
-    screen, n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str, on: bool
+    screen, n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str, inflation_on: list, log_on: bool
 ):
-    symbols = (
-        selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
-    )
+    symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
+    inflation_on_bool = inflation_on != []
     al_object = ok.AssetList(
-        symbols, first_date=fd_value, last_date=ld_value, ccy=ccy, inflation=True
+        symbols, first_date=fd_value, last_date=ld_value, ccy=ccy, inflation=inflation_on_bool
     )
-    fig = get_al_figure(al_object, on)
+    fig = get_al_figure(al_object, inflation_on, log_on)
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
     # AL Info
@@ -83,43 +82,46 @@ def update_graf_compare(
 
 
 def get_al_statistics_table(al_object):
-    statistics_df = al_object.describe().iloc[
-                    :-4, :
-                    ]  # there is a problem with dates '2020-08' in the last 4 rows
+    statistics_df = al_object.describe().iloc[:-4, :]
+    # statistics_df = al_object.describe()
+    # statistics_df.iloc[-4:, :] = statistics_df.iloc[-4:, :].applymap(str)
+    statistics_dict = statistics_df.to_dict(orient="records")
+
     columns = [
         dict(
             id=i, name=i, type="numeric", format=dash_table.FormatTemplate.percentage(2)
         )
         for i in statistics_df.columns
     ]
-    return dash_table.DataTable(data=statistics_df.to_dict(orient="records"),
+    return dash_table.DataTable(data=statistics_dict,
                                 columns=columns,
                                 style_table={"overflowX": "auto"},)
 
 
-def get_al_figure(al_object, log_scale):
+def get_al_figure(al_object, inflation_on, log_scale):
     df = al_object.wealth_indexes
     ind = df.index.to_timestamp("D")
     fig = px.line(
         df,
         x=ind,
-        y=df.columns[:-1],
+        y=df.columns[:-1] if inflation_on else df.columns,
         log_y=log_scale,
         title="Assets Wealth indexes",
         # width=800,
         height=800,
     )
     # Plot Inflation
-    fig.add_trace(
-        go.Scatter(
-            x=ind,
-            y=df.iloc[:, -1],
-            mode="none",
-            fill="tozeroy",
-            fillcolor="rgba(226,150,65,0.5)",
-            name="Inflation",
+    if inflation_on:
+        fig.add_trace(
+            go.Scatter(
+                x=ind,
+                y=df.iloc[:, -1],
+                mode="none",
+                fill="tozeroy",
+                fillcolor="rgba(226,150,65,0.5)",
+                name="Inflation",
+            )
         )
-    )
     # Plot Financial crisis historical data (sample)
     crisis_first_date = pd.to_datetime("2007-10", format="%Y-%m")
     crisis_last_date = pd.to_datetime("2009-09", format="%Y-%m")

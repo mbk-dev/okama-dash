@@ -63,6 +63,35 @@ card_controls = dbc.Card(
                                 ]
                             ),
                         ]
+                    ),
+                    dbc.Row(html.H5(children="Options")),
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                [
+                                    dbc.Label(["Include Inflation",
+                                               html.I(className="bi bi-info-square ms-2", id="al-info-inflation")]),
+                                    dbc.Checklist(
+                                        options=[
+                                            {"label": "", "value": "inflation-on"},
+                                        ],
+                                        value=[],
+                                        id="al-inflation-option",
+                                        inline=True,
+                                        switch=True,
+                                    ),
+                                    dbc.Tooltip(
+                                        "If enabled, inflation will be displayed on the chart. However, with inflation "
+                                        "turned on, the chart statistics will not include last month data, as "
+                                        "inflation statistics are delayed.",
+                                        target="al-info-inflation",
+                                        # className="text-start"
+                                    )
+                                ],
+                                lg=12, md=12, sm=12,
+                                # class_name="pt-4 pt-sm-4 pt-md-1"
+                            ),
+                        ]
                     )
                 ]
             ),
