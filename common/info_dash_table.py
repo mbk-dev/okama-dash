@@ -17,13 +17,16 @@ def get_assets_names(al_object: okama.AssetList) -> dash_table.DataTable:
 
 def get_info(al_object):
     newest_asset_date = al_object.assets_first_dates[al_object.newest_asset].strftime("%Y-%m")
-    eldest_asset_date = al_object.assets_first_dates[al_object.eldest_asset].strftime("%Y-%m")
+    ccy = al_object.currency
+    al_object.assets_first_dates.pop(ccy)
+    eldest_ticker = list(al_object.assets_first_dates)[0]
+    eldest_asset_date = al_object.assets_first_dates[eldest_ticker].strftime("%Y-%m")
     info_dict = [
         {"Property": "First Date", "Value": al_object.first_date.strftime("%Y-%m")},
         {"Property": "Last datee", "Value": al_object.last_date.strftime("%Y-%m")},
         {"Property": "Period length", "Value": al_object._pl_txt},
-        {"Property": "Asset with shortest history", "Value": f"{al_object.newest_asset} - {newest_asset_date}"},
-        {"Property": "Asset with longest history", "Value": f"{al_object.eldest_asset} - {eldest_asset_date}"}
+        {"Property": "Shortest history", "Value": f"{al_object.newest_asset} - {newest_asset_date}"},
+        {"Property": "Longest history", "Value": f"{eldest_ticker} - {eldest_asset_date}"}
     ]
     info_table = dash_table.DataTable(
         data=info_dict,
