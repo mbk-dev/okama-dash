@@ -102,9 +102,10 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
         ))
     # CML line
     if ef_options['cml'] == "On":
+        cagr_option = ef_options['ror'] == "Geometric"
         rf_rate = ef_options['rf_rate']
-        tg = ef_object.get_tangency_portfolio(rf_rate / 100)
-        x_cml, y_cml = [0, tg["Risk"] * 100], [rf_rate, tg["Mean_return"] * 100]
+        tg = ef_object.get_tangency_portfolio(cagr=cagr_option, rf_return=rf_rate / 100)
+        x_cml, y_cml = [0, tg["Risk"] * 100], [rf_rate, tg["Rate_of_return"] * 100]
         fig.add_trace(
             go.Scatter(
                 x=x_cml,
