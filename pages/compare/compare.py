@@ -27,20 +27,23 @@ dash.register_page(__name__,
                    description="Okama widget to compare financial assets properties: rate of return, risk, CVAR, drawdowns",
                    )
 
-layout = dbc.Container(
-    [
-        dbc.Row(
-            [
-                dbc.Col(card_controls, lg=7),
-                dbc.Col(card_assets_info, lg=5),
-            ]
-        ),
-        dbc.Row(dbc.Col(card_graf_compare, width=12), align="center"),
-        dbc.Row(dbc.Col(card_table, width=12), align="center"),
-    ],
-    class_name="mt-2",
-    fluid="md",
-)
+
+def layout(tickers=None, **kwargs):
+    page = dbc.Container(
+        [
+            dbc.Row(
+                [
+                    dbc.Col(card_controls, lg=7),
+                    dbc.Col(card_assets_info, lg=5),
+                ]
+            ),
+            dbc.Row(dbc.Col(card_graf_compare, width=12), align="center"),
+            dbc.Row(dbc.Col(card_table, width=12), align="center"),
+        ],
+        class_name="mt-2",
+        fluid="md",
+    )
+    return page
 
 
 @callback(

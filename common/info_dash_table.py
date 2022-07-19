@@ -23,7 +23,7 @@ def get_info(al_object):
     eldest_asset_date = al_object.assets_first_dates[eldest_ticker].strftime("%Y-%m")
     info_list = [
         {"Property": "First Date", "Value": al_object.first_date.strftime("%Y-%m")},
-        {"Property": "Last datee", "Value": al_object.last_date.strftime("%Y-%m")},
+        {"Property": "Last Date", "Value": al_object.last_date.strftime("%Y-%m")},
         {"Property": "Period length", "Value": al_object._pl_txt},
         {"Property": "Shortest history", "Value": f"{al_object.newest_asset} - {newest_asset_date}"},
         {"Property": "Longest history", "Value": f"{eldest_ticker} - {eldest_asset_date}"}
