@@ -13,6 +13,7 @@ import okama as ok
 
 from common.info_dash_table import get_assets_names, get_info
 from common.mobile_screens import adopt_small_screens
+from common.parse_query import get_tickers_list
 from pages.compare.cards_compare.asset_list_controls import card_controls
 from pages.compare.cards_compare.assets_info import card_assets_info
 from pages.compare.cards_compare.statistics_table import card_table
@@ -28,12 +29,13 @@ dash.register_page(__name__,
                    )
 
 
-def layout(tickers=None, **kwargs):
+def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
+    tickers_list = get_tickers_list(tickers)
     page = dbc.Container(
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls, lg=7),
+                    dbc.Col(card_controls(tickers_list, first_date, last_date, ccy), lg=7),
                     dbc.Col(card_assets_info, lg=5),
                 ]
             ),

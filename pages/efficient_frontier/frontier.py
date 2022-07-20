@@ -11,6 +11,7 @@ import pandas as pd
 import okama as ok
 
 from common.info_dash_table import get_assets_names, get_info
+from common.parse_query import get_tickers_list
 from pages.efficient_frontier.cards_efficient_frontier.ef_info import card_ef_info
 from pages.efficient_frontier.cards_efficient_frontier.ef_chart import card_graf
 from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
@@ -24,12 +25,13 @@ dash.register_page(__name__,
                    )
 
 
-def layout(tickers=None, **kwargs):
+def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
+    tickers_list = get_tickers_list(tickers)
     page = dbc.Container(
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls, lg=7),
+                    dbc.Col(card_controls(tickers_list, first_date, last_date, ccy), lg=7),
                     dbc.Col(card_ef_info, lg=5),
                 ]
             ),
