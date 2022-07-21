@@ -7,7 +7,7 @@ card_graf_compare = dbc.Card(
         [
             dcc.Loading(
                 [
-                    dcc.Graph(id="wealth-indexes"),
+                    dcc.Graph(id="al-wealth-indexes"),
                     daq.BooleanSwitch(
                         id="logarithmic-scale-switch",
                         on=False,
