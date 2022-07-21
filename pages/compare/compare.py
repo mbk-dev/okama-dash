@@ -30,12 +30,11 @@ dash.register_page(__name__,
 
 
 def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
-    tickers_list = get_tickers_list(tickers)
     page = dbc.Container(
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls(tickers_list, first_date, last_date, ccy), lg=7),
+                    dbc.Col(card_controls(tickers, first_date, last_date, ccy), lg=7),
                     dbc.Col(card_assets_info, lg=5),
                 ]
             ),

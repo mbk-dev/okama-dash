@@ -2,11 +2,13 @@ from typing import Optional
 
 import dash
 import dash_bootstrap_components as dbc
-from dash import html, dcc
+from dash.dependencies import Input, Output
+from dash import html, dcc, callback
 
 import pandas as pd
 
 from common import settings as settings, inflation as inflation
+from common.parse_query import get_tickers_list
 from common.symbols import get_symbols
 from common import cache
 
@@ -21,6 +23,7 @@ def card_controls(tickers: Optional[list],
                   last_date: Optional[str],
                   ccy: Optional[str]
                   ):
+    tickers_list = get_tickers_list(tickers)
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -30,13 +33,18 @@ def card_controls(tickers: Optional[list],
                         html.Label("Tickers to compare"),
                         dcc.Dropdown(
                             options=get_symbols(),
-                            value=tickers if tickers else settings.default_symbols,
+                            value=tickers_list if tickers_list else settings.default_symbols,
                             multi=True,
                             placeholder="Select assets",
                             id="symbols-list",
                         ),
                     ],
                 ),
+                # html.Div(
+                #     children=tickers,
+                #     id="hidden-div",
+                #     hidden=True,
+                # ),
                 html.Div(
                     [
                         html.Label("Base currency"),
@@ -75,6 +83,47 @@ def card_controls(tickers: Optional[list],
                                         dbc.FormText("Format: YYYY-MM"),
                                     ]
                                 ),
+                            ]
+                        ),
+                        dbc.Row(
+                            [
+                                html.Div(
+                                    [
+                                        # represents the URL bar, doesn't render anything
+                                        dcc.Location(id='url', refresh=False),
+                                        # content will be rendered in this element
+                                        # html.Div(id='show_url'),
+                                        html.Div(
+                                            [
+                                                dbc.Button(
+                                                    [
+                                                        "Copy link",
+                                                        html.I(className="bi bi-share ms-2"),
+                                                        dcc.Clipboard(
+                                                            target_id="show_url",
+                                                            className="position-absolute start-0 top-0 h-100 w-100 opacity-0",
+                                                        ),
+                                                    ],
+                                                    id="al-copy-link-button",
+                                                    className="position-relative",
+                                                    color="link",
+                                                    outline=False
+                                                ),
+                                                html.Div(
+                                                    children="",
+                                                    hidden=True,
+                                                    id="show_url"
+                                                ),
+                                                dbc.Tooltip(
+                                                    "Сopy asset list link to clipboard",
+                                                    target="al-copy-link-button",
+                                                )
+
+                                            ],
+                                            style={"text-align": "center"},
+                                        )
+                                    ]
+                                )
                             ]
                         ),
                         dbc.Row(html.H5(children="Options")),
@@ -125,3 +174,24 @@ def card_controls(tickers: Optional[list],
         class_name="mb-3",
     )
     return card
+
+
+@callback(
+    Output('show_url', 'children'),
+    Input('url', 'href'),
+    Input('symbols-list', 'value'),
+    Input('base-currency', 'value'),
+    Input('first-date', 'value'),
+    Input('last-date', 'value')
+          )
+def update_content(href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
+    tickers_str = ""
+    t_number = len(tickers_list)
+    for i, ticker in enumerate(tickers_list):
+        tickers_str += f"{ticker}," if i + 1 < t_number else ticker
+    reset_href = href.split("?")[0]
+    new_url = f"{reset_href}?tickers={tickers_str}" if tickers_str else reset_href
+    new_url += f"&ccy={ccy}"
+    new_url += f"&first_date={first_date}"
+    new_url += f"&last_date={last_date}"
+    return new_url
