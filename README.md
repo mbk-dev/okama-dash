@@ -8,3 +8,9 @@ and _Dash framework_:
 
 - Efficient Frontier builder (home page)
 - Compare assets historical performance: wealth indexes, rate of return and risk-metrics
+
+![](../images/images/main_page.jpg?raw=true) 
+
+## License
+
+MIT
