@@ -2,6 +2,7 @@ import pandas as pd
 import okama as ok
 
 from common import cache
+import settings
 
 
 @cache.memoize(timeout=2592000)
@@ -9,8 +10,7 @@ def get_symbols() -> list:
     """
     Get all available symbols (tickers) from assets namespaces.
     """
-    namespaces = ["US", "LSE", "XFRA", "XTAE", "MOEX", "INDX", "COMM", "FX", "CC"]
-    list_of_symbols = [ok.symbols_in_namespace(ns).symbol for ns in namespaces]
+    list_of_symbols = [ok.symbols_in_namespace(ns).symbol for ns in settings.namespaces]
     classifier_df = pd.concat(
         list_of_symbols, axis=0, join="outer", copy="false", ignore_index=True
     )
