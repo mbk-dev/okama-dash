@@ -10,7 +10,24 @@ and _Dash framework_:
 - Compare assets historical performance: wealth indexes, rate of return and risk-metrics
 
 ![](../images/images/main_page.jpg?raw=true) 
-
+## Installation
+We recommend using [Poetry](https://python-poetry.org/docs/) for dependency management.  
+After installing Poetry:
+```python
+poetry init
+poetry shell  # activate the environment
+```
+Alternatively you can do it with pure python:
+```python
+python -m venv venv
+source venv/bin/activate  # Windows: \venv\scripts\activate
+pip install -r requirements.txt
+```
+To run the project locally:
+```python
+python app.py
+```
+For production, we recommend using [gunicorn]() WSGI server and run the project with `run_gunicorn.py`.
 ## License
 
 MIT
