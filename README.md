@@ -59,6 +59,7 @@ To run the project locally:
 python app.py
 ```
 For production, we recommend using [gunicorn]() WSGI server and run the project with `run_gunicorn.py`.
+![](../images/images/wealth_indexes.png?raw=true) 
 ## License
 
 MIT
