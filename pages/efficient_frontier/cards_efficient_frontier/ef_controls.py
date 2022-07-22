@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 import dash
@@ -246,16 +247,11 @@ def update_link_ef(
     return create_link(ccy, first_date, href, last_date, tickers_list)
 
 
-#
-# @app.callback(
-#     Output("ef-symbols-list", "options"),
-#     Input("ef-symbols-list", "search_value"),
-#     State("ef-symbols-list", "value"),
-# )
-# def update_options(search_value, value):
-#     if not search_value:
-#         raise PreventUpdate
-#     opt_list = [
-#         o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (value or [])
-#     ]
-#     return opt_list
+@app.callback(
+    Output("ef-symbols-list", "options"),
+    Input("ef-symbols-list", "search_value"),
+    Input("ef-symbols-list", "value"),
+)
+def optimize_search_ef(search_value, selected_values):
+    return [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])] \
+        if search_value else selected_values

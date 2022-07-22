@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 import dash
@@ -16,6 +17,8 @@ from common import cache
 
 app = dash.get_app()
 cache.init_app(app.server)
+options = get_symbols()
+
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
@@ -34,7 +37,7 @@ def card_controls(
                     [
                         html.Label("Tickers to compare"),
                         dcc.Dropdown(
-                            options=get_symbols(),
+                            options=options,
                             value=tickers_list
                             if tickers_list
                             else settings.default_symbols,
@@ -166,3 +169,13 @@ def update_link_al(
     href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str
 ):
     return create_link(ccy, first_date, href, last_date, tickers_list)
+
+
+@app.callback(
+    Output("al-symbols-list", "options"),
+    Input("al-symbols-list", "search_value"),
+    Input("al-symbols-list", "value"),
+)
+def optimize_search_al(search_value, selected_values):
+    return [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])] \
+        if search_value else selected_values
