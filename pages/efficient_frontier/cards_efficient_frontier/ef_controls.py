@@ -13,6 +13,8 @@ from common.create_link import create_link
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.symbols import get_symbols
 from common import cache
+from pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt import ef_options_tooltip_ror, \
+    ef_options_tooltip_cml, ef_options_tooltip_rf_rate
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -125,11 +127,7 @@ def card_controls(
                                             id="rate-of-return-options",
                                         ),
                                         dbc.Tooltip(
-                                            "Geometric mean or Compound annual growth rate (CAGR) is the rate of return "
-                                            "that would be required for an investment to grow from its initial to its "
-                                            "final value, assuming all incomes were reinvested. "
-                                            "Arithmetic mean - annualized mean return (arithmetic mean) for "
-                                            "the rate of return monthly time series.",
+                                            ef_options_tooltip_ror,
                                             target="info-ror",
                                             # className="text-start"
                                         ),
@@ -159,10 +157,7 @@ def card_controls(
                                             id="cml-option",
                                         ),
                                         dbc.Tooltip(
-                                            "The Capital Market Line (CML) is the tangent line drawn from the point of "
-                                            "the risk-free asset (volatility is zero) to the point of tangency portfolio "
-                                            "or Maximum Sharpe Ratio (MSR) point."
-                                            "The slope of the CML is the Sharpe ratio of the tangency portfolio.",
+                                            ef_options_tooltip_cml,
                                             target="info-cml",
                                         ),
                                     ],
@@ -191,9 +186,7 @@ def card_controls(
                                         ),
                                         dbc.FormText("0 - 100 (Format: XX.XX)"),
                                         dbc.Tooltip(
-                                            "Risk-free Rate of Return is the theoretical rate of return of "
-                                            "an investment with zero risk. Risk-free Rate required to calculate "
-                                            "Sharpe Ratio, Tangency portfolio and plot Capital Market Line (CML).",
+                                            ef_options_tooltip_rf_rate,
                                             target="info-rf-rate",
                                         ),
                                     ],
