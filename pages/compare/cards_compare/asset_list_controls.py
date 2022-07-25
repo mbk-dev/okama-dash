@@ -14,6 +14,8 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import get_tickers_list
 from common.symbols import get_symbols
 from common import cache
+from pages.compare.cards_compare.eng.al_tooltips_options_txt import al_options_tooltip_inflation, \
+    al_options_tooltip_cagr, al_options_window
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -105,6 +107,37 @@ def card_controls(
                                     [
                                         dbc.Label(
                                             [
+                                                "Plot:",
+                                                html.I(
+                                                    className="bi bi-info-square ms-2",
+                                                    id="al-info-plot",
+                                                ),
+                                            ]
+                                        ),
+                                        dbc.RadioItems(
+                                            options=[
+                                                {"label": "Wealth Index", "value": "wealth"},
+                                                {"label": "Rolling Cagr", "value": "cagr"},
+                                                {"label": "Rolling Real Cagr", "value": "real cagr"},
+                                            ],
+                                            value="wealth",
+                                            id="al-plot-option",
+                                        ),
+                                        dbc.Tooltip(
+                                            al_options_tooltip_cagr,
+                                            target="al-info-plot",
+
+                                        ),
+                                    ],
+                                    lg=4,
+                                    md=4,
+                                    sm=12,
+                                    class_name="pt-4 pt-sm-4 pt-md-1",
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Label(
+                                            [
                                                 "Include Inflation",
                                                 html.I(
                                                     className="bi bi-info-square ms-2",
@@ -122,17 +155,42 @@ def card_controls(
                                             switch=True,
                                         ),
                                         dbc.Tooltip(
-                                            "If enabled, inflation will be displayed on the chart. However, with inflation "
-                                            "turned on, the chart statistics will not include last month data, as "
-                                            "inflation statistics are delayed.",
+                                            al_options_tooltip_inflation,
                                             target="al-info-inflation",
-                                            # className="text-start"
                                         ),
                                     ],
-                                    lg=12,
-                                    md=12,
+                                    lg=4,
+                                    md=4,
                                     sm=12,
-                                    # class_name="pt-4 pt-sm-4 pt-md-1"
+                                    class_name="pt-4 pt-sm-4 pt-md-1"
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Label(
+                                            [
+                                                "Rolling Window",
+                                                html.I(
+                                                    className="bi bi-info-square ms-2",
+                                                    id="al-info-rolling",
+                                                ),
+                                            ]
+                                        ),
+                                        dbc.Input(
+                                            type="number",
+                                            min=12,
+                                            value=12,
+                                            id="al-rolling-window",
+                                        ),
+                                        dbc.FormText("Format: number of years (≥ 1)"),
+                                        dbc.Tooltip(
+                                            al_options_window,
+                                            target="al-info-rolling",
+                                        ),
+                                    ],
+                                    lg=4,
+                                    md=4,
+                                    sm=12,
+                                    class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
                             ]
                         ),
