@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import okama as ok
 
+import common.settings as settings
 from common.html_elements.info_dash_table import get_assets_names, get_info
 from common.mobile_screens import adopt_small_screens
 from pages.compare.cards_compare.asset_list_controls import card_controls
@@ -64,7 +65,9 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="al-first-date", component_property="value"),
     State(component_id="al-last-date", component_property="value"),
     # Options
+    State(component_id="al-plot-option", component_property="value"),
     State(component_id="al-inflation-switch", component_property="value"),
+    State(component_id="al-rolling-window", component_property="value"),
     # Logarithmic scale button
     Input(component_id="logarithmic-scale-switch", component_property="on"),
 )
@@ -75,7 +78,11 @@ def update_graf_compare(
     ccy: str,
     fd_value: str,
     ld_value: str,
-    inflation_on: list,
+    # Options
+    plot_type: str,
+    inflation_on: bool,
+    rolling_window: int,
+    # Log scale
     log_on: bool,
 ):
     symbols = (
@@ -88,7 +95,7 @@ def update_graf_compare(
         ccy=ccy,
         inflation=inflation_on,
     )
-    fig = get_al_figure(al_object, inflation_on, log_on)
+    fig = get_al_figure(al_object, plot_type, inflation_on, rolling_window, log_on)
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
     # AL Info
@@ -118,20 +125,42 @@ def get_al_statistics_table(al_object):
     )
 
 
-def get_al_figure(al_object, inflation_on, log_scale):
-    df = al_object.wealth_indexes
+def get_al_figure(
+        al_object: ok.AssetList,
+        plot_type: str,
+        inflation_on: bool,
+        rolling_window: int,
+        log_scale: bool
+):
+    titles = {
+        "wealth": "Assets Wealth indexes",
+        "cagr": f"Rolling CAGR (window={rolling_window} years)",
+        "real_cagr": f"Rolling real CAGR (window={rolling_window} years)"
+    }
+
+    # Select Plot Type
+    if plot_type == "wealth":
+        df = al_object.wealth_indexes
+    else:
+        real = False if plot_type == "cagr" else True
+        df = al_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
     ind = df.index.to_timestamp("D")
+    chart_first_date = ind[0]
+    chart_last_date = ind[-1]
+    # inflation must not be in the chart for "Real CAGR"
+    plot_inflation_condition = inflation_on and plot_type != "real_cagr"
+
     fig = px.line(
         df,
         x=ind,
-        y=df.columns[:-1] if inflation_on else df.columns,
+        y=df.columns[:-1] if plot_inflation_condition else df.columns,
         log_y=log_scale,
-        title="Assets Wealth indexes",
+        title=titles[plot_type],
         # width=800,
         height=800,
     )
     # Plot Inflation
-    if inflation_on:
+    if plot_inflation_condition:
         fig.add_trace(
             go.Scatter(
                 x=ind,
@@ -145,8 +174,8 @@ def get_al_figure(al_object, inflation_on, log_scale):
     # Plot Financial crisis historical data (sample)
     crisis_first_date = pd.to_datetime("2007-10", format="%Y-%m")
     crisis_last_date = pd.to_datetime("2009-09", format="%Y-%m")
-    if (al_object.first_date < crisis_first_date) and (
-        al_object.last_date > crisis_last_date
+    if (chart_first_date < crisis_first_date) and (
+        chart_last_date > crisis_last_date
     ):
         fig.add_vrect(
             x0=crisis_first_date.strftime(format="%Y-%m"),
