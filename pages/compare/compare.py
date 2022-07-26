@@ -64,7 +64,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="al-first-date", component_property="value"),
     State(component_id="al-last-date", component_property="value"),
     # Options
-    State(component_id="al-inflation-option", component_property="value"),
+    State(component_id="al-inflation-switch", component_property="value"),
     # Logarithmic scale button
     Input(component_id="logarithmic-scale-switch", component_property="on"),
 )
@@ -81,13 +81,12 @@ def update_graf_compare(
     symbols = (
         selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     )
-    inflation_on_bool = inflation_on != []
     al_object = ok.AssetList(
         symbols,
         first_date=fd_value,
         last_date=ld_value,
         ccy=ccy,
-        inflation=inflation_on_bool,
+        inflation=inflation_on,
     )
     fig = get_al_figure(al_object, inflation_on, log_on)
     # Change layout for mobile screens

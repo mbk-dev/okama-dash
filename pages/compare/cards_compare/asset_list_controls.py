@@ -3,7 +3,7 @@ from typing import Optional
 
 import dash
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback
 
 import pandas as pd
@@ -118,7 +118,7 @@ def card_controls(
                                             options=[
                                                 {"label": "Wealth Index", "value": "wealth"},
                                                 {"label": "Rolling Cagr", "value": "cagr"},
-                                                {"label": "Rolling Real Cagr", "value": "real cagr"},
+                                                {"label": "Rolling Real Cagr", "value": "real_cagr"},
                                             ],
                                             value="wealth",
                                             id="al-plot-option",
@@ -145,14 +145,10 @@ def card_controls(
                                                 ),
                                             ]
                                         ),
-                                        dbc.Checklist(
-                                            options=[
-                                                {"label": "", "value": "inflation-on"},
-                                            ],
-                                            value=[],
-                                            id="al-inflation-option",
-                                            inline=True,
-                                            switch=True,
+                                        dbc.Switch(
+                                            label="",
+                                            value=False,
+                                            id="al-inflation-switch",
                                         ),
                                         dbc.Tooltip(
                                             al_options_tooltip_inflation,
@@ -177,8 +173,8 @@ def card_controls(
                                         ),
                                         dbc.Input(
                                             type="number",
-                                            min=12,
-                                            value=12,
+                                            min=1,
+                                            value=2,
                                             id="al-rolling-window",
                                         ),
                                         dbc.FormText("Format: number of years (≥ 1)"),
@@ -213,6 +209,32 @@ def card_controls(
         class_name="mb-3",
     )
     return card
+
+
+@callback(
+    Output(component_id="al-rolling-window", component_property="disabled"),
+    Input(component_id="al-plot-option", component_property="value"),
+)
+def update_rolling_input(plot_options: str):
+    return plot_options == "wealth"
+
+
+@callback(
+    Output(component_id="al-inflation-switch", component_property="value"),
+    Output(component_id="al-inflation-switch", component_property="disabled"),
+    Input(component_id="al-plot-option", component_property="value"),
+    State(component_id="al-inflation-switch", component_property="value")
+)
+def update_inflation_switch(plot_options: str, inflation_switch_value):
+    """
+    Change inflation-switch value and disabled state.
+
+    It should be "ON" and "Disabled" if "Real CAGR" chart selected.
+    """
+    if plot_options == "real_cagr":
+        return True, True
+    else:
+        return inflation_switch_value, False
 
 
 @callback(
