@@ -14,8 +14,11 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import get_tickers_list
 from common.symbols import get_symbols
 from common import cache
-from pages.compare.cards_compare.eng.al_tooltips_options_txt import al_options_tooltip_inflation, \
-    al_options_tooltip_cagr, al_options_window
+from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
+    al_options_tooltip_inflation,
+    al_options_tooltip_cagr,
+    al_options_window,
+)
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -40,9 +43,7 @@ def card_controls(
                         html.Label("Tickers to compare"),
                         dcc.Dropdown(
                             options=options,
-                            value=tickers_list
-                            if tickers_list
-                            else settings.default_symbols,
+                            value=tickers_list if tickers_list else settings.default_symbols,
                             multi=True,
                             placeholder="Select assets",
                             id="al-symbols-list",
@@ -70,9 +71,7 @@ def card_controls(
                                         html.Label("First Date"),
                                         dbc.Input(
                                             id="al-first-date",
-                                            value=first_date
-                                            if first_date
-                                            else "2000-01",
+                                            value=first_date if first_date else "2000-01",
                                             type="text",
                                         ),
                                         dbc.FormText("Format: YYYY-MM"),
@@ -126,7 +125,6 @@ def card_controls(
                                         dbc.Tooltip(
                                             al_options_tooltip_cagr,
                                             target="al-info-plot",
-
                                         ),
                                     ],
                                     lg=4,
@@ -158,7 +156,7 @@ def card_controls(
                                     lg=4,
                                     md=4,
                                     sm=12,
-                                    class_name="pt-4 pt-sm-4 pt-md-1"
+                                    class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
                                 dbc.Col(
                                     [
@@ -223,7 +221,7 @@ def update_rolling_input(plot_options: str):
     Output(component_id="al-inflation-switch", component_property="value"),
     Output(component_id="al-inflation-switch", component_property="disabled"),
     Input(component_id="al-plot-option", component_property="value"),
-    State(component_id="al-inflation-switch", component_property="value")
+    State(component_id="al-inflation-switch", component_property="value"),
 )
 def update_inflation_switch(plot_options: str, inflation_switch_value):
     """
@@ -245,9 +243,7 @@ def update_inflation_switch(plot_options: str, inflation_switch_value):
     Input("al-first-date", "value"),
     Input("al-last-date", "value"),
 )
-def update_link_al(
-    href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str
-):
+def update_link_al(href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
     return create_link(ccy, first_date, href, last_date, tickers_list)
 
 
@@ -257,5 +253,8 @@ def update_link_al(
     Input("al-symbols-list", "value"),
 )
 def optimize_search_al(search_value, selected_values):
-    return [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])] \
-        if search_value else selected_values
+    return (
+        [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])]
+        if search_value
+        else selected_values
+    )

@@ -13,8 +13,11 @@ from common.create_link import create_link
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.symbols import get_symbols
 from common import cache
-from pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt import ef_options_tooltip_ror, \
-    ef_options_tooltip_cml, ef_options_tooltip_rf_rate
+from pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt import (
+    ef_options_tooltip_ror,
+    ef_options_tooltip_cml,
+    ef_options_tooltip_rf_rate,
+)
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -66,9 +69,7 @@ def card_controls(
                                         html.Label("First Date"),
                                         dbc.Input(
                                             id="ef-first-date",
-                                            value=first_date
-                                            if first_date
-                                            else "2000-01",
+                                            value=first_date if first_date else "2000-01",
                                             type="text",
                                         ),
                                         dbc.FormText("Format: YYYY-MM"),
@@ -234,9 +235,7 @@ def update_risk_free_rate(cml: str):
     Input("ef-first-date", "value"),
     Input("ef-last-date", "value"),
 )
-def update_link_ef(
-    href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str
-):
+def update_link_ef(href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
     return create_link(ccy, first_date, href, last_date, tickers_list)
 
 
@@ -246,5 +245,8 @@ def update_link_ef(
     Input("ef-symbols-list", "value"),
 )
 def optimize_search_ef(search_value, selected_values):
-    return [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])] \
-        if search_value else selected_values
+    return (
+        [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])]
+        if search_value
+        else selected_values
+    )

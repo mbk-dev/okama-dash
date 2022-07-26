@@ -4,9 +4,7 @@ def adopt_small_screens(fig, screen: dict):
     """
     if screen and screen["in_width"] < 800:
         fig.update_layout(
-            legend=dict(
-                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-            ),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(l=0, r=0, t=20, b=20, pad=3),
         )
         fig.update_yaxes(

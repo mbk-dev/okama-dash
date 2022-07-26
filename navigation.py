@@ -12,9 +12,7 @@ navbar = dbc.NavbarSimple(
                 #     f"{page['name']}, href={page['relative_path']}"
                 # )
                 # for page in dash.page_registry.values()
-                dbc.DropdownMenuItem(
-                    "Community forums", href="https://community.okama.io"
-                ),
+                dbc.DropdownMenuItem("Community forums", href="https://community.okama.io"),
                 # dbc.DropdownMenuItem("Compare Assets", href="/")
             ],
             nav=True,

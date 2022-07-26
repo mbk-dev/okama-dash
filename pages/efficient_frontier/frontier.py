@@ -32,9 +32,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
         [
             dbc.Row(
                 [
-                    dbc.Col(
-                        card_controls(tickers_list, first_date, last_date, ccy), lg=7
-                    ),
+                    dbc.Col(card_controls(tickers_list, first_date, last_date, ccy), lg=7),
                     dbc.Col(card_ef_info, lg=5),
                 ]
             ),
@@ -79,9 +77,7 @@ def update_ef_cards(
     cml_option: str,
     rf_rate: float,
 ):
-    symbols = (
-        selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
-    )
+    symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     ef_object = ok.EfficientFrontier(
         symbols,
         first_date=fd_value,
@@ -140,11 +136,7 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
             )
         )
     # Assets Risk-Return points
-    ror_df = (
-        ef_object.mean_return
-        if ef_options["ror"] == "Arithmetic"
-        else ef_object.get_cagr()
-    )
+    ror_df = ef_object.mean_return if ef_options["ror"] == "Arithmetic" else ef_object.get_cagr()
     df = pd.concat(
         [ror_df, ef_object.risk_annual],
         axis=1,

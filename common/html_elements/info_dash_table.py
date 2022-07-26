@@ -26,9 +26,7 @@ def get_info(al_object) -> dash_table.DataTable:
     """
     Render DataTable with information about assets available historical period: length, first date, last date etc.
     """
-    newest_asset_date = al_object.assets_first_dates[al_object.newest_asset].strftime(
-        "%Y-%m"
-    )
+    newest_asset_date = al_object.assets_first_dates[al_object.newest_asset].strftime("%Y-%m")
     ccy = al_object.currency
     al_object.assets_first_dates.pop(ccy)
     eldest_ticker = list(al_object.assets_first_dates)[0]

@@ -58,9 +58,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     # user screen info
     Input(component_id="store", component_property="data"),
     # main Inputs
-    Input(
-        component_id="al-submit-button", component_property="n_clicks"
-    ),  # n_clicks
+    Input(component_id="al-submit-button", component_property="n_clicks"),  # n_clicks
     State(component_id="al-symbols-list", component_property="value"),
     State(component_id="al-base-currency", component_property="value"),
     State(component_id="al-first-date", component_property="value"),
@@ -86,9 +84,7 @@ def update_graf_compare(
     # Log scale
     log_on: bool,
 ):
-    symbols = (
-        selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
-    )
+    symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     al_object = ok.AssetList(
         symbols,
         first_date=fd_value,
@@ -114,9 +110,7 @@ def get_al_statistics_table(al_object):
     statistics_dict = statistics_df.to_dict(orient="records")
 
     columns = [
-        dict(
-            id=i, name=i, type="numeric", format=dash_table.FormatTemplate.percentage(2)
-        )
+        dict(id=i, name=i, type="numeric", format=dash_table.FormatTemplate.percentage(2))
         for i in statistics_df.columns
     ]
     return dash_table.DataTable(
@@ -126,17 +120,11 @@ def get_al_statistics_table(al_object):
     )
 
 
-def get_al_figure(
-        al_object: ok.AssetList,
-        plot_type: str,
-        inflation_on: bool,
-        rolling_window: int,
-        log_scale: bool
-):
+def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, rolling_window: int, log_scale: bool):
     titles = {
         "wealth": "Assets Wealth indexes",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
-        "real_cagr": f"Rolling real CAGR (window={rolling_window} years)"
+        "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
     }
 
     # Select Plot Type

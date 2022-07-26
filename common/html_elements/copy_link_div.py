@@ -2,9 +2,7 @@ import dash_bootstrap_components as dbc
 from dash import html, dcc
 
 
-def create_copy_link_div(
-    location_id: str, hidden_div_with_url_id: str, button_id: str, card_name: str
-):
+def create_copy_link_div(location_id: str, hidden_div_with_url_id: str, button_id: str, card_name: str):
     div = html.Div(
         [
             # the URL bar, doesn't render anything
