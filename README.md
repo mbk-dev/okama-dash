@@ -10,6 +10,7 @@ This repository has a set of interactive financial widgets (multi-page web appli
 - Compare assets historical performance: wealth indexes, rate of return and risk-metrics
 
 _okama package_ is used for quantitative finance and historical data. 
+Running financial widgets example is available in [okama.io](https://okama.io).
 
 ![](../images/images/main_page.jpg?raw=true) 
 ## Historical data
