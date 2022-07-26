@@ -18,6 +18,7 @@ from pages.compare.cards_compare.asset_list_controls import card_controls
 from pages.compare.cards_compare.assets_info import card_assets_info
 from pages.compare.cards_compare.statistics_table import card_table
 from pages.compare.cards_compare.wealth_indexes_chart import card_graf_compare
+import pages.compare.crisis.crisis_data as cr
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -172,20 +173,17 @@ def get_al_figure(
             )
         )
     # Plot Financial crisis historical data (sample)
-    crisis_first_date = pd.to_datetime("2007-10", format="%Y-%m")
-    crisis_last_date = pd.to_datetime("2009-09", format="%Y-%m")
-    if (chart_first_date < crisis_first_date) and (
-        chart_last_date > crisis_last_date
-    ):
-        fig.add_vrect(
-            x0=crisis_first_date.strftime(format="%Y-%m"),
-            x1=crisis_last_date.strftime(format="%Y-%m"),
-            annotation_text="US Housing Bubble",
-            annotation_position="top left",
-            fillcolor="red",
-            opacity=0.25,
-            line_width=0,
-        )
+    for crisis in cr.crisis_list:
+        if (chart_first_date < crisis.first_date_dt) and (chart_last_date > crisis.last_date_dt):
+            fig.add_vrect(
+                x0=crisis.first_date,
+                x1=crisis.last_date,
+                annotation_text=crisis.name,
+                annotation=dict(align="left", valign="top", textangle=-90),
+                fillcolor="red",
+                opacity=0.25,
+                line_width=0,
+            )
     # Plot x-axis slider
     fig.update_xaxes(rangeslider_visible=True)
     fig.update_layout(
