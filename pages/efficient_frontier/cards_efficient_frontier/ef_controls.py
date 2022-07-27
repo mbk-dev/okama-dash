@@ -194,7 +194,7 @@ def card_controls(
                                 ),
                             ]
                         ),
-                        dbc.Row(html.H5(children="Monte-Carlo Simulation")),
+                        dbc.Row(html.H5(children="Monte Carlo Simulation")),
                         dbc.Row(
                             [
                                 # html.Hr(),
