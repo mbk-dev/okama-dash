@@ -60,10 +60,11 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     # Options
     State(component_id="rate-of-return-options", component_property="value"),
     State(component_id="cml-option", component_property="value"),
-    State(component_id="risk-free-rate-option", component_property="value")
+    State(component_id="risk-free-rate-option", component_property="value"),
+    # Monte-Carlo
+    State(component_id="monte-carlo-option", component_property="value"),
     # Input(component_id="ef-return-type-checklist-input", component_property="value"),
 )
-# @cache.memoize(timeout=86400)
 def update_ef_cards(
     screen,
     n_clicks,
@@ -76,6 +77,7 @@ def update_ef_cards(
     ror_option: str,
     cml_option: str,
     rf_rate: float,
+    n_monte_carlo: int,
 ):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     ef_object = ok.EfficientFrontier(
@@ -87,7 +89,7 @@ def update_ef_cards(
         n_points=40,
         full_frontier=True,
     )
-    ef_options = dict(ror=ror_option, cml=cml_option, rf_rate=rf_rate)
+    ef_options = dict(ror=ror_option, cml=cml_option, rf_rate=rf_rate, n_monte_carlo=n_monte_carlo)
     fig = make_ef_figure(ef_object, ef_options)
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
@@ -158,6 +160,18 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
             name="Assets",
         )
     )
+    # Monte-Carlo simulation
+    if ef_options["n_monte_carlo"]:
+        kind = "mean" if ef_options["ror"] == "Arithmetic" else "cagr"
+        df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"], kind=kind) * 100
+        fig.add_trace(
+            go.Scatter(
+                x=df["Risk"],
+                y=df["Return"] if ef_options["ror"] == "Arithmetic" else df["CAGR"],
+                mode="markers",
+                name=f"Monte-Carlo Simulation",
+            )
+        )
     # X and Y titles
     fig.update_layout(
         height=800,

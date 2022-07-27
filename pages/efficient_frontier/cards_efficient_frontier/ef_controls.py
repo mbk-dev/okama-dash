@@ -13,11 +13,7 @@ from common.create_link import create_link
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.symbols import get_symbols
 from common import cache
-from pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt import (
-    ef_options_tooltip_ror,
-    ef_options_tooltip_cml,
-    ef_options_tooltip_rf_rate,
-)
+import pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt as tl
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -128,7 +124,7 @@ def card_controls(
                                             id="rate-of-return-options",
                                         ),
                                         dbc.Tooltip(
-                                            ef_options_tooltip_ror,
+                                            tl.ef_options_tooltip_ror,
                                             target="info-ror",
                                             # className="text-start"
                                         ),
@@ -158,7 +154,7 @@ def card_controls(
                                             id="cml-option",
                                         ),
                                         dbc.Tooltip(
-                                            ef_options_tooltip_cml,
+                                            tl.ef_options_tooltip_cml,
                                             target="info-cml",
                                         ),
                                     ],
@@ -187,7 +183,7 @@ def card_controls(
                                         ),
                                         dbc.FormText("0 - 100 (Format: XX.XX)"),
                                         dbc.Tooltip(
-                                            ef_options_tooltip_rf_rate,
+                                            tl.ef_options_tooltip_rf_rate,
                                             target="info-rf-rate",
                                         ),
                                     ],
@@ -198,6 +194,44 @@ def card_controls(
                                 ),
                             ]
                         ),
+                        dbc.Row(html.H5(children="Monte-Carlo Simulation")),
+                        dbc.Row(
+                            [
+                                # html.Hr(),
+                                dbc.Label(
+                                    [
+                                        "Number of points",
+                                        html.I(
+                                            className="bi bi-info-square ms-2",
+                                            id="info-monte-carlo",
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Input(
+                                            type="number",
+                                            min=0,
+                                            max=100000,
+                                            value=0,
+                                            id="monte-carlo-option",
+                                        ),
+                                        dbc.FormFeedback("", type="valid"),
+                                        dbc.FormFeedback(
+                                            f"it should be an integer number ≤{settings.MC_MAX}", type="invalid"
+                                        ),
+                                        # dbc.FormText("≤100 000")
+                                    ],
+                                    width=6
+                                ),
+                                dbc.Tooltip(
+                                    tl.ef_options_monte_carlo,
+                                    target="info-monte-carlo",
+                                ),
+                            ],
+                            className="p-1",
+                        )
                     ]
                 ),
                 html.Div(
@@ -250,3 +284,18 @@ def optimize_search_ef(search_value, selected_values):
         if search_value
         else selected_values
     )
+
+
+@app.callback(
+    Output("monte-carlo-option", "valid"),
+    Output("monte-carlo-option", "invalid"),
+    Input("monte-carlo-option", "value"),
+)
+def check_validity_monte_carlo(number: int):
+    """
+    Check if input is an integer in range for 0 to 100K
+    """
+    if number:
+        is_correct_number = number in range(0, settings.MC_MAX) and isinstance(number, int)
+        return is_correct_number, not is_correct_number
+    return False, False
