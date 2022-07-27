@@ -293,7 +293,7 @@ def optimize_search_ef(search_value, selected_values):
 )
 def check_validity_monte_carlo(number: int):
     """
-    Check if input is an integer in range for 0 to 100K
+    Check if input is an integer in range for 0 to MC_MAX.
     """
     if number:
         is_correct_number = number in range(0, settings.MC_MAX) and isinstance(number, int)
