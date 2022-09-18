@@ -7,6 +7,7 @@ from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback, ALL, MATCH
 
 import pandas as pd
+from dash.exceptions import PreventUpdate
 
 from common import settings as settings, inflation as inflation
 from common.create_link import create_link
@@ -242,19 +243,7 @@ def update_inflation_switch(plot_options: str, inflation_switch_value):
 #     return create_link(ccy, first_date, href, last_date, tickers_list)
 
 
-# @app.callback(
-#     Output({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "options"),
-#     Input({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "search_value"),
-# )
-# def optimize_search_al(search_value):
-#     return (
-#         [o for o in options if re.match(search_value, o, re.IGNORECASE)]
-#         if search_value
-#         else []
-#     )
-
-
-# ----------------------- Portfolio Specific Callbacks -------------------------------------------
+# ----------------------- Pattern Matching Callbacks -------------------------------------------
 @app.callback(
     Output('dynamic-container', 'children'),
     Input('dynamic-add-filter', 'n_clicks'),
@@ -263,11 +252,11 @@ def display_dropdowns(n_clicks, children):
     new_row = dbc.Row([
         dbc.Col(
             dcc.Dropdown(
-                options=options,
                 id={
                     'type': 'pf-dynamic-dropdown',
                     'index': n_clicks
-                }
+                },
+                placeholder="Select an assets",
             ),
         ),
         dbc.Col(
@@ -275,7 +264,8 @@ def display_dropdowns(n_clicks, children):
                 id={
                     'type': 'pf-dynamic-input',
                     'index': n_clicks
-                }
+                },
+                placeholder="Input a weight",
             )
         )
 
@@ -283,6 +273,15 @@ def display_dropdowns(n_clicks, children):
     children.append(new_row)
     return children
 
+
+@app.callback(
+    Output({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "options"),
+    Input({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "search_value"),
+)
+def optimize_search_al(search_value):
+    if not search_value:
+        raise PreventUpdate
+    return [o for o in options if re.match(search_value, o, re.IGNORECASE)]
 
 # @app.callback(
 #     Output('dynamic-output', 'children'),
