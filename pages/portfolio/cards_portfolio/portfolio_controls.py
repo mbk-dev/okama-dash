@@ -33,7 +33,7 @@ def card_controls(
     last_date: Optional[str],
     ccy: Optional[str],
 ):
-    tickers_list = get_tickers_list(tickers)
+    # tickers_list = get_tickers_list(tickers)
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -41,7 +41,7 @@ def card_controls(
                 html.Div(
                     [
                         html.Label("Tickers & Weights"),
-                        html.Div(id='dynamic-container'),
+                        html.Div(id='dynamic-container', children=[]),
                         dbc.Button("Add Asset", id="dynamic-add-filter", n_clicks=0),
                     ],
                 ),
