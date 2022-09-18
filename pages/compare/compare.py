@@ -58,7 +58,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     # user screen info
     Input(component_id="store", component_property="data"),
     # main Inputs
-    Input(component_id="al-submit-button", component_property="n_clicks"),  # n_clicks
+    Input(component_id="al-submit-button", component_property="n_clicks"),
     State(component_id="al-symbols-list", component_property="value"),
     State(component_id="al-base-currency", component_property="value"),
     State(component_id="al-first-date", component_property="value"),
