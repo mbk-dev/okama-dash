@@ -5,9 +5,13 @@ from dash import html, dcc
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
+import plotly.io as pio
+
 import navigation
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
+
+pio.templates.default = "plotly_white"
 
 app = dash.Dash(
     __name__,
@@ -24,7 +28,6 @@ app.layout = html.Div(
         dash.page_container,
     ]
 )
-
 
 app.clientside_callback(
     """
