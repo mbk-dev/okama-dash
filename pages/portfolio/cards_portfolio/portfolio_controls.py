@@ -274,6 +274,7 @@ def display_dropdowns(n_clicks, children):
                     'index': n_clicks
                 },
                 placeholder="Type a weight",
+                type='number', min=0, max=100
             )
         )
 
@@ -294,21 +295,28 @@ def optimize_search_al(search_value):
 
 @app.callback(
     Output('pf-portfolio-weights-sum', 'children'),
-    Output('pf-submit-button', 'disabled'),
     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
 )
-def calculate_weights_sum(values):
+def print_weights_sum(values):
     weights_sum = sum(float(x) for x in values if x)
     weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
     return f"Total: {weights_sum}", weights_sum_is_not_100
 
 
-# @app.callback(
-#     Output('weights-list', 'children'),
-#     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
-# )
-# def get_weights_list(values):
-#     return values
+@app.callback(
+    Output('pf-submit-button', 'disabled'),
+    Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),
+    Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
+)
+def enable_submit_button(tickers_list, weights_list):
+    tickers_list = [i for i in tickers_list if i is not None]
+    weights_list = [i for i in weights_list if i is not None]
+
+    weights_sum = sum(float(x) for x in weights_list if x)
+    weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
+
+    weights_and_tickers_has_different_length = len(tickers_list) != len(weights_list)
+    return weights_sum_is_not_100 or weights_and_tickers_has_different_length
 
 
 # @app.callback(
