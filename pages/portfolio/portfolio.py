@@ -36,8 +36,8 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls(tickers, first_date, last_date, ccy), lg=7),
-                    dbc.Col(card_assets_info, lg=5),
+                    dbc.Col(card_controls(tickers, first_date, last_date, ccy), lg=5),
+                    dbc.Col(card_assets_info, lg=7),
                 ]
             ),
             dbc.Row(dbc.Col(card_graf_portfolio, width=12), align="center"),

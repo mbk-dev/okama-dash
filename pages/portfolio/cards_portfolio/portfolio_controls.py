@@ -3,6 +3,7 @@ from typing import Optional
 
 import dash
 import dash_bootstrap_components as dbc
+import numpy as np
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback, ALL, MATCH
 
@@ -41,9 +42,16 @@ def card_controls(
                 html.H5("Investment Portfolio", className="card-title"),
                 html.Div(
                     [
-                        html.Label("Tickers & Weights"),
+                        dbc.Row([
+                           dbc.Col(html.Label("Tickers")),
+                           dbc.Col(html.Label("Weights"))
+                        ]),
                         html.Div(id='dynamic-container', children=[]),
-                        dbc.Button("Add Asset", id="dynamic-add-filter", n_clicks=0),
+                        dbc.Row([
+                            dbc.Col(dbc.Button("Add Asset", id="dynamic-add-filter", n_clicks=0)),
+                            dbc.Col(html.Div(id="pf-portfolio-weights-sum"))
+                        ]),
+
                     ],
                 ),
                 html.Div(
@@ -189,7 +197,7 @@ def card_controls(
                 html.Div(
                     [
                         dbc.Button(
-                            children="Calculate",
+                            children="Submit",
                             id="pf-submit-button",
                             n_clicks=0,
                             color="primary",
@@ -256,7 +264,7 @@ def display_dropdowns(n_clicks, children):
                     'type': 'pf-dynamic-dropdown',
                     'index': n_clicks
                 },
-                placeholder="Select an assets",
+                placeholder="Type a ticker",
             ),
         ),
         dbc.Col(
@@ -265,7 +273,7 @@ def display_dropdowns(n_clicks, children):
                     'type': 'pf-dynamic-input',
                     'index': n_clicks
                 },
-                placeholder="Input a weight",
+                placeholder="Type a weight",
             )
         )
 
@@ -283,22 +291,26 @@ def optimize_search_al(search_value):
         raise PreventUpdate
     return [o for o in options if re.match(search_value, o, re.IGNORECASE)]
 
-# @app.callback(
-#     Output('dynamic-output', 'children'),
-#     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
-# )
-# def calculate_weights_sum(values):
-#     return sum(float(x) for x in values if x)
-#
-#
+
+@app.callback(
+    Output('pf-portfolio-weights-sum', 'children'),
+    Output('pf-submit-button', 'disabled'),
+    Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
+)
+def calculate_weights_sum(values):
+    weights_sum = sum(float(x) for x in values if x)
+    weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
+    return f"Total: {weights_sum}", weights_sum_is_not_100
+
+
 # @app.callback(
 #     Output('weights-list', 'children'),
 #     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
 # )
 # def get_weights_list(values):
 #     return values
-#
-#
+
+
 # @app.callback(
 #     Output('assets-list', 'children'),
 #     Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),
