@@ -18,7 +18,7 @@ def get_assets_names(al_object: okama.AssetList) -> dash_table.DataTable:
             "whiteSpace": "normal",
             "height": "auto",
         },
-        page_size=4,
+        # page_size=4,
     )
 
 

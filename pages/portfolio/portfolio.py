@@ -8,11 +8,9 @@ import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.graph_objects as go
 
-import pandas as pd
 import okama as ok
 
 import common.settings as settings
-from common.html_elements.info_dash_table import get_assets_names, get_info
 from common.mobile_screens import adopt_small_screens
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
 from pages.portfolio.cards_portfolio.portfolio_info import card_assets_info
@@ -52,8 +50,6 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
 @callback(
     Output(component_id="pf-wealth-indexes", component_property="figure"),
     Output(component_id="pf-wealth-indexes", component_property="config"),
-    Output(component_id="pf-compare-info", component_property="children"),
-    Output(component_id="pf-assets-names", component_property="children"),
     Output(component_id="pf-describe-table", component_property="children"),
     # user screen info
     Input(component_id="store", component_property="data"),
@@ -62,6 +58,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),  # tickers
     State({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),  # weights
     State(component_id="pf-base-currency", component_property="value"),
+    State(component_id="pf-rebalancing-period", component_property="value"),
     State(component_id="pf-first-date", component_property="value"),
     State(component_id="pf-last-date", component_property="value"),
     # Options
@@ -78,6 +75,7 @@ def update_graf_portfolio(
     assets: list,
     weights: list,
     ccy: str,
+    rebalancing_period: str,
     fd_value: str,
     ld_value: str,
     # Options
@@ -90,24 +88,27 @@ def update_graf_portfolio(
     assets = [i for i in assets if i is not None]
     weights = [i / 100. for i in weights if i is not None]
     # symbols = assets if isinstance(assets, list) else [assets]
-    al_object = ok.Portfolio(
+    pf_object = ok.Portfolio(
         assets=assets,
         weights=weights,
         first_date=fd_value,
         last_date=ld_value,
         ccy=ccy,
+        rebalancing_period=rebalancing_period,
         inflation=inflation_on,
         symbol="PORTFOLIO.PF"
     )
-    fig = get_pf_figure(al_object, plot_type, inflation_on, rolling_window, log_on)
+    fig = get_pf_figure(pf_object, plot_type, inflation_on, rolling_window, log_on)
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
-    # AL Info
-    info_table = get_info(al_object)
-    names_table = get_assets_names(al_object)
-    # AL statistics
-    statistics_dash_table = get_pf_statistics_table(al_object)
-    return fig, config, info_table, names_table, statistics_dash_table
+    # PF statistics
+    statistics_dash_table = get_pf_statistics_table(pf_object)
+    return (fig,
+            config,
+            # info_table,
+            # names_table,
+            statistics_dash_table
+            )
 
 
 def get_pf_statistics_table(al_object):
@@ -127,7 +128,7 @@ def get_pf_statistics_table(al_object):
     )
 
 
-def get_pf_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, rolling_window: int, log_scale: bool):
+def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, rolling_window: int, log_scale: bool):
     titles = {
         "wealth": "Portfolio Wealth index",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
@@ -136,10 +137,10 @@ def get_pf_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
 
     # Select Plot Type
     if plot_type == "wealth":
-        df = al_object.wealth_index_with_assets
+        df = pf_object.wealth_index_with_assets
     else:
         real = False if plot_type == "cagr" else True
-        df = al_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
+        df = pf_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
     ind = df.index.to_timestamp("D")
     chart_first_date = ind[0]
     chart_last_date = ind[-1]

@@ -16,10 +16,11 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import get_tickers_list
 from common.symbols import get_symbols
 from common import cache
-from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
-    al_options_tooltip_inflation,
-    al_options_tooltip_cagr,
-    al_options_window,
+from pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt import (
+    pf_options_tooltip_inflation,
+    pf_options_tooltip_cagr,
+    pf_options_window,
+    pf_rebalancing_period
 )
 
 app = dash.get_app()
@@ -54,17 +55,49 @@ def card_controls(
 
                     ],
                 ),
-                html.Div(
+                dbc.Row(
                     [
-                        html.Label("Base currency"),
-                        dcc.Dropdown(
-                            options=inflation.get_currency_list(),
-                            value=ccy if ccy else "USD",
-                            multi=False,
-                            placeholder="Select a base currency",
-                            id="pf-base-currency",
+                        dbc.Col(
+                            [
+                                html.Label("Base currency"),
+                                dcc.Dropdown(
+                                    options=inflation.get_currency_list(),
+                                    value=ccy if ccy else "USD",
+                                    multi=False,
+                                    placeholder="Select a base currency",
+                                    id="pf-base-currency",
+                                ),
+                            ],
                         ),
-                    ],
+                        dbc.Col(
+                            [
+                                html.Label(
+                                           [
+                                               "Rebalancing period",
+                                               html.I(
+                                                   className="bi bi-info-square ms-2",
+                                                   id="pf-info-rebalancing",
+                                               ),
+                                           ]
+                                           ),
+                                dcc.Dropdown(
+                                    options=[
+                                                  {"label": "Monthly", "value": "month"},
+                                                  {"label": "Every year", "value": "year"},
+                                                  {"label": "Not rebalanced", "value": "none"},
+                                              ],
+                                    value='month',
+                                    multi=False,
+                                    placeholder="Select a rebalancing period",
+                                    id="pf-rebalancing-period",
+                                ),
+                                dbc.Tooltip(
+                                    pf_rebalancing_period,
+                                    target="pf-info-rebalancing",
+                                ),
+                            ],
+                        ),
+                    ]
                 ),
                 html.Div(
                     [
@@ -94,15 +127,15 @@ def card_controls(
                                 ),
                             ]
                         ),
-                        dbc.Row(
-                            # copy link to clipboard button
-                            create_copy_link_div(
-                                location_id="pf-url",
-                                hidden_div_with_url_id="pf-show-url",
-                                button_id="pf-copy-link-button",
-                                card_name="asset list",
-                            ),
-                        ),
+                        # dbc.Row(
+                        #     # copy link to clipboard button
+                        #     create_copy_link_div(
+                        #         location_id="pf-url",
+                        #         hidden_div_with_url_id="pf-show-url",
+                        #         button_id="pf-copy-link-button",
+                        #         card_name="asset list",
+                        #     ),
+                        # ),
                         dbc.Row(html.H5(children="Options")),
                         dbc.Row(
                             [
@@ -127,7 +160,7 @@ def card_controls(
                                             id="pf-plot-option",
                                         ),
                                         dbc.Tooltip(
-                                            al_options_tooltip_cagr,
+                                            pf_options_tooltip_cagr,
                                             target="pf-info-plot",
                                         ),
                                     ],
@@ -153,7 +186,7 @@ def card_controls(
                                             id="pf-inflation-switch",
                                         ),
                                         dbc.Tooltip(
-                                            al_options_tooltip_inflation,
+                                            pf_options_tooltip_inflation,
                                             target="pf-info-inflation",
                                         ),
                                     ],
@@ -181,7 +214,7 @@ def card_controls(
                                         ),
                                         dbc.FormText("Format: number of years (≥ 1)"),
                                         dbc.Tooltip(
-                                            al_options_window,
+                                            pf_options_window,
                                             target="pf-info-rolling",
                                         ),
                                     ],
@@ -298,7 +331,7 @@ def optimize_search_al(search_value):
     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
 )
 def print_weights_sum(values):
-    weights_sum = sum(float(x) for x in values if x)
+    weights_sum = sum(x for x in values if x)
     weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
     return f"Total: {weights_sum}", weights_sum_is_not_100
 
