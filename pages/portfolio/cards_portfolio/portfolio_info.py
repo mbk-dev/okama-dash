@@ -44,7 +44,7 @@ card_assets_info = dbc.Card(
 def generate_chart(tickers, weights, screen):
     weights_sum = sum(x for x in weights if x)
     if np.around(weights_sum, decimals=3) < 100:
-        not_allocated_weight = 100 - weights_sum if 100 - weights_sum > 0 else 0
+        not_allocated_weight = 100 - weights_sum if weights_sum < 100 else 0
         weights.append(not_allocated_weight)
         tickers.append("Not Allocated")
     elif np.around(weights_sum, decimals=3) > 100:
