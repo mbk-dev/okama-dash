@@ -3,7 +3,7 @@ from dash import html, dcc
 
 
 def create_copy_link_div(location_id: str, hidden_div_with_url_id: str, button_id: str, card_name: str):
-    div = html.Div(
+    return html.Div(
         [
             # the URL bar, doesn't render anything
             dcc.Location(id=location_id, refresh=False),
@@ -26,7 +26,9 @@ def create_copy_link_div(location_id: str, hidden_div_with_url_id: str, button_i
                         outline=False,
                     ),
                     # hidden div to receive output from callback with url
-                    html.Div(children="", hidden=True, id=hidden_div_with_url_id),
+                    html.Div(
+                        children="", hidden=True, id=hidden_div_with_url_id
+                    ),
                     dbc.Tooltip(
                         f"Copy {card_name} link to clipboard",
                         target=button_id,
@@ -36,4 +38,3 @@ def create_copy_link_div(location_id: str, hidden_div_with_url_id: str, button_i
             ),
         ]
     )
-    return div

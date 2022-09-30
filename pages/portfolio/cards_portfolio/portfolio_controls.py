@@ -36,23 +36,33 @@ def card_controls(
     last_date: Optional[str],
     ccy: Optional[str],
 ):
-    # tickers_list = get_tickers_list(tickers)
-    card = dbc.Card(
+    return dbc.Card(
         dbc.CardBody(
             [
                 html.H5("Investment Portfolio", className="card-title"),
                 html.Div(
                     [
-                        dbc.Row([
-                           dbc.Col(html.Label("Tickers")),
-                           dbc.Col(html.Label("Weights"))
-                        ]),
+                        dbc.Row(
+                            [
+                                dbc.Col(html.Label("Tickers")),
+                                dbc.Col(html.Label("Weights")),
+                            ]
+                        ),
                         html.Div(id='dynamic-container', children=[]),
-                        dbc.Row([
-                            dbc.Col(dbc.Button("Add Asset", id="dynamic-add-filter", n_clicks=0)),
-                            dbc.Col(html.Div(id="pf-portfolio-weights-sum"))
-                        ]),
-
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Button(
+                                        "Add Asset",
+                                        id="dynamic-add-filter",
+                                        n_clicks=0,
+                                    )
+                                ),
+                                dbc.Col(
+                                    html.Div(id="pf-portfolio-weights-sum")
+                                ),
+                            ]
+                        ),
                     ],
                 ),
                 dbc.Row(
@@ -62,30 +72,36 @@ def card_controls(
                                 html.Label("Base currency"),
                                 dcc.Dropdown(
                                     options=inflation.get_currency_list(),
-                                    value=ccy if ccy else "USD",
+                                    value=ccy or "USD",
                                     multi=False,
                                     placeholder="Select a base currency",
                                     id="pf-base-currency",
                                 ),
-                            ],
+                            ]
                         ),
                         dbc.Col(
                             [
                                 html.Label(
-                                           [
-                                               "Rebalancing period",
-                                               html.I(
-                                                   className="bi bi-info-square ms-2",
-                                                   id="pf-info-rebalancing",
-                                               ),
-                                           ]
-                                           ),
+                                    [
+                                        "Rebalancing period",
+                                        html.I(
+                                            className="bi bi-info-square ms-2",
+                                            id="pf-info-rebalancing",
+                                        ),
+                                    ]
+                                ),
                                 dcc.Dropdown(
                                     options=[
-                                                  {"label": "Monthly", "value": "month"},
-                                                  {"label": "Every year", "value": "year"},
-                                                  {"label": "Not rebalanced", "value": "none"},
-                                              ],
+                                        {"label": "Monthly", "value": "month"},
+                                        {
+                                            "label": "Every year",
+                                            "value": "year",
+                                        },
+                                        {
+                                            "label": "Not rebalanced",
+                                            "value": "none",
+                                        },
+                                    ],
                                     value='month',
                                     multi=False,
                                     placeholder="Select a rebalancing period",
@@ -108,7 +124,7 @@ def card_controls(
                                         html.Label("First Date"),
                                         dbc.Input(
                                             id="pf-first-date",
-                                            value=first_date if first_date else "2000-01",
+                                            value=first_date or "2000-01",
                                             type="text",
                                         ),
                                         dbc.FormText("Format: YYYY-MM"),
@@ -119,7 +135,7 @@ def card_controls(
                                         html.Label("Last Date"),
                                         dbc.Input(
                                             id="pf-last-date",
-                                            value=last_date if last_date else today_str,
+                                            value=last_date or today_str,
                                             type="text",
                                         ),
                                         dbc.FormText("Format: YYYY-MM"),
@@ -127,15 +143,6 @@ def card_controls(
                                 ),
                             ]
                         ),
-                        # dbc.Row(
-                        #     # copy link to clipboard button
-                        #     create_copy_link_div(
-                        #         location_id="pf-url",
-                        #         hidden_div_with_url_id="pf-show-url",
-                        #         button_id="pf-copy-link-button",
-                        #         card_name="asset list",
-                        #     ),
-                        # ),
                         dbc.Row(html.H5(children="Options")),
                         dbc.Row(
                             [
@@ -152,9 +159,18 @@ def card_controls(
                                         ),
                                         dbc.RadioItems(
                                             options=[
-                                                {"label": "Wealth Index", "value": "wealth"},
-                                                {"label": "Rolling Cagr", "value": "cagr"},
-                                                {"label": "Rolling Real Cagr", "value": "real_cagr"},
+                                                {
+                                                    "label": "Wealth Index",
+                                                    "value": "wealth",
+                                                },
+                                                {
+                                                    "label": "Rolling Cagr",
+                                                    "value": "cagr",
+                                                },
+                                                {
+                                                    "label": "Rolling Real Cagr",
+                                                    "value": "real_cagr",
+                                                },
                                             ],
                                             value="wealth",
                                             id="pf-plot-option",
@@ -212,7 +228,9 @@ def card_controls(
                                             value=2,
                                             id="pf-rolling-window",
                                         ),
-                                        dbc.FormText("Format: number of years (≥ 1)"),
+                                        dbc.FormText(
+                                            "Format: number of years (≥ 1)"
+                                        ),
                                         dbc.Tooltip(
                                             pf_options_window,
                                             target="pf-info-rolling",
@@ -243,7 +261,6 @@ def card_controls(
         ),
         class_name="mb-3",
     )
-    return card
 
 
 @callback(

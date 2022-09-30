@@ -47,8 +47,7 @@ def get_info(al_object) -> dash_table.DataTable:
     if len(al_object.symbols) < 2:
         # no need in "Shortest history" and "Longest history" if only one ticker
         info_list = info_list[:3]
-    info_table = dash_table.DataTable(
+    return dash_table.DataTable(
         data=info_list,
         style_data={"whiteSpace": "normal", "height": "auto"},
     )
-    return info_table

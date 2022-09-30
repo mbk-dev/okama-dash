@@ -31,11 +31,16 @@ dash.register_page(
 
 def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     tickers_list = get_tickers_list(tickers)
-    page = dbc.Container(
+    return dbc.Container(
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls(tickers_list, first_date, last_date, ccy), lg=7),
+                    dbc.Col(
+                        card_controls(
+                            tickers_list, first_date, last_date, ccy
+                        ),
+                        lg=7,
+                    ),
                     dbc.Col(card_ef_info, lg=5),
                 ]
             ),
@@ -43,20 +48,22 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
             dbc.Row(
                 html.Div(
                     [
-                        dcc.Markdown("""
+                        dcc.Markdown(
+                            """
                         **Portfolio data**  
                         Click on points to get portfolio data.
-                        """),
+                        """
+                        ),
                         html.P(id='ef-click-data-risk'),
                         html.P(id='ef-click-data-return'),
                         html.Pre(id='ef-click-data-weights'),
-                    ]),
-            )
+                    ]
+                ),
+            ),
         ],
         class_name="mt-2",
         fluid="md",
     )
-    return page
 
 
 @callback(
@@ -190,13 +197,15 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
         fig.add_trace(
             go.Scatter(
                 x=df["Risk"],
-                y=df["Return"] if ef_options["ror"] == "Arithmetic" else df["CAGR"],
-                # customdata=weights_array,
+                y=df["Return"]
+                if ef_options["ror"] == "Arithmetic"
+                else df["CAGR"],
                 hovertemplate='Risk: %{x:.2f}%<br>Return: %{y:.2}%',
                 mode="markers",
-                name=f"Monte-Carlo Simulation",
+                name="Monte-Carlo Simulation",
             )
         )
+
     # X and Y titles
     fig.update_layout(
         height=800,

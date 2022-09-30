@@ -30,11 +30,14 @@ dash.register_page(
 
 
 def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
-    page = dbc.Container(
+    return dbc.Container(
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls(tickers, first_date, last_date, ccy), lg=5),
+                    dbc.Col(
+                        card_controls(tickers, first_date, last_date, ccy),
+                        lg=5,
+                    ),
                     dbc.Col(card_assets_info, lg=7),
                 ]
             ),
@@ -44,7 +47,6 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
         class_name="mt-2",
         fluid="md",
     )
-    return page
 
 
 @callback(
@@ -139,7 +141,7 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
     if plot_type == "wealth":
         df = pf_object.wealth_index_with_assets
     else:
-        real = False if plot_type == "cagr" else True
+        real = plot_type != "cagr"
         df = pf_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
     ind = df.index.to_timestamp("D")
     chart_first_date = ind[0]
