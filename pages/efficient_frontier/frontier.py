@@ -187,10 +187,12 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
     if ef_options["n_monte_carlo"]:
         kind = "mean" if ef_options["ror"] == "Arithmetic" else "cagr"
         df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"], kind=kind) * 100
+        weights_array = np.stack([df[n] for n in df.columns[2:]], axis=-1)
         fig.add_trace(
             go.Scatter(
                 x=df["Risk"],
                 y=df["Return"] if ef_options["ror"] == "Arithmetic" else df["CAGR"],
+                customdata=weights_array,
                 # customdata=weights_array,
                 hovertemplate='Risk: %{x:.2f}%<br>Return: %{y:.2}%',
                 mode="markers",
