@@ -1,6 +1,6 @@
 dash
 dash_daq
-pandas
-okama
+dash-bootstrap-components
 plotly
-# flask_caching
+flask_caching
+okama

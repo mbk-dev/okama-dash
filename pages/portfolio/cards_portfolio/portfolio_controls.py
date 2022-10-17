@@ -3,10 +3,12 @@ from typing import Optional
 
 import dash
 import dash_bootstrap_components as dbc
+import numpy as np
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback, ALL, MATCH
 
 import pandas as pd
+from dash.exceptions import PreventUpdate
 
 from common import settings as settings, inflation as inflation
 from common.create_link import create_link
@@ -14,10 +16,11 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import get_tickers_list
 from common.symbols import get_symbols
 from common import cache
-from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
-    al_options_tooltip_inflation,
-    al_options_tooltip_cagr,
-    al_options_window,
+from pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt import (
+    pf_options_tooltip_inflation,
+    pf_options_tooltip_cagr,
+    pf_options_window,
+    pf_rebalancing_period
 )
 
 app = dash.get_app()
@@ -33,29 +36,68 @@ def card_controls(
     last_date: Optional[str],
     ccy: Optional[str],
 ):
-    tickers_list = get_tickers_list(tickers)
+    # tickers_list = get_tickers_list(tickers)
     card = dbc.Card(
         dbc.CardBody(
             [
                 html.H5("Investment Portfolio", className="card-title"),
                 html.Div(
                     [
-                        html.Label("Tickers & Weights"),
-                        html.Div(id='dynamic-container'),
-                        dbc.Button("Add Asset", id="dynamic-add-filter", n_clicks=0),
+                        dbc.Row([
+                           dbc.Col(html.Label("Tickers")),
+                           dbc.Col(html.Label("Weights"))
+                        ]),
+                        html.Div(id='dynamic-container', children=[]),
+                        dbc.Row([
+                            dbc.Col(dbc.Button("Add Asset", id="dynamic-add-filter", n_clicks=0)),
+                            dbc.Col(html.Div(id="pf-portfolio-weights-sum"))
+                        ]),
+
                     ],
                 ),
-                html.Div(
+                dbc.Row(
                     [
-                        html.Label("Base currency"),
-                        dcc.Dropdown(
-                            options=inflation.get_currency_list(),
-                            value=ccy if ccy else "USD",
-                            multi=False,
-                            placeholder="Select a base currency",
-                            id="pf-base-currency",
+                        dbc.Col(
+                            [
+                                html.Label("Base currency"),
+                                dcc.Dropdown(
+                                    options=inflation.get_currency_list(),
+                                    value=ccy if ccy else "USD",
+                                    multi=False,
+                                    placeholder="Select a base currency",
+                                    id="pf-base-currency",
+                                ),
+                            ],
                         ),
-                    ],
+                        dbc.Col(
+                            [
+                                html.Label(
+                                           [
+                                               "Rebalancing period",
+                                               html.I(
+                                                   className="bi bi-info-square ms-2",
+                                                   id="pf-info-rebalancing",
+                                               ),
+                                           ]
+                                           ),
+                                dcc.Dropdown(
+                                    options=[
+                                                  {"label": "Monthly", "value": "month"},
+                                                  {"label": "Every year", "value": "year"},
+                                                  {"label": "Not rebalanced", "value": "none"},
+                                              ],
+                                    value='month',
+                                    multi=False,
+                                    placeholder="Select a rebalancing period",
+                                    id="pf-rebalancing-period",
+                                ),
+                                dbc.Tooltip(
+                                    pf_rebalancing_period,
+                                    target="pf-info-rebalancing",
+                                ),
+                            ],
+                        ),
+                    ]
                 ),
                 html.Div(
                     [
@@ -85,15 +127,15 @@ def card_controls(
                                 ),
                             ]
                         ),
-                        dbc.Row(
-                            # copy link to clipboard button
-                            create_copy_link_div(
-                                location_id="pf-url",
-                                hidden_div_with_url_id="pf-show-url",
-                                button_id="pf-copy-link-button",
-                                card_name="asset list",
-                            ),
-                        ),
+                        # dbc.Row(
+                        #     # copy link to clipboard button
+                        #     create_copy_link_div(
+                        #         location_id="pf-url",
+                        #         hidden_div_with_url_id="pf-show-url",
+                        #         button_id="pf-copy-link-button",
+                        #         card_name="asset list",
+                        #     ),
+                        # ),
                         dbc.Row(html.H5(children="Options")),
                         dbc.Row(
                             [
@@ -118,7 +160,7 @@ def card_controls(
                                             id="pf-plot-option",
                                         ),
                                         dbc.Tooltip(
-                                            al_options_tooltip_cagr,
+                                            pf_options_tooltip_cagr,
                                             target="pf-info-plot",
                                         ),
                                     ],
@@ -144,7 +186,7 @@ def card_controls(
                                             id="pf-inflation-switch",
                                         ),
                                         dbc.Tooltip(
-                                            al_options_tooltip_inflation,
+                                            pf_options_tooltip_inflation,
                                             target="pf-info-inflation",
                                         ),
                                     ],
@@ -172,7 +214,7 @@ def card_controls(
                                         ),
                                         dbc.FormText("Format: number of years (≥ 1)"),
                                         dbc.Tooltip(
-                                            al_options_window,
+                                            pf_options_window,
                                             target="pf-info-rolling",
                                         ),
                                     ],
@@ -188,7 +230,7 @@ def card_controls(
                 html.Div(
                     [
                         dbc.Button(
-                            children="Calculate",
+                            children="Submit",
                             id="pf-submit-button",
                             n_clicks=0,
                             color="primary",
@@ -242,19 +284,7 @@ def update_inflation_switch(plot_options: str, inflation_switch_value):
 #     return create_link(ccy, first_date, href, last_date, tickers_list)
 
 
-# @app.callback(
-#     Output({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "options"),
-#     Input({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "search_value"),
-# )
-# def optimize_search_al(search_value):
-#     return (
-#         [o for o in options if re.match(search_value, o, re.IGNORECASE)]
-#         if search_value
-#         else []
-#     )
-
-
-# ----------------------- Portfolio Specific Callbacks -------------------------------------------
+# ----------------------- Pattern Matching Callbacks -------------------------------------------
 @app.callback(
     Output('dynamic-container', 'children'),
     Input('dynamic-add-filter', 'n_clicks'),
@@ -263,11 +293,11 @@ def display_dropdowns(n_clicks, children):
     new_row = dbc.Row([
         dbc.Col(
             dcc.Dropdown(
-                options=options,
                 id={
                     'type': 'pf-dynamic-dropdown',
                     'index': n_clicks
-                }
+                },
+                placeholder="Type a ticker",
             ),
         ),
         dbc.Col(
@@ -275,7 +305,9 @@ def display_dropdowns(n_clicks, children):
                 id={
                     'type': 'pf-dynamic-input',
                     'index': n_clicks
-                }
+                },
+                placeholder="Type a weight",
+                type='number', min=0, max=100
             )
         )
 
@@ -284,22 +316,42 @@ def display_dropdowns(n_clicks, children):
     return children
 
 
-# @app.callback(
-#     Output('dynamic-output', 'children'),
-#     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
-# )
-# def calculate_weights_sum(values):
-#     return sum(float(x) for x in values if x)
-#
-#
-# @app.callback(
-#     Output('weights-list', 'children'),
-#     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
-# )
-# def get_weights_list(values):
-#     return values
-#
-#
+@app.callback(
+    Output({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "options"),
+    Input({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "search_value"),
+)
+def optimize_search_al(search_value):
+    if not search_value:
+        raise PreventUpdate
+    return [o for o in options if re.match(search_value, o, re.IGNORECASE)]
+
+
+@app.callback(
+    Output('pf-portfolio-weights-sum', 'children'),
+    Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
+)
+def print_weights_sum(values):
+    weights_sum = sum(x for x in values if x)
+    weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
+    return f"Total: {weights_sum}", weights_sum_is_not_100
+
+
+@app.callback(
+    Output('pf-submit-button', 'disabled'),
+    Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),
+    Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
+)
+def enable_submit_button(tickers_list, weights_list):
+    tickers_list = [i for i in tickers_list if i is not None]
+    weights_list = [i for i in weights_list if i is not None]
+
+    weights_sum = sum(float(x) for x in weights_list if x)
+    weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
+
+    weights_and_tickers_has_different_length = len(tickers_list) != len(weights_list)
+    return weights_sum_is_not_100 or weights_and_tickers_has_different_length
+
+
 # @app.callback(
 #     Output('assets-list', 'children'),
 #     Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),

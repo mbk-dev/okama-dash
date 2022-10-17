@@ -7,7 +7,7 @@ card_table = dbc.Card(
             html.Div(
                 [
                     html.H4(children="Statistics table"),
-                    html.Div(id="pf-describe-table"),
+                    html.Div(id="pf-describe-table", children="Portfolio statistics is shown after submitting data."),
                 ]
             )
         ]

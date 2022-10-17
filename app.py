@@ -1,120 +1,49 @@
 import warnings
 
 import dash
-from dash import html, dash_table
-from dash.dependencies import Input, Output, State
+from dash import html, dcc
 import dash_bootstrap_components as dbc
+from dash.dependencies import Input, Output, State
 
-import plotly.express as px
-import plotly.graph_objects as go
+import plotly.io as pio
 
-import pandas as pd
-import okama as ok
+import navigation
 
-from cards.asset_list_controls import card_controls
-from cards.statistics_table import card_table
-from cards.wealth_indexes_chart import card_graf
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
-warnings.simplefilter(action='ignore', category=FutureWarning)
+pio.templates.default = "plotly_white"
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(
+    __name__,
+    use_pages=True,
+    update_title="Loading okama ...",
+    external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP],
+)
 server = app.server
 
-card_assets_info = dbc.Card(
-    dbc.CardBody(
-        [
-            html.Div("Assets description will be here...")
-        ]
-    ),
-    class_name="mb-3",
-    )
-
-app.layout = dbc.Container(
+app.layout = html.Div(
     [
-        html.H1("Compare Assets"),
-        html.Hr(),
-
-        dbc.Row(
-            [
-                dbc.Col(card_controls, width=8),
-                dbc.Col(card_assets_info, width=4),
-            ]
-        ),
-        dbc.Row(
-            dbc.Col(card_graf, md=12),
-            align="center"
-        ),
-        dbc.Row(
-            dbc.Col(card_table, md=12),
-            align="center"),
-    ],
-    # fluid=True,
-)
-
-
-@app.callback(
-    Output(component_id='wealth-indexes', component_property='figure'),
-    Output(component_id='describe-table', component_property='children'),
-    Input(component_id='submit-button-state', component_property='n_clicks'),
-    State(component_id='symbols-list', component_property='value'),
-    State(component_id='base-currency', component_property='value'),
-    State(component_id='first-date', component_property='value'),
-    State(component_id='last-date', component_property='value'),
-    Input(component_id='logarithmic-scale-switch', component_property='on'),
-)
-def update_graf(n_clicks, selected_symbols: list, ccy: str, fd_value: str, ld_value: str, on: bool):
-    symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
-    al = ok.AssetList(symbols, first_date=fd_value, last_date=ld_value, ccy=ccy, inflation=True)
-    df = al.wealth_indexes
-    ind = df.index.to_timestamp('D')
-    table = al.describe().iloc[:-4, :]  # there is a problem with dates '2020-08' in the last 4 rows
-    columns = [
-        dict(id=i, name=i, type='numeric', format=dash_table.FormatTemplate.percentage(2))
-        for i in table.columns
+        dcc.Store(id="store"),
+        navigation.navbar,
+        dash.page_container,
     ]
-    fig = px.line(df, x=ind, y=df.columns[:-1],
-                  log_y=on,
-                  title='Assets Wealth indexes',
-                  # width=800,
-                  height=800
-                  )
-    # Plot Inflation
-    fig.add_trace(go.Scatter(x=ind, y=df.iloc[:, -1],
-                             mode="none",
-                             fill="tozeroy",
-                             fillcolor="rgba(226,150,65,0.5)",
-                             name="Inflation")
-                  )
-    # Plot Financial crisis historical data (sample)
-    crisis_first_date = pd.to_datetime('2007-10', format='%Y-%m')
-    crisis_last_date = pd.to_datetime('2009-09', format='%Y-%m')
-    if (al.first_date < crisis_first_date) and (al.last_date > crisis_last_date):
-        fig.add_vrect(x0=crisis_first_date.strftime(format='%Y-%m'), x1=crisis_last_date.strftime(format='%Y-%m'),
-                      annotation_text="US Housing Bubble",
-                      annotation_position="top left",
-                      fillcolor="red",
-                      opacity=0.25,
-                      line_width=0)
+)
 
-    # Plot x-axis slider
-    fig.update_xaxes(rangeslider_visible=True)
-    fig.update_layout(
-        xaxis_title="Date",
-        legend_title="Assets",
-        # font=dict(
-        #     family="Courier New, monospace",
-        #     size=18,
-        #     color="RebeccaPurple"
-        # )
-    )
+app.clientside_callback(
+    """
+    function(trigger) {
+        //  can use any prop to trigger this callback - we just want to store the info on startup
+        const inner_width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+        const inner_height = window.innerHeight|| document.documentElement.clientHeight|| document.body.clientHeight;
+        const screenInfo = {height :screen.height, width: screen.width, in_width: inner_width, in_height: inner_height};
 
-    table = dash_table.DataTable(
-        data=table.to_dict(orient='records'),
-        columns=columns,
-        # page_size=4
-    )
-    return fig, table
+        return screenInfo
+    }
+    """,
+    Output("store", "data"),
+    Input("store", "data"),
+)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run_server(debug=True, port=8050)
