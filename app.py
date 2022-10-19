@@ -7,7 +7,7 @@ from dash.dependencies import Input, Output, State
 
 import plotly.io as pio
 
-import navigation
+import navigation, footer
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -26,6 +26,7 @@ app.layout = html.Div(
         dcc.Store(id="store"),
         navigation.navbar,
         dash.page_container,
+        footer.footer()
     ]
 )
 
