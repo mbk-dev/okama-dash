@@ -118,6 +118,7 @@ def card_controls(
                                                 {"label": "Wealth Index", "value": "wealth"},
                                                 {"label": "Rolling Cagr", "value": "cagr"},
                                                 {"label": "Rolling Real Cagr", "value": "real_cagr"},
+                                                {"label": "Correlation matrix", "value": "correlation"}
                                             ],
                                             value="wealth",
                                             id="al-plot-option",
@@ -214,7 +215,7 @@ def card_controls(
     Input(component_id="al-plot-option", component_property="value"),
 )
 def update_rolling_input(plot_options: str):
-    return plot_options == "wealth"
+    return plot_options in ("wealth", "correlation")
 
 
 @callback(
@@ -258,3 +259,12 @@ def optimize_search_al(search_value, selected_values):
         if search_value
         else selected_values
     )
+
+
+@app.callback(
+    Output("al-logarithmic-scale-switch-div", "hidden"),
+    Input(component_id="al-submit-button", component_property="n_clicks"),
+    State(component_id="al-plot-option", component_property="value"),
+)
+def show_log_scale_switch(n_clicks, plot_type: str):
+    return False if plot_type in ("wealth", "cagr", "real_cagr") else True

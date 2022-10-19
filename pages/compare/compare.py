@@ -93,7 +93,14 @@ def update_graf_compare(
         inflation=inflation_on,
     )
     fig = get_al_figure(al_object, plot_type, inflation_on, rolling_window, log_on)
-    # Change layout for mobile screens
+    if plot_type == "correlation":
+        fig.update(layout_showlegend=False)
+        fig.update(layout_coloraxis_showscale=False)
+    elif plot_type == "wealth":
+        fig.update_yaxes(title_text="Wealth Index")
+    else:
+        fig.update_yaxes(title_text="CAGR")
+    # Change layout for mobile screens (except correlation matrix)
     fig, config = adopt_small_screens(fig, screen)
     # AL Info
     info_table = get_info(al_object)
@@ -125,14 +132,21 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
         "wealth": "Assets Wealth indexes",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
         "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
+        "correlation": "Correlation Matrix"
     }
 
     # Select Plot Type
     if plot_type == "wealth":
         df = al_object.wealth_indexes
-    else:
+    elif plot_type in ("cagr", "real_cagr"):
         real = False if plot_type == "cagr" else True
         df = al_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
+    elif plot_type == "correlation":
+        matrix = al_object.assets_ror.corr()
+        matrix = matrix.applymap('{:,.2f}'.format)
+        fig = px.imshow(matrix, text_auto=True, aspect="equal", labels=dict(x="", y="", color=""))
+        return fig
+
     ind = df.index.to_timestamp("D")
     chart_first_date = ind[0]
     chart_last_date = ind[-1]
