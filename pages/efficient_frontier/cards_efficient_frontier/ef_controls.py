@@ -299,3 +299,15 @@ def check_validity_monte_carlo(number: int):
         is_correct_number = number in range(0, settings.MC_MAX) and isinstance(number, int)
         return is_correct_number, not is_correct_number
     return False, False
+
+
+@app.callback(
+    Output("ef-symbols-list", "disabled"),
+    Input("ef-symbols-list", "value"),
+)
+def disable_search(tickers_list) -> bool:
+    """
+    Disable asset search form if the number of ticker exceeds allowed in settings.
+    """
+    return len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
+

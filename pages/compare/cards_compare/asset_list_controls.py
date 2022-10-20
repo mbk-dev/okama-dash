@@ -268,3 +268,14 @@ def optimize_search_al(search_value, selected_values):
 )
 def show_log_scale_switch(n_clicks, plot_type: str):
     return False if plot_type in ("wealth", "cagr", "real_cagr") else True
+
+
+@app.callback(
+    Output("al-symbols-list", "disabled"),
+    Input("al-symbols-list", "value"),
+)
+def disable_search(tickers_list) -> bool:
+    """
+    Disable asset search form if the number of ticker exceeds allowed in settings.
+    """
+    return len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
