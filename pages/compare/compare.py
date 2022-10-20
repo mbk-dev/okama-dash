@@ -69,6 +69,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="al-rolling-window", component_property="value"),
     # Logarithmic scale button
     Input(component_id="logarithmic-scale-switch", component_property="on"),
+    prevent_initial_call=False,
 )
 def update_graf_compare(
     screen,

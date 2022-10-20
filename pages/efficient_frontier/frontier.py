@@ -79,6 +79,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     # Monte-Carlo
     State(component_id="monte-carlo-option", component_property="value"),
     # Input(component_id="ef-return-type-checklist-input", component_property="value"),
+    prevent_initial_call=False,
 )
 def update_ef_cards(
     screen,
