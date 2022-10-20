@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+from typing import Optional, Tuple
 
 import dash
 import dash_bootstrap_components as dbc
@@ -250,7 +250,7 @@ def card_controls(
     Output(component_id="pf-rolling-window", component_property="disabled"),
     Input(component_id="pf-plot-option", component_property="value"),
 )
-def update_rolling_input(plot_options: str):
+def update_rolling_input(plot_options: str) -> bool:
     return plot_options == "wealth"
 
 
@@ -260,7 +260,7 @@ def update_rolling_input(plot_options: str):
     Input(component_id="pf-plot-option", component_property="value"),
     State(component_id="pf-inflation-switch", component_property="value"),
 )
-def update_inflation_switch(plot_options: str, inflation_switch_value):
+def update_inflation_switch(plot_options: str, inflation_switch_value) -> Tuple[bool, bool]:
     """
     Change inflation-switch value and disabled state.
 
@@ -320,7 +320,7 @@ def display_dropdowns(n_clicks, children):
     Output({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "options"),
     Input({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "search_value"),
 )
-def optimize_search_al(search_value):
+def optimize_search_al(search_value) -> list:
     if not search_value:
         raise PreventUpdate
     return [o for o in options if re.match(search_value, o, re.IGNORECASE)]
@@ -330,7 +330,7 @@ def optimize_search_al(search_value):
     Output('pf-portfolio-weights-sum', 'children'),
     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
 )
-def print_weights_sum(values):
+def print_weights_sum(values) -> Tuple[str, bool]:
     weights_sum = sum(x for x in values if x)
     weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
     return f"Total: {weights_sum}", weights_sum_is_not_100
@@ -338,23 +338,31 @@ def print_weights_sum(values):
 
 @app.callback(
     Output('pf-submit-button', 'disabled'),
+    Output("dynamic-add-filter", "disabled"),
     Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),
     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
 )
-def enable_submit_button(tickers_list, weights_list):
+def disable_submit_add_buttons(tickers_list, weights_list) -> Tuple[bool, bool]:
+    """
+    Disable "Add Asset" and "Submit" buttons.
+    disable "Add Asset" conditions:
+    - weights and assets forms are not empty (don't have None)
+    - number of tickers are more than allowed (in settings)
+
+    disable "Submit" conditions:
+    - sum of weights is not 100
+    - number of weights is not equal to the number of assets
+    """
+    add_condition1 = None in tickers_list or None in weights_list
+    add_condition2 = len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
+    add_result = add_condition1 or add_condition2
+
     tickers_list = [i for i in tickers_list if i is not None]
     weights_list = [i for i in weights_list if i is not None]
 
     weights_sum = sum(float(x) for x in weights_list if x)
     weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
 
-    weights_and_tickers_has_different_length = len(tickers_list) != len(weights_list)
-    return weights_sum_is_not_100 or weights_and_tickers_has_different_length
-
-
-# @app.callback(
-#     Output('assets-list', 'children'),
-#     Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),
-# )
-# def get_assets_list(values):
-#     return values
+    weights_and_tickers_has_different_length = len(set(tickers_list)) != len(weights_list)
+    submit_result = weights_sum_is_not_100 or weights_and_tickers_has_different_length
+    return submit_result, add_result
