@@ -99,6 +99,10 @@ def update_graf_portfolio(
         symbol="PORTFOLIO.PF"
     )
     fig = get_pf_figure(pf_object, plot_type, inflation_on, rolling_window, log_on)
+    if plot_type == "wealth":
+        fig.update_yaxes(title_text="Wealth Indexes")
+    else:
+        fig.update_yaxes(title_text="CAGR")
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
     # PF statistics
@@ -112,7 +116,7 @@ def update_graf_portfolio(
 
 
 def get_pf_statistics_table(al_object):
-    statistics_df = al_object.describe().iloc[:-4, :]
+    statistics_df = al_object.describe().iloc[:-1, :]
     # statistics_df = al_object.describe()
     # statistics_df.iloc[-4:, :] = statistics_df.iloc[-4:, :].applymap(str)
     statistics_dict = statistics_df.to_dict(orient="records")
