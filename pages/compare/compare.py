@@ -52,8 +52,6 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
 @callback(
     Output(component_id="al-wealth-indexes", component_property="figure"),
     Output(component_id="al-wealth-indexes", component_property="config"),
-    Output(component_id="al-compare-info", component_property="children"),
-    Output(component_id="al-assets-names", component_property="children"),
     Output(component_id="al-describe-table", component_property="children"),
     # user screen info
     Input(component_id="store", component_property="data"),
@@ -103,12 +101,9 @@ def update_graf_compare(
         fig.update_yaxes(title_text="CAGR")
     # Change layout for mobile screens (except correlation matrix)
     fig, config = adopt_small_screens(fig, screen)
-    # AL Info
-    info_table = get_info(al_object)
-    names_table = get_assets_names(al_object)
-    # AL statistics
+    # Asset List describe() risk-return statistics
     statistics_dash_table = get_al_statistics_table(al_object)
-    return fig, config, info_table, names_table, statistics_dash_table
+    return fig, config, statistics_dash_table
 
 
 def get_al_statistics_table(al_object):

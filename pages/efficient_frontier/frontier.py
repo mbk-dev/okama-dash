@@ -62,8 +62,6 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
 @callback(
     Output(component_id="ef-graf", component_property="figure"),
     Output(component_id="ef-graf", component_property="config"),
-    Output(component_id="ef-info", component_property="children"),
-    Output(component_id="ef-assets-names", component_property="children"),
     # Inputs
     Input(component_id="store", component_property="data"),
     # Main input for EF
@@ -109,10 +107,7 @@ def update_ef_cards(
     fig = make_ef_figure(ef_object, ef_options)
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
-    # Get EF info
-    info_table = get_info(ef_object)
-    names_table = get_assets_names(ef_object)
-    return fig, config, info_table, names_table
+    return fig, config
 
 
 def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
