@@ -325,3 +325,17 @@ def disable_link_button(tickers_list) -> bool:
     - number of tickers is more than allowed (in settings)
     """
     return check_if_list_empty_or_big(tickers_list) or len(tickers_list) < 2
+
+
+@app.callback(
+    Output('ef-submit-button-state', 'disabled'),
+    Input("ef-symbols-list", "value"),
+)
+def disable_submit(tickers_list) -> bool:
+    """
+    Disable "Get EF" (Submit) button.
+
+    conditions:
+    - number of tickers is < 2
+    """
+    return len(tickers_list) < 2

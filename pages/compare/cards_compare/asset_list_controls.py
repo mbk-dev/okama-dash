@@ -295,3 +295,17 @@ def disable_link_button(tickers_list) -> bool:
     - number of tickers is more than allowed (in settings)
     """
     return check_if_list_empty_or_big(tickers_list)
+
+
+@app.callback(
+    Output('al-submit-button', 'disabled'),
+    Input("al-symbols-list", "value"),
+)
+def disable_submit(tickers_list) -> bool:
+    """
+    Disable "Compare" (Submit) button.
+
+    conditions:
+    - number of tickers is 0
+    """
+    return len(tickers_list) == 0
