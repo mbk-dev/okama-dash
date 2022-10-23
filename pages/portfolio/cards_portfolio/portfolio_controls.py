@@ -1,3 +1,8 @@
+"""
+test URL:
+http://127.0.0.1:8050/portfolio?tickers=SPY.US,BND.US,GLD.US&weights=30,20,50&first_date=2015-01&last_date=2020-12&ccy=RUB&rebal=year
+"""
+
 import re
 from typing import Optional, Tuple
 
@@ -13,7 +18,7 @@ from dash.exceptions import PreventUpdate
 from common import settings as settings, inflation as inflation
 from common.create_link import create_link
 from common.html_elements.copy_link_div import create_copy_link_div
-from common.parse_query import get_tickers_list
+from common.parse_query import make_list_from_string
 from common.symbols import get_symbols
 from common import cache
 from pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt import (
@@ -32,11 +37,14 @@ today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 def card_controls(
     tickers: Optional[list],
+    weights: Optional[list],
     first_date: Optional[str],
     last_date: Optional[str],
     ccy: Optional[str],
+    rebal: Optional[str],
 ):
-    # tickers_list = get_tickers_list(tickers)
+    tickers_list = make_list_from_string(tickers, char_type='str')
+    weights_list = make_list_from_string(weights, char_type='float')
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -86,7 +94,7 @@ def card_controls(
                                                   {"label": "Every year", "value": "year"},
                                                   {"label": "Not rebalanced", "value": "none"},
                                               ],
-                                    value='month',
+                                    value=rebal if rebal else 'month',
                                     multi=False,
                                     placeholder="Select a rebalancing period",
                                     id="pf-rebalancing-period",
@@ -127,15 +135,15 @@ def card_controls(
                                 ),
                             ]
                         ),
-                        # dbc.Row(
-                        #     # copy link to clipboard button
-                        #     create_copy_link_div(
-                        #         location_id="pf-url",
-                        #         hidden_div_with_url_id="pf-show-url",
-                        #         button_id="pf-copy-link-button",
-                        #         card_name="asset list",
-                        #     ),
-                        # ),
+                        dbc.Row(
+                            # copy link to clipboard button
+                            create_copy_link_div(
+                                location_id="pf-url",
+                                hidden_div_with_url_id="pf-show-url",
+                                button_id="pf-copy-link-button",
+                                card_name="Portfolio",
+                            ),
+                        ),
                         dbc.Row(html.H5(children="Options")),
                         dbc.Row(
                             [
@@ -239,6 +247,8 @@ def card_controls(
                     style={"text-align": "center"},
                     className="p-3",
                 ),
+                dcc.Store(id="pf_tickers_url", data=tickers_list),
+                dcc.Store(id="pf_weights_url", data=weights_list)
             ]
         ),
         class_name="mb-3",
@@ -272,31 +282,66 @@ def update_inflation_switch(plot_options: str, inflation_switch_value) -> Tuple[
         return inflation_switch_value, False
 
 
-# @callback(
-#     Output("pf-show-url", "children"),
-#     Input("pf-url", "href"),
-#     Input("pf-symbols-list", "value"),  # get selected tickers
-#     Input("pf-base-currency", "value"),
-#     Input("pf-first-date", "value"),
-#     Input("pf-last-date", "value"),
-# )
-# def update_link_pf(href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
-#     return create_link(ccy, first_date, href, last_date, tickers_list)
+@callback(
+    Output("pf-show-url", "children"),
+    Input("pf-copy-link-button", "n_clicks"),
+    State("pf-url", "href"),
+    State({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),  # tickers
+    State({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),  # weights
+    State("pf-base-currency", "value"),
+    State("pf-first-date", "value"),
+    State("pf-last-date", "value"),
+    State("pf-rebalancing-period", "value"),
+    prevent_initial_call=True,
+)
+def update_link_pf(n_clicks: int,
+                   href: str,
+                   tickers_list: Optional[list],
+                   weights_list: Optional[list],
+                   ccy: str,
+                   first_date: str,
+                   last_date: str,
+                   rebal: str):
+    return create_link(ccy=ccy,
+                       first_date=first_date,
+                       href=href,
+                       last_date=last_date,
+                       tickers_list=tickers_list,
+                       weights_list=weights_list,
+                       rebal=rebal)
 
 
-# ----------------------- Pattern Matching Callbacks -------------------------------------------
+# ----------------------- Ticker | Weight constructor -------------------------------------------
 @app.callback(
     Output('dynamic-container', 'children'),
+    Input("pf_tickers_url", "data"),
+    Input("pf_weights_url", "data"),
     Input('dynamic-add-filter', 'n_clicks'),
     State('dynamic-container', 'children'))
-def display_dropdowns(n_clicks, children):
+def add_rows_to_constructor(tickers, weights, n_clicks, children):
+    if n_clicks == 0 and tickers:
+        print(f'tickers={tickers}')
+        print(f'n_click={n_clicks}. Adding tickers from URL ...')
+        for symbol, weight in zip(tickers, weights):
+            children = append_row(children, symbol, weight, n_clicks)
+    else:
+        print(f'tickers={tickers}')
+        print(f'n_click={n_clicks}. Adding empty row ...')
+        children = append_row(children, None, None, n_clicks)
+    return children
+
+
+def append_row(children, symbol, weight, n_clicks):
     new_row = dbc.Row([
         dbc.Col(
             dcc.Dropdown(
+                multi=False,
                 id={
                     'type': 'pf-dynamic-dropdown',
                     'index': n_clicks
                 },
+                options=[symbol] if symbol else [],
+                value=symbol,
                 placeholder="Type a ticker",
             ),
         ),
@@ -307,6 +352,7 @@ def display_dropdowns(n_clicks, children):
                     'index': n_clicks
                 },
                 placeholder="Type a weight",
+                value=weight,
                 type='number', min=0, max=100
             )
         )
@@ -331,27 +377,32 @@ def optimize_search_al(search_value) -> list:
     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
 )
 def print_weights_sum(values) -> Tuple[str, bool]:
-    weights_sum = sum(x for x in values if x)
+    weights_sum = sum(float(x) for x in values if x)
     weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
     return f"Total: {weights_sum}", weights_sum_is_not_100
 
 
 @app.callback(
     Output('pf-submit-button', 'disabled'),
+    Output("pf-copy-link-button", "disabled"),
     Output("dynamic-add-filter", "disabled"),
     Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),
     Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
 )
-def disable_submit_add_buttons(tickers_list, weights_list) -> Tuple[bool, bool]:
+def disable_submit_add_link_buttons(tickers_list, weights_list) -> Tuple[bool, bool, bool]:
     """
-    Disable "Add Asset" and "Submit" buttons.
+    Disable "Add Asset", "Submit" and "Copy Link" buttons.
     disable "Add Asset" conditions:
     - weights and assets forms are not empty (don't have None)
-    - number of tickers are more than allowed (in settings)
+    - number of tickers is more or equal than allowed (in settings)
 
     disable "Submit" conditions:
     - sum of weights is not 100
     - number of weights is not equal to the number of assets
+
+    disable "Copy Link" conditions:
+    - "Submit"
+    - number of tickers is more than allowed (in settings)
     """
     add_condition1 = None in tickers_list or None in weights_list
     add_condition2 = len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
@@ -365,4 +416,7 @@ def disable_submit_add_buttons(tickers_list, weights_list) -> Tuple[bool, bool]:
 
     weights_and_tickers_has_different_length = len(set(tickers_list)) != len(weights_list)
     submit_result = weights_sum_is_not_100 or weights_and_tickers_has_different_length
-    return submit_result, add_result
+
+    link_condition = len(tickers_list) > settings.ALLOWED_NUMBER_OF_TICKERS
+    link_result = submit_result or link_condition
+    return submit_result, link_result, add_result

@@ -42,7 +42,7 @@ card_assets_info = dbc.Card(
     Input(component_id="store", component_property="data"),
 )
 def generate_pie_chart(tickers, weights, screen):
-    weights_sum = sum(x for x in weights if x)
+    weights_sum = sum(float(x) for x in weights if x)
     if np.around(weights_sum, decimals=3) < 100:
         not_allocated_weight = 100 - weights_sum if 100 - weights_sum > 0 else 0
         weights.append(not_allocated_weight)

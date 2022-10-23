@@ -4,12 +4,14 @@ from typing import Optional
 import pandas as pd
 
 
-def get_tickers_list(tickers: Optional[str]) -> Optional[list]:
+def make_list_from_string(symbols: Optional[str], char_type: str = 'str') -> Optional[list]:
     """
-    Get tickers list from query (comma separated).
+    Get list of parameters from URL query (csv - comma separated).
     """
-    if tickers:
-        tickers_io = io.StringIO(tickers)
-        return pd.read_csv(tickers_io).columns.to_list()
+    if symbols:
+        tickers_io = io.StringIO(symbols)
+        df = pd.read_csv(tickers_io, header=None, dtype=char_type)
+        result = df.iloc[0, :].to_list()
     else:
-        return None
+        result = None
+    return result

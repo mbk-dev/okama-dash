@@ -25,16 +25,17 @@ dash.register_page(
     path="/portfolio",
     title="Investment Portfolio : okama",
     name="Investment Portfolio",
+    suppress_callback_exceptions=True,
     description="Okama widget for Investment Portfolio analysis",
 )
 
 
-def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
+def layout(tickers=None, weights=None, first_date=None, last_date=None, ccy=None, rebal=None, **kwargs):
     page = dbc.Container(
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls(tickers, first_date, last_date, ccy), lg=5),
+                    dbc.Col(card_controls(tickers, weights, first_date, last_date, ccy, rebal), lg=5),
                     dbc.Col(card_assets_info, lg=7),
                 ]
             ),
@@ -87,7 +88,6 @@ def update_graf_portfolio(
 ):
     assets = [i for i in assets if i is not None]
     weights = [i / 100. for i in weights if i is not None]
-    # symbols = assets if isinstance(assets, list) else [assets]
     pf_object = ok.Portfolio(
         assets=assets,
         weights=weights,
