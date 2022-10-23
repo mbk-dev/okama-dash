@@ -9,9 +9,9 @@ from dash import html, dcc, callback
 import pandas as pd
 
 from common import settings as settings, inflation as inflation
-from common.create_link import create_link
+from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
-from common.parse_query import get_tickers_list
+from common.parse_query import make_list_from_string
 from common.symbols import get_symbols
 from common import cache
 from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
@@ -33,7 +33,7 @@ def card_controls(
     last_date: Optional[str],
     ccy: Optional[str],
 ):
-    tickers_list = get_tickers_list(tickers)
+    tickers_list = make_list_from_string(tickers)
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -238,14 +238,15 @@ def update_inflation_switch(plot_options: str, inflation_switch_value):
 
 @callback(
     Output("al-show-url", "children"),
-    Input("al-url", "href"),
-    Input("al-symbols-list", "value"),  # get selected tickers
-    Input("al-base-currency", "value"),
-    Input("al-first-date", "value"),
-    Input("al-last-date", "value"),
+    Input("al-copy-link-button", "n_clicks"),
+    State("al-url", "href"),
+    State("al-symbols-list", "value"),  # get selected tickers
+    State("al-base-currency", "value"),
+    State("al-first-date", "value"),
+    State("al-last-date", "value"),
 )
-def update_link_al(href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
-    return create_link(ccy, first_date, href, last_date, tickers_list)
+def update_link_al(n_clicks, href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
+    return create_link(ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list)
 
 
 @app.callback(
@@ -279,3 +280,18 @@ def disable_search(tickers_list) -> bool:
     Disable asset search form if the number of ticker exceeds allowed in settings.
     """
     return len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
+
+
+@app.callback(
+    Output("al-copy-link-button", "disabled"),
+    Input("al-symbols-list", "value"),
+)
+def disable_link_button(tickers_list) -> bool:
+    """
+    Disable "Copy Link" button.
+
+    Conditions:
+    - list of tickers is empty
+    - number of tickers is more than allowed (in settings)
+    """
+    return check_if_list_empty_or_big(tickers_list)

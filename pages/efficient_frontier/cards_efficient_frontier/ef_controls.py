@@ -9,7 +9,7 @@ from dash.dependencies import Input, Output
 import pandas as pd
 
 from common import settings as settings, inflation as inflation
-from common.create_link import create_link
+from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.symbols import get_symbols
 from common import cache
@@ -269,8 +269,8 @@ def update_risk_free_rate(cml: str):
     Input("ef-first-date", "value"),
     Input("ef-last-date", "value"),
 )
-def update_link_ef(href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
-    return create_link(ccy, first_date, href, last_date, tickers_list)
+def update_link_ef(href: str, tickers_list: list, ccy: str, first_date: str, last_date: str):
+    return create_link(ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list)
 
 
 @app.callback(
@@ -311,3 +311,17 @@ def disable_search(tickers_list) -> bool:
     """
     return len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
 
+
+@app.callback(
+    Output("ef-copy-link-button", "disabled"),
+    Input("ef-symbols-list", "value"),
+)
+def disable_link_button(tickers_list) -> bool:
+    """
+    Disable "Copy Link" button.
+
+    Conditions:
+    - list of tickers length is < 2
+    - number of tickers is more than allowed (in settings)
+    """
+    return check_if_list_empty_or_big(tickers_list) or len(tickers_list) < 2

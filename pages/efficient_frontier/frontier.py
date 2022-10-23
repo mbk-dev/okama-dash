@@ -14,7 +14,7 @@ import pandas as pd
 import okama as ok
 
 from common.html_elements.info_dash_table import get_assets_names, get_info
-from common.parse_query import get_tickers_list
+from common.parse_query import make_list_from_string
 from pages.efficient_frontier.cards_efficient_frontier.ef_info import card_ef_info
 from pages.efficient_frontier.cards_efficient_frontier.ef_chart import card_graf
 from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
@@ -30,7 +30,7 @@ dash.register_page(
 
 
 def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
-    tickers_list = get_tickers_list(tickers)
+    tickers_list = make_list_from_string(tickers)
     page = dbc.Container(
         [
             dbc.Row(
