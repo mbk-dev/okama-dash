@@ -320,13 +320,9 @@ def update_link_pf(n_clicks: int,
     State('dynamic-container', 'children'))
 def add_rows_to_constructor(tickers, weights, n_clicks, children):
     if n_clicks == 0 and tickers:
-        print(f'tickers={tickers}')
-        print(f'n_click={n_clicks}. Adding tickers from URL ...')
         for symbol, weight in zip(tickers, weights):
             children = append_row(children, symbol, weight, n_clicks)
     else:
-        print(f'tickers={tickers}')
-        print(f'n_click={n_clicks}. Adding empty row ...')
         children = append_row(children, None, None, n_clicks)
     return children
 

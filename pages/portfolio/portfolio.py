@@ -160,6 +160,9 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
         # width=800,
         height=800,
     )
+    fig.update_traces({"line": {"width": 1}})
+    fig.update_traces(patch={"line": {"width": 3}, "name": "PORTFOLIO"},
+                      selector={"legendgroup": "PORTFOLIO.PF"})
     # Plot Inflation
     if plot_inflation_condition:
         fig.add_trace(
