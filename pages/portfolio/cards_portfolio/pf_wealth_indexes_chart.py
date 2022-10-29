@@ -1,22 +1,34 @@
 import dash_bootstrap_components as dbc
 import dash_daq as daq
-from dash import dcc
+from dash import dcc, html, callback
+from dash.dependencies import Input, Output
 
 card_graf_portfolio = dbc.Card(
     dbc.CardBody(
         [
-            dcc.Loading(
-                [
-                    dcc.Graph(id="pf-wealth-indexes"),
-                    daq.BooleanSwitch(
-                        id="pf-logarithmic-scale-switch",
-                        on=False,
-                        label="Logarithmic Y-Scale",
-                        labelPosition="bottom",
-                    ),
-                ],
-            )
+            html.Div([
+                dcc.Loading(
+                        [
+                            dcc.Graph(id="pf-wealth-indexes"),
+                            daq.BooleanSwitch(
+                                id="pf-logarithmic-scale-switch",
+                                on=False,
+                                label="Logarithmic Y-Scale",
+                                labelPosition="bottom",
+                            ),
+                        ],
+                )
+            ], id="portfolio_graf_div")
         ]
     ),
     class_name="mb-3",
 )
+
+
+@callback(
+    Output("portfolio_graf_div", "hidden"),
+    Input('pf-submit-button', 'n_clicks')
+)
+def hide_graf(n_clicks):
+    print(f"{n_clicks}, hidden={True if n_clicks == 0 else False}")
+    return True if n_clicks == 0 else False
