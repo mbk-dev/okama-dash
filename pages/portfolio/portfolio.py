@@ -13,6 +13,7 @@ import okama as ok
 import common.settings as settings
 from common.mobile_screens import adopt_small_screens
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
+from pages.portfolio.cards_portfolio.portfolio_description import card_portfolio_description
 from pages.portfolio.cards_portfolio.portfolio_info import card_assets_info
 from pages.portfolio.cards_portfolio.pf_statistics_table import card_table
 from pages.portfolio.cards_portfolio.pf_wealth_indexes_chart import card_graf_portfolio
@@ -41,6 +42,7 @@ def layout(tickers=None, weights=None, first_date=None, last_date=None, ccy=None
             ),
             dbc.Row(dbc.Col(card_graf_portfolio, width=12), align="center"),
             dbc.Row(dbc.Col(card_table, width=12), align="center"),
+            dbc.Row(dbc.Col(card_portfolio_description, width=12), align="left"),
         ],
         class_name="mt-2",
         fluid="md",

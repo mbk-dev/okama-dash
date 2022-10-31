@@ -30,5 +30,4 @@ card_graf_portfolio = dbc.Card(
     Input('pf-submit-button', 'n_clicks')
 )
 def hide_graf(n_clicks):
-    print(f"{n_clicks}, hidden={True if n_clicks == 0 else False}")
     return True if n_clicks == 0 else False
