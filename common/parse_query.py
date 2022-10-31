@@ -4,7 +4,7 @@ from typing import Optional
 import pandas as pd
 
 
-def make_list_from_string(symbols: Optional[str], char_type: str = 'str') -> Optional[list]:
+def make_list_from_string(symbols: Optional[str], char_type: str = "str") -> Optional[list]:
     """
     Get list of parameters from URL query (csv - comma separated).
     """

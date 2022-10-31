@@ -15,8 +15,8 @@ card_graf_compare = dbc.Card(
                             label="Logarithmic Y-Scale",
                             labelPosition="bottom",
                         ),
-                        id="al-logarithmic-scale-switch-div"
-                    )
+                        id="al-logarithmic-scale-switch-div",
+                    ),
                 ],
             )
         ]

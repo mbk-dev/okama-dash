@@ -43,15 +43,18 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
             dbc.Row(
                 html.Div(
                     [
-                        dcc.Markdown("""
+                        dcc.Markdown(
+                            """
                         **Portfolio data**  
                         Click on points to get portfolio data.
-                        """),
-                        html.P(id='ef-click-data-risk'),
-                        html.P(id='ef-click-data-return'),
-                        html.Pre(id='ef-click-data-weights'),
-                    ]),
-            )
+                        """
+                        ),
+                        html.P(id="ef-click-data-risk"),
+                        html.P(id="ef-click-data-return"),
+                        html.Pre(id="ef-click-data-weights"),
+                    ]
+                ),
+            ),
         ],
         class_name="mt-2",
         fluid="md",
@@ -120,8 +123,7 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
             x=ef["Risk"],
             y=y_value,
             customdata=weights_array,
-            hovertemplate=('<b>Risk: %{x:.2f}% <br>Return: %{y:.2}%</b>' +
-                           '<extra></extra>'),
+            hovertemplate=("<b>Risk: %{x:.2f}% <br>Return: %{y:.2}%</b>" + "<extra></extra>"),
             mode="lines",
             name=f"Efficient Frontier - {ef_options['ror']} mean",
         )
@@ -131,7 +133,7 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
         cagr_option = ef_options["ror"] == "Geometric"
         rf_rate = ef_options["rf_rate"]
         tg = ef_object.get_tangency_portfolio(cagr=cagr_option, rf_return=rf_rate / 100)
-        weights_array = np.expand_dims(tg['Weights'], axis=0)
+        weights_array = np.expand_dims(tg["Weights"], axis=0)
         x_cml, y_cml = [0, tg["Risk"] * 100], [rf_rate, tg["Rate_of_return"] * 100]
         fig.add_trace(
             go.Scatter(
@@ -148,7 +150,7 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
                 x=[x_cml[1]],
                 y=[y_cml[1]],
                 customdata=weights_array,
-                hovertemplate='Risk: %{x:.2f}%<br>Return: %{y:.2}%',
+                hovertemplate="Risk: %{x:.2f}%<br>Return: %{y:.2}%",
                 mode="markers+text",
                 text="MSR",
                 textposition="top left",
@@ -190,7 +192,7 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
                 y=df["Return"] if ef_options["ror"] == "Arithmetic" else df["CAGR"],
                 customdata=weights_array,
                 # customdata=weights_array,
-                hovertemplate='Risk: %{x:.2f}%<br>Return: %{y:.2}%',
+                hovertemplate="Risk: %{x:.2f}%<br>Return: %{y:.2}%",
                 mode="markers",
                 name=f"Monte-Carlo Simulation",
             )
@@ -205,10 +207,11 @@ def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
 
 
 @callback(
-    Output('ef-click-data-risk', 'children'),
-    Output('ef-click-data-return', 'children'),
-    Output('ef-click-data-weights', 'children'),
-    Input('ef-graf', 'clickData'))
+    Output("ef-click-data-risk", "children"),
+    Output("ef-click-data-return", "children"),
+    Output("ef-click-data-weights", "children"),
+    Input("ef-graf", "clickData"),
+)
 def display_click_data(clickData):
     if not clickData:
         raise dash.exceptions.PreventUpdate
@@ -220,7 +223,7 @@ def display_click_data(clickData):
 
     weights_str = None
     try:
-        weights_list = clickData["points"][0]['customdata']
+        weights_list = clickData["points"][0]["customdata"]
     except KeyError:
         pass
     else:

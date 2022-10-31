@@ -25,7 +25,7 @@ from pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt import (
     pf_options_tooltip_inflation,
     pf_options_tooltip_cagr,
     pf_options_window,
-    pf_rebalancing_period
+    pf_rebalancing_period,
 )
 
 app = dash.get_app()
@@ -43,24 +43,22 @@ def card_controls(
     ccy: Optional[str],
     rebal: Optional[str],
 ):
-    tickers_list = make_list_from_string(tickers, char_type='str')
-    weights_list = make_list_from_string(weights, char_type='float')
+    tickers_list = make_list_from_string(tickers, char_type="str")
+    weights_list = make_list_from_string(weights, char_type="float")
     card = dbc.Card(
         dbc.CardBody(
             [
                 html.H5("Investment Portfolio", className="card-title"),
                 html.Div(
                     [
-                        dbc.Row([
-                           dbc.Col(html.Label("Tickers")),
-                           dbc.Col(html.Label("Weights"))
-                        ]),
-                        html.Div(id='dynamic-container', children=[]),
-                        dbc.Row([
-                            dbc.Col(dbc.Button("Add Asset", id="dynamic-add-filter", n_clicks=0)),
-                            dbc.Col(html.Div(id="pf-portfolio-weights-sum"))
-                        ]),
-
+                        dbc.Row([dbc.Col(html.Label("Tickers")), dbc.Col(html.Label("Weights"))]),
+                        html.Div(id="dynamic-container", children=[]),
+                        dbc.Row(
+                            [
+                                dbc.Col(dbc.Button("Add Asset", id="dynamic-add-filter", n_clicks=0)),
+                                dbc.Col(html.Div(id="pf-portfolio-weights-sum")),
+                            ]
+                        ),
                     ],
                 ),
                 dbc.Row(
@@ -80,21 +78,21 @@ def card_controls(
                         dbc.Col(
                             [
                                 html.Label(
-                                           [
-                                               "Rebalancing period",
-                                               html.I(
-                                                   className="bi bi-info-square ms-2",
-                                                   id="pf-info-rebalancing",
-                                               ),
-                                           ]
-                                           ),
+                                    [
+                                        "Rebalancing period",
+                                        html.I(
+                                            className="bi bi-info-square ms-2",
+                                            id="pf-info-rebalancing",
+                                        ),
+                                    ]
+                                ),
                                 dcc.Dropdown(
                                     options=[
-                                                  {"label": "Monthly", "value": "month"},
-                                                  {"label": "Every year", "value": "year"},
-                                                  {"label": "Not rebalanced", "value": "none"},
-                                              ],
-                                    value=rebal if rebal else 'month',
+                                        {"label": "Monthly", "value": "month"},
+                                        {"label": "Every year", "value": "year"},
+                                        {"label": "Not rebalanced", "value": "none"},
+                                    ],
+                                    value=rebal if rebal else "month",
                                     multi=False,
                                     placeholder="Select a rebalancing period",
                                     id="pf-rebalancing-period",
@@ -248,7 +246,7 @@ def card_controls(
                     className="p-3",
                 ),
                 dcc.Store(id="pf_tickers_url", data=tickers_list),
-                dcc.Store(id="pf_weights_url", data=weights_list)
+                dcc.Store(id="pf_weights_url", data=weights_list),
             ]
         ),
         class_name="mb-3",
@@ -286,38 +284,43 @@ def update_inflation_switch(plot_options: str, inflation_switch_value) -> Tuple[
     Output("pf-show-url", "children"),
     Input("pf-copy-link-button", "n_clicks"),
     State("pf-url", "href"),
-    State({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),  # tickers
-    State({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),  # weights
+    State({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
+    State({"type": "pf-dynamic-input", "index": ALL}, "value"),  # weights
     State("pf-base-currency", "value"),
     State("pf-first-date", "value"),
     State("pf-last-date", "value"),
     State("pf-rebalancing-period", "value"),
     prevent_initial_call=True,
 )
-def update_link_pf(n_clicks: int,
-                   href: str,
-                   tickers_list: Optional[list],
-                   weights_list: Optional[list],
-                   ccy: str,
-                   first_date: str,
-                   last_date: str,
-                   rebal: str):
-    return create_link(ccy=ccy,
-                       first_date=first_date,
-                       href=href,
-                       last_date=last_date,
-                       tickers_list=tickers_list,
-                       weights_list=weights_list,
-                       rebal=rebal)
+def update_link_pf(
+    n_clicks: int,
+    href: str,
+    tickers_list: Optional[list],
+    weights_list: Optional[list],
+    ccy: str,
+    first_date: str,
+    last_date: str,
+    rebal: str,
+):
+    return create_link(
+        ccy=ccy,
+        first_date=first_date,
+        href=href,
+        last_date=last_date,
+        tickers_list=tickers_list,
+        weights_list=weights_list,
+        rebal=rebal,
+    )
 
 
 # ----------------------- Ticker | Weight constructor -------------------------------------------
 @app.callback(
-    Output('dynamic-container', 'children'),
+    Output("dynamic-container", "children"),
     Input("pf_tickers_url", "data"),
     Input("pf_weights_url", "data"),
-    Input('dynamic-add-filter', 'n_clicks'),
-    State('dynamic-container', 'children'))
+    Input("dynamic-add-filter", "n_clicks"),
+    State("dynamic-container", "children"),
+)
 def add_rows_to_constructor(tickers, weights, n_clicks, children):
     if n_clicks == 0 and tickers:
         for symbol, weight in zip(tickers, weights):
@@ -328,39 +331,36 @@ def add_rows_to_constructor(tickers, weights, n_clicks, children):
 
 
 def append_row(children, symbol, weight, n_clicks):
-    new_row = dbc.Row([
-        dbc.Col(
-            dcc.Dropdown(
-                multi=False,
-                id={
-                    'type': 'pf-dynamic-dropdown',
-                    'index': n_clicks
-                },
-                options=[symbol] if symbol else [],
-                value=symbol,
-                placeholder="Type a ticker",
+    new_row = dbc.Row(
+        [
+            dbc.Col(
+                dcc.Dropdown(
+                    multi=False,
+                    id={"type": "pf-dynamic-dropdown", "index": n_clicks},
+                    options=[symbol] if symbol else [],
+                    value=symbol,
+                    placeholder="Type a ticker",
+                ),
             ),
-        ),
-        dbc.Col(
-            dbc.Input(
-                id={
-                    'type': 'pf-dynamic-input',
-                    'index': n_clicks
-                },
-                placeholder="Type a weight",
-                value=weight,
-                type='number', min=0, max=100
-            )
-        )
-
-    ])
+            dbc.Col(
+                dbc.Input(
+                    id={"type": "pf-dynamic-input", "index": n_clicks},
+                    placeholder="Type a weight",
+                    value=weight,
+                    type="number",
+                    min=0,
+                    max=100,
+                )
+            ),
+        ]
+    )
     children.append(new_row)
     return children
 
 
 @app.callback(
-    Output({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "options"),
-    Input({'type': 'pf-dynamic-dropdown', 'index': MATCH}, "search_value"),
+    Output({"type": "pf-dynamic-dropdown", "index": MATCH}, "options"),
+    Input({"type": "pf-dynamic-dropdown", "index": MATCH}, "search_value"),
 )
 def optimize_search_al(search_value) -> list:
     if not search_value:
@@ -369,21 +369,21 @@ def optimize_search_al(search_value) -> list:
 
 
 @app.callback(
-    Output('pf-portfolio-weights-sum', 'children'),
-    Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
+    Output("pf-portfolio-weights-sum", "children"),
+    Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
 )
 def print_weights_sum(values) -> Tuple[str, bool]:
     weights_sum = sum(float(x) for x in values if x)
-    weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
+    weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.0
     return f"Total: {weights_sum}", weights_sum_is_not_100
 
 
 @app.callback(
-    Output('pf-submit-button', 'disabled'),
+    Output("pf-submit-button", "disabled"),
     Output("pf-copy-link-button", "disabled"),
     Output("dynamic-add-filter", "disabled"),
-    Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),
-    Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
+    Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
+    Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
 )
 def disable_submit_add_link_buttons(tickers_list, weights_list) -> Tuple[bool, bool, bool]:
     """
@@ -408,7 +408,7 @@ def disable_submit_add_link_buttons(tickers_list, weights_list) -> Tuple[bool, b
     weights_list = [i for i in weights_list if i is not None]
 
     weights_sum = sum(float(x) for x in weights_list if x)
-    weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.
+    weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.0
 
     weights_and_tickers_has_different_length = len(set(tickers_list)) != len(weights_list)
     submit_result = weights_sum_is_not_100 or weights_and_tickers_has_different_length

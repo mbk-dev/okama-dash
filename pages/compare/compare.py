@@ -128,7 +128,7 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
         "wealth": "Assets Wealth indexes",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
         "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
-        "correlation": "Correlation Matrix"
+        "correlation": "Correlation Matrix",
     }
 
     # Select Plot Type
@@ -139,7 +139,7 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
         df = al_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
     elif plot_type == "correlation":
         matrix = al_object.assets_ror.corr()
-        matrix = matrix.applymap('{:,.2f}'.format)
+        matrix = matrix.applymap("{:,.2f}".format)
         fig = px.imshow(matrix, text_auto=True, aspect="equal", labels=dict(x="", y="", color=""))
         return fig
 

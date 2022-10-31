@@ -118,7 +118,7 @@ def card_controls(
                                                 {"label": "Wealth Index", "value": "wealth"},
                                                 {"label": "Rolling Cagr", "value": "cagr"},
                                                 {"label": "Rolling Real Cagr", "value": "real_cagr"},
-                                                {"label": "Correlation matrix", "value": "correlation"}
+                                                {"label": "Correlation matrix", "value": "correlation"},
                                             ],
                                             value="wealth",
                                             id="al-plot-option",
@@ -298,7 +298,7 @@ def disable_link_button(tickers_list) -> bool:
 
 
 @app.callback(
-    Output('al-submit-button', 'disabled'),
+    Output("al-submit-button", "disabled"),
     Input("al-symbols-list", "value"),
 )
 def disable_submit(tickers_list) -> bool:

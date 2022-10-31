@@ -21,14 +21,7 @@ app = dash.Dash(
 )
 server = app.server
 
-app.layout = html.Div(
-    [
-        dcc.Store(id="store"),
-        navigation.navbar,
-        dash.page_container,
-        footer.footer()
-    ]
-)
+app.layout = html.Div([dcc.Store(id="store"), navigation.navbar, dash.page_container, footer.footer()])
 
 app.clientside_callback(
     """

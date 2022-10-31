@@ -223,7 +223,7 @@ def card_controls(
                                         ),
                                         # dbc.FormText("≤100 000")
                                     ],
-                                    width=6
+                                    width=6,
                                 ),
                                 dbc.Tooltip(
                                     tl.ef_options_monte_carlo,
@@ -231,7 +231,7 @@ def card_controls(
                                 ),
                             ],
                             className="p-1",
-                        )
+                        ),
                     ]
                 ),
                 html.Div(
@@ -328,7 +328,7 @@ def disable_link_button(tickers_list) -> bool:
 
 
 @app.callback(
-    Output('ef-submit-button-state', 'disabled'),
+    Output("ef-submit-button-state", "disabled"),
     Input("ef-symbols-list", "value"),
 )
 def disable_submit(tickers_list) -> bool:

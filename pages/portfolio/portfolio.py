@@ -58,8 +58,8 @@ def layout(tickers=None, weights=None, first_date=None, last_date=None, ccy=None
     Input(component_id="store", component_property="data"),
     # main Inputs
     Input(component_id="pf-submit-button", component_property="n_clicks"),
-    State({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),  # tickers
-    State({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),  # weights
+    State({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
+    State({"type": "pf-dynamic-input", "index": ALL}, "value"),  # weights
     State(component_id="pf-base-currency", component_property="value"),
     State(component_id="pf-rebalancing-period", component_property="value"),
     State(component_id="pf-first-date", component_property="value"),
@@ -89,7 +89,7 @@ def update_graf_portfolio(
     log_on: bool,
 ):
     assets = [i for i in assets if i is not None]
-    weights = [i / 100. for i in weights if i is not None]
+    weights = [i / 100.0 for i in weights if i is not None]
     pf_object = ok.Portfolio(
         assets=assets,
         weights=weights,
@@ -98,7 +98,7 @@ def update_graf_portfolio(
         ccy=ccy,
         rebalancing_period=rebalancing_period,
         inflation=inflation_on,
-        symbol="PORTFOLIO.PF"
+        symbol="PORTFOLIO.PF",
     )
     fig = get_pf_figure(pf_object, plot_type, inflation_on, rolling_window, log_on)
     if plot_type == "wealth":
@@ -109,12 +109,13 @@ def update_graf_portfolio(
     fig, config = adopt_small_screens(fig, screen)
     # PF statistics
     statistics_dash_table = get_pf_statistics_table(pf_object)
-    return (fig,
-            config,
-            # info_table,
-            # names_table,
-            statistics_dash_table
-            )
+    return (
+        fig,
+        config,
+        # info_table,
+        # names_table,
+        statistics_dash_table,
+    )
 
 
 def get_pf_statistics_table(al_object):
@@ -163,8 +164,7 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
         height=800,
     )
     fig.update_traces({"line": {"width": 1}})
-    fig.update_traces(patch={"line": {"width": 3}, "name": "PORTFOLIO"},
-                      selector={"legendgroup": "PORTFOLIO.PF"})
+    fig.update_traces(patch={"line": {"width": 3}, "name": "PORTFOLIO"}, selector={"legendgroup": "PORTFOLIO.PF"})
     # Plot Inflation
     if plot_inflation_condition:
         fig.add_trace(

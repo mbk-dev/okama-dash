@@ -12,7 +12,7 @@ def adopt_small_screens(fig, screen: dict):
             title_text="",
             # title_font={"size": 8},
             title_standoff=0,
-            visible=True
+            visible=True,
         )
         config = {"displayModeBar": False, "displaylogo": False}
     else:

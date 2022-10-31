@@ -13,18 +13,22 @@ from common.mobile_screens import adopt_small_screens
 card_assets_info = dbc.Card(
     dbc.CardBody(
         [
-            dbc.Row([
-                dbc.Col([
-                    html.H5("Asset Allocation"),
-                    dcc.Graph(id="pf-asset-allocation",
-                              style={"height": 200, "width": "100%"}
-                              )
-                ]),
-                dbc.Col([
-                    html.H5("Information"),
-                    html.Div(id="pf-asset-list-info", children="Start to select assets to see the information"),
-                ])
-            ]),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            html.H5("Asset Allocation"),
+                            dcc.Graph(id="pf-asset-allocation", style={"height": 200, "width": "100%"}),
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            html.H5("Information"),
+                            html.Div(id="pf-asset-list-info", children="Start to select assets to see the information"),
+                        ]
+                    ),
+                ]
+            ),
             html.H5(children="Assets names"),
             html.Div(id="pf-assets-names", children="Start to select assets to see the information"),
         ]
@@ -36,8 +40,8 @@ card_assets_info = dbc.Card(
 @callback(
     Output("pf-asset-allocation", "figure"),
     Output("pf-asset-allocation", "config"),
-    Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),
-    Input({'type': 'pf-dynamic-input', 'index': ALL}, 'value'),
+    Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
+    Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
     # user screen info
     Input(component_id="store", component_property="data"),
 )
@@ -50,7 +54,7 @@ def generate_pie_chart(tickers, weights, screen):
     elif np.around(weights_sum, decimals=3) > 100:
         raise PreventUpdate
 
-    df = pd.DataFrame({'Assets': tickers, 'Weights': weights})
+    df = pd.DataFrame({"Assets": tickers, "Weights": weights})
     fig = px.pie(df, values="Weights", names="Assets", hole=0)
     # Change layout for screen sizes
     fig, config = adopt_small_screens(fig, screen)
@@ -63,7 +67,7 @@ def generate_pie_chart(tickers, weights, screen):
 @callback(
     Output("pf-assets-names", "children"),
     Output("pf-asset-list-info", "children"),
-    Input({'type': 'pf-dynamic-dropdown', 'index': ALL}, 'value'),  # tickers
+    Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
     prevent_initial_call=True,
 )
 def pf_update_asset_names_info(assets: list) -> dash_table.DataTable:
