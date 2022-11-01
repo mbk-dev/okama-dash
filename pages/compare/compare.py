@@ -8,14 +8,13 @@ import dash_bootstrap_components as dbc
 import plotly.express as px
 import plotly.graph_objects as go
 
-import pandas as pd
 import okama as ok
 
 import common.settings as settings
-from common.html_elements.info_dash_table import get_assets_names, get_info
 from common.mobile_screens import adopt_small_screens
 from pages.compare.cards_compare.asset_list_controls import card_controls
 from pages.compare.cards_compare.assets_info import card_assets_info
+from pages.compare.cards_compare.compare_description import card_compare_description
 from pages.compare.cards_compare.statistics_table import card_table
 from pages.compare.cards_compare.wealth_indexes_chart import card_graf_compare
 import pages.compare.crisis.crisis_data as cr
@@ -42,6 +41,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
             ),
             dbc.Row(dbc.Col(card_graf_compare, width=12), align="center"),
             dbc.Row(dbc.Col(card_table, width=12), align="center"),
+            dbc.Row(dbc.Col(card_compare_description, width=12), align="left"),
         ],
         class_name="mt-2",
         fluid="md",

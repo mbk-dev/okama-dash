@@ -1,5 +1,3 @@
-import json
-
 import dash
 import numpy as np
 import okama
@@ -13,8 +11,8 @@ import pandas as pd
 
 import okama as ok
 
-from common.html_elements.info_dash_table import get_assets_names, get_info
 from common.parse_query import make_list_from_string
+from pages.efficient_frontier.cards_efficient_frontier.ef_description import card_ef_description
 from pages.efficient_frontier.cards_efficient_frontier.ef_info import card_ef_info
 from pages.efficient_frontier.cards_efficient_frontier.ef_chart import card_graf
 from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
@@ -55,6 +53,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                     ]
                 ),
             ),
+            dbc.Row(dbc.Col(card_ef_description, width=12), align="left"),
         ],
         class_name="mt-2",
         fluid="md",

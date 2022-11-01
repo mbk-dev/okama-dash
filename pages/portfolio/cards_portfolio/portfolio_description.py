@@ -1,7 +1,7 @@
 import dash_bootstrap_components as dbc
 from dash import html
 
-from pages.portfolio.cards_portfolio.eng.portfolio_description import portfolio_description_text
+from pages.portfolio.cards_portfolio.eng.portfolio_description_txt import portfolio_description_text
 
 card_portfolio_description = dbc.Card(
     dbc.CardBody(
