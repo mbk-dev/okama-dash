@@ -1,7 +1,7 @@
 import warnings
 
 import dash
-from dash import dash_table, callback, ALL, MATCH
+from dash import dash_table, callback, ALL
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
@@ -17,7 +17,7 @@ from pages.portfolio.cards_portfolio.portfolio_description import card_portfolio
 from pages.portfolio.cards_portfolio.portfolio_info import card_assets_info
 from pages.portfolio.cards_portfolio.pf_statistics_table import card_table
 from pages.portfolio.cards_portfolio.pf_wealth_indexes_chart import card_graf_portfolio
-import pages.compare.crisis.crisis_data as cr
+import common.crisis.crisis_data as cr
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 

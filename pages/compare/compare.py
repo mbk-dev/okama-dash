@@ -17,7 +17,7 @@ from pages.compare.cards_compare.assets_info import card_assets_info
 from pages.compare.cards_compare.compare_description import card_compare_description
 from pages.compare.cards_compare.statistics_table import card_table
 from pages.compare.cards_compare.wealth_indexes_chart import card_graf_compare
-import pages.compare.crisis.crisis_data as cr
+import common.crisis.crisis_data as cr
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 

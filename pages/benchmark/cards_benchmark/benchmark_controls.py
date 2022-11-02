@@ -14,11 +14,8 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
 from common.symbols import get_symbols
 from common import cache
-from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
-    al_options_tooltip_inflation,
-    al_options_tooltip_cagr,
-    al_options_window,
-)
+from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import benchmark_options_tooltip_cagr, \
+    benchmark_options_tooltip_window
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -28,6 +25,7 @@ today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
 def card_controls(
+    benchmark: Optional[str],
     tickers: Optional[list],
     first_date: Optional[str],
     last_date: Optional[str],
@@ -37,16 +35,39 @@ def card_controls(
     card = dbc.Card(
         dbc.CardBody(
             [
-                html.H5("Compare Assets", className="card-title"),
+                html.H5("Compare with Benchmark", className="card-title"),
                 html.Div(
                     [
-                        html.Label("Tickers to compare"),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Label("Benchmark"),
+                                        dcc.Dropdown(
+                                            options=options,
+                                            multi=False,
+                                            placeholder="Select a benchmark",
+                                            id="select-benchmark",
+                                            value=settings.default_benchmark
+                                        ),
+                                    ],
+                                    lg=6,
+                                    md=6,
+                                    sm=12,
+                                ),
+                            ]
+                        ),
+                    ]
+                ),
+                html.Div(
+                    [
+                        html.Label("Tickers to compare with benchmark"),
                         dcc.Dropdown(
                             options=options,
                             value=tickers_list if tickers_list else settings.default_symbols,
                             multi=True,
-                            placeholder="Select assets",
-                            id="al-symbols-list",
+                            placeholder="Select tickers",
+                            id="benchmark-assets-list",
                         ),
                     ],
                 ),
@@ -55,22 +76,23 @@ def card_controls(
                         html.Label("Base currency"),
                         dcc.Dropdown(
                             options=inflation.get_currency_list(),
-                            value=ccy if ccy else "USD",
+                            value=ccy if ccy else settings.default_currency,
                             multi=False,
                             placeholder="Select a base currency",
-                            id="al-base-currency",
+                            id="benchmark-base-currency",
                         ),
                     ],
                 ),
                 html.Div(
-                    [
+                    id="benchmark-options-div",
+                    children=[
                         dbc.Row(
                             [
                                 dbc.Col(
                                     [
                                         html.Label("First Date"),
                                         dbc.Input(
-                                            id="al-first-date",
+                                            id="benchmark-first-date",
                                             value=first_date if first_date else "2000-01",
                                             type="text",
                                         ),
@@ -81,7 +103,7 @@ def card_controls(
                                     [
                                         html.Label("Last Date"),
                                         dbc.Input(
-                                            id="al-last-date",
+                                            id="benchmark-last-date",
                                             value=last_date if last_date else today_str,
                                             type="text",
                                         ),
@@ -93,10 +115,10 @@ def card_controls(
                         dbc.Row(
                             # copy link to clipboard button
                             create_copy_link_div(
-                                location_id="al-url",
-                                hidden_div_with_url_id="al-show-url",
-                                button_id="al-copy-link-button",
-                                card_name="asset list",
+                                location_id="benchmark-url",
+                                hidden_div_with_url_id="benchmark-show-url",
+                                button_id="benchmark-copy-link-button",
+                                card_name="widget",
                             ),
                         ),
                         dbc.Row(html.H5("Options")),
@@ -109,53 +131,27 @@ def card_controls(
                                                 "Plot:",
                                                 html.I(
                                                     className="bi bi-info-square ms-2",
-                                                    id="al-info-plot",
+                                                    id="benchmark-info-plot",
                                                 ),
                                             ]
                                         ),
                                         dbc.RadioItems(
                                             options=[
-                                                {"label": "Wealth Index", "value": "wealth"},
-                                                {"label": "Rolling Cagr", "value": "cagr"},
-                                                {"label": "Rolling Real Cagr", "value": "real_cagr"},
-                                                {"label": "Correlation matrix", "value": "correlation"},
+                                                {"label": "Tracking difference", "value": "td"},
+                                                {"label": "Annualized Tracking difference", "value": "annualized_td"},
+                                                {"label": "Annual Tracking difference (bars)", "value": "annual_td_bar"},
+                                                {"label": "Tracking Error", "value": "te"},
                                             ],
-                                            value="wealth",
-                                            id="al-plot-option",
+                                            value="annualized_td",
+                                            id="benchmark-plot-option",
                                         ),
                                         dbc.Tooltip(
-                                            al_options_tooltip_cagr,
-                                            target="al-info-plot",
+                                            benchmark_options_tooltip_cagr,
+                                            target="benchmark-info-plot",
                                         ),
                                     ],
-                                    lg=4,
-                                    md=4,
-                                    sm=12,
-                                    class_name="pt-4 pt-sm-4 pt-md-1",
-                                ),
-                                dbc.Col(
-                                    [
-                                        dbc.Label(
-                                            [
-                                                "Include Inflation",
-                                                html.I(
-                                                    className="bi bi-info-square ms-2",
-                                                    id="al-info-inflation",
-                                                ),
-                                            ]
-                                        ),
-                                        dbc.Switch(
-                                            label="",
-                                            value=False,
-                                            id="al-inflation-switch",
-                                        ),
-                                        dbc.Tooltip(
-                                            al_options_tooltip_inflation,
-                                            target="al-info-inflation",
-                                        ),
-                                    ],
-                                    lg=4,
-                                    md=4,
+                                    lg=6,
+                                    md=6,
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
@@ -166,7 +162,7 @@ def card_controls(
                                                 "Rolling Window",
                                                 html.I(
                                                     className="bi bi-info-square ms-2",
-                                                    id="al-info-rolling",
+                                                    id="benchmark-info-rolling",
                                                 ),
                                             ]
                                         ),
@@ -174,16 +170,16 @@ def card_controls(
                                             type="number",
                                             min=1,
                                             value=2,
-                                            id="al-rolling-window",
+                                            id="benchmark-rolling-window",
                                         ),
                                         dbc.FormText("Format: number of years (≥ 1)"),
                                         dbc.Tooltip(
-                                            al_options_window,
-                                            target="al-info-rolling",
+                                            benchmark_options_tooltip_window,
+                                            target="benchmark-info-rolling",
                                         ),
                                     ],
-                                    lg=4,
-                                    md=4,
+                                    lg=6,
+                                    md=6,
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
@@ -195,7 +191,7 @@ def card_controls(
                     [
                         dbc.Button(
                             children="Compare",
-                            id="al-submit-button",
+                            id="benchmark-submit-button",
                             n_clicks=0,
                             color="primary",
                         ),
@@ -211,50 +207,33 @@ def card_controls(
 
 
 @callback(
-    Output(component_id="al-rolling-window", component_property="disabled"),
-    Input(component_id="al-plot-option", component_property="value"),
+    Output(component_id="benchmark-rolling-window", component_property="disabled"),
+    Input(component_id="benchmark-plot-option", component_property="value"),
 )
 def update_rolling_input(plot_options: str):
     return plot_options in ("wealth", "correlation")
 
 
 @callback(
-    Output(component_id="al-inflation-switch", component_property="value"),
-    Output(component_id="al-inflation-switch", component_property="disabled"),
-    Input(component_id="al-plot-option", component_property="value"),
-    State(component_id="al-inflation-switch", component_property="value"),
+    Output("benchmark-show-url", "children"),
+    Input("benchmark-copy-link-button", "n_clicks"),
+    State("benchmark-url", "href"),
+    State("select-benchmark", "value"),  # benchmark
+    State("benchmark-assets-list", "value"),  # selected tickers
+    State("benchmark-base-currency", "value"),
+    State("benchmark-first-date", "value"),
+    State("benchmark-last-date", "value"),
 )
-def update_inflation_switch(plot_options: str, inflation_switch_value):
-    """
-    Change inflation-switch value and disabled state.
-
-    It should be "ON" and "Disabled" if "Real CAGR" chart selected.
-    """
-    if plot_options == "real_cagr":
-        return True, True
-    else:
-        return inflation_switch_value, False
-
-
-@callback(
-    Output("al-show-url", "children"),
-    Input("al-copy-link-button", "n_clicks"),
-    State("al-url", "href"),
-    State("al-symbols-list", "value"),  # get selected tickers
-    State("al-base-currency", "value"),
-    State("al-first-date", "value"),
-    State("al-last-date", "value"),
-)
-def update_link_al(n_clicks, href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
+def update_link_benchmark(n_clicks, href: str, benchmark: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
     return create_link(ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list)
 
 
 @app.callback(
-    Output("al-symbols-list", "options"),
-    Input("al-symbols-list", "search_value"),
-    Input("al-symbols-list", "value"),
+    Output("benchmark-assets-list", "options"),
+    Input("benchmark-assets-list", "search_value"),
+    Input("benchmark-assets-list", "value"),
 )
-def optimize_search_al(search_value, selected_values):
+def optimize_search_benchmark(search_value, selected_values):
     return (
         [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])]
         if search_value
@@ -263,17 +242,8 @@ def optimize_search_al(search_value, selected_values):
 
 
 @app.callback(
-    Output("al-logarithmic-scale-switch-div", "hidden"),
-    Input(component_id="al-submit-button", component_property="n_clicks"),
-    State(component_id="al-plot-option", component_property="value"),
-)
-def show_log_scale_switch(n_clicks, plot_type: str):
-    return False if plot_type in ("wealth", "cagr", "real_cagr") else True
-
-
-@app.callback(
-    Output("al-symbols-list", "disabled"),
-    Input("al-symbols-list", "value"),
+    Output("benchmark-assets-list", "disabled"),
+    Input("benchmark-assets-list", "value"),
 )
 def disable_search(tickers_list) -> bool:
     """
@@ -283,8 +253,8 @@ def disable_search(tickers_list) -> bool:
 
 
 @app.callback(
-    Output("al-copy-link-button", "disabled"),
-    Input("al-symbols-list", "value"),
+    Output("benchmark-copy-link-button", "disabled"),
+    Input("benchmark-assets-list", "value"),
 )
 def disable_link_button(tickers_list) -> bool:
     """
@@ -298,8 +268,8 @@ def disable_link_button(tickers_list) -> bool:
 
 
 @app.callback(
-    Output("al-submit-button", "disabled"),
-    Input("al-symbols-list", "value"),
+    Output("benchmark-submit-button", "disabled"),
+    Input("benchmark-assets-list", "value"),
 )
 def disable_submit(tickers_list) -> bool:
     """

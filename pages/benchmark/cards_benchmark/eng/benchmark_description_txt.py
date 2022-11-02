@@ -1,6 +1,6 @@
 from dash import dcc
 
-compare_description_text = dcc.Markdown(
+benchmark_description_text = dcc.Markdown(
     """
     Compare Assets widget uses monthly **total return** historical data (adjusted close) to calculate risk and 
     return metrics for each asset.  

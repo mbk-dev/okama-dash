@@ -5,6 +5,7 @@ navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Efficient Frontier", href="/")),
         dbc.NavItem(dbc.NavLink("Compare Assets", href="/compare")),
+        dbc.NavItem(dbc.NavLink("Benchmark", href="/benchmark")),
         dbc.NavItem(dbc.NavLink("Portfolio", href="/portfolio")),
         dbc.DropdownMenu(
             children=[

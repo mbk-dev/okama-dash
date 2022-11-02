@@ -18,6 +18,7 @@ app = dash.Dash(
     use_pages=True,
     update_title="Loading okama ...",
     external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP],
+    # suppress_callback_exceptions=True
 )
 server = app.server
 

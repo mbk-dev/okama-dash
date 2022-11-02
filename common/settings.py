@@ -1,4 +1,6 @@
 default_symbols = ["SPY.US", "BND.US", "GLD.US"]
+default_benchmark = "SP500TR.INDX"
+default_currency = "USD"
 namespaces = ["US", "LSE", "XFRA", "XTAE", "MOEX", "INDX", "COMM", "FX", "CC"]
 
 MONTHS_PER_YEAR = 12
