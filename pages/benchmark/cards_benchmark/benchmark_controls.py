@@ -24,7 +24,7 @@ options = get_symbols()
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
-def card_controls(
+def benchmark_card_controls(
     benchmark: Optional[str],
     tickers: Optional[list],
     first_date: Optional[str],
@@ -48,7 +48,7 @@ def card_controls(
                                             multi=False,
                                             placeholder="Select a benchmark",
                                             id="select-benchmark",
-                                            value=settings.default_benchmark
+                                            value=benchmark if benchmark else settings.default_benchmark
                                         ),
                                     ],
                                     lg=6,
@@ -64,7 +64,7 @@ def card_controls(
                         html.Label("Tickers to compare with benchmark"),
                         dcc.Dropdown(
                             options=options,
-                            value=tickers_list if tickers_list else settings.default_symbols,
+                            value=tickers_list if tickers_list else settings.default_symbols_benchmark,
                             multi=True,
                             placeholder="Select tickers",
                             id="benchmark-assets-list",
@@ -141,6 +141,9 @@ def card_controls(
                                                 {"label": "Annualized Tracking difference", "value": "annualized_td"},
                                                 {"label": "Annual Tracking difference (bars)", "value": "annual_td_bar"},
                                                 {"label": "Tracking Error", "value": "te"},
+                                                {"label": "Correlation", "value": "correlation"},
+                                                {"label": "Beta coefficient", "value": "beta"},
+
                                             ],
                                             value="annualized_td",
                                             id="benchmark-plot-option",
@@ -157,6 +160,23 @@ def card_controls(
                                 ),
                                 dbc.Col(
                                     [
+                                        dbc.Label(
+                                            [
+                                                "Chart Type:",
+                                                html.I(
+                                                    className="bi bi-info-square ms-2",
+                                                    id="benchmark-info-chart-type",
+                                                ),
+                                            ]
+                                        ),
+                                        dbc.RadioItems(
+                                            options=[
+                                                {"label": "Expanding", "value": "expanding"},
+                                                {"label": "Rolling", "value": "rolling"},
+                                            ],
+                                            value="expanding",
+                                            id="benchmark-chart-expanding-rolling",
+                                        ),
                                         dbc.Label(
                                             [
                                                 "Rolling Window",
@@ -207,11 +227,30 @@ def card_controls(
 
 
 @callback(
-    Output(component_id="benchmark-rolling-window", component_property="disabled"),
-    Input(component_id="benchmark-plot-option", component_property="value"),
+    Output("benchmark-rolling-window", "disabled"),
+    Input("benchmark-plot-option", "value"),
+    Input("benchmark-chart-expanding-rolling", "value"),
 )
-def update_rolling_input(plot_options: str):
-    return plot_options in ("wealth", "correlation")
+def disable_rolling_input(plot_options: str, expanding_rolling):
+    condition1 = expanding_rolling == "expanding"
+    condition2 = plot_options in ("annual_td_bar", "te", "beta")
+    return condition1 or condition2
+
+
+@callback(
+    Output("benchmark-chart-expanding-rolling", "options"),
+    Output("benchmark-chart-expanding-rolling", "value"),
+    Input("benchmark-plot-option", "value"),
+    Input("benchmark-chart-expanding-rolling", "value"),
+)
+def disable_rolling_expanding_switch(plot_options: str, radio_switch_value):
+    disabled = True if plot_options in ("annual_td_bar", "te", "beta") else False
+    radio_options = [
+        {"label": "Expanding", "value": "expanding"},
+        {"label": "Rolling", "value": "rolling", "disabled": disabled}
+    ]
+    new_value = "expanding" if disabled else radio_switch_value
+    return radio_options, new_value
 
 
 @callback(
@@ -229,11 +268,27 @@ def update_link_benchmark(n_clicks, href: str, benchmark: str, tickers_list: Opt
 
 
 @app.callback(
+    Output("select-benchmark", "options"),
+    Input("select-benchmark", "search_value"),
+    Input("select-benchmark", "value"),
+)
+def optimize_search_benchmark(search_value, selected_value):
+    if search_value:
+        ls = [o for o in options if re.match(search_value, o, re.IGNORECASE)]
+    else:
+        if selected_value:
+            ls = [selected_value]
+        else:
+            ls = [settings.default_benchmark]
+    return ls
+
+
+@app.callback(
     Output("benchmark-assets-list", "options"),
     Input("benchmark-assets-list", "search_value"),
     Input("benchmark-assets-list", "value"),
 )
-def optimize_search_benchmark(search_value, selected_values):
+def optimize_search_assets_benchmark(search_value, selected_values):
     return (
         [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])]
         if search_value

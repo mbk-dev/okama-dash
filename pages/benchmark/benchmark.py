@@ -13,7 +13,7 @@ import okama as ok
 import common.settings as settings
 from common.mobile_screens import adopt_small_screens
 from pages.benchmark.cards_benchmark.benchmark_chart import card_graf_benchmark
-from pages.benchmark.cards_benchmark.benchmark_controls import card_controls
+from pages.benchmark.cards_benchmark.benchmark_controls import benchmark_card_controls
 
 from pages.benchmark.cards_benchmark.benchmark_description import card_benchmark_description
 from pages.benchmark.cards_benchmark.benchmark_info import card_benchmark_info
@@ -34,14 +34,14 @@ def layout(benchmark=None, tickers=None, first_date=None, last_date=None, ccy=No
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls(benchmark, tickers, first_date, last_date, ccy), lg=7),
+                    dbc.Col(benchmark_card_controls(benchmark, tickers, first_date, last_date, ccy), lg=7),
                     dbc.Col(card_benchmark_info, lg=5),
                 ]
             ),
             dbc.Row(dbc.Col(card_graf_benchmark, width=12), align="center"),
             dbc.Row(dbc.Col(card_benchmark_description, width=12), align="left"),
         ],
-        class_name="mt-2 gap-3",
+        class_name="mt-2",
         fluid="md",
     )
     return page
@@ -61,6 +61,7 @@ def layout(benchmark=None, tickers=None, first_date=None, last_date=None, ccy=No
     State("benchmark-last-date", "value"),
     # Options
     State("benchmark-plot-option", "value"),
+    State("benchmark-chart-expanding-rolling", "value"),
     State("benchmark-rolling-window", "value"),
     prevent_initial_call=True,
 )
@@ -74,79 +75,66 @@ def update_graf_benchmark(
     ld_value: str,
     # Options
     plot_type: str,
-    inflation_on: bool,
+    expanding_rolling: str,
     rolling_window: int,
-    # Log scale
-    log_on: bool,
 ):
-    symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
+    tickers = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
+    symbols = [benchmark] + tickers
     al_object = ok.AssetList(
         symbols,
         first_date=fd_value,
         last_date=ld_value,
         ccy=ccy,
-        inflation=inflation_on,
+        inflation=False,
     )
-    fig = get_benchmark_figure(al_object, plot_type, inflation_on, rolling_window, log_on)
-    if plot_type == "correlation":
-        fig.update(layout_showlegend=False)
-        fig.update(layout_coloraxis_showscale=False)
-    elif plot_type == "wealth":
-        fig.update_yaxes(title_text="Wealth Index")
-    else:
-        fig.update_yaxes(title_text="CAGR")
+    fig = get_benchmark_figure(al_object, plot_type, expanding_rolling, rolling_window)
+    # if plot_type == "correlation":
+    #     fig.update(layout_showlegend=False)
+    #     fig.update(layout_coloraxis_showscale=False)
+    # elif plot_type == "wealth":
+    #     fig.update_yaxes(title_text="Wealth Index")
+    # else:
+    #     fig.update_yaxes(title_text="CAGR")
     # Change layout for mobile screens (except correlation matrix)
     fig, config = adopt_small_screens(fig, screen)
     return fig, config
 
 
-def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, rolling_window: int, log_scale: bool):
+def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_rolling: str, rolling_window: int):
+    rolling_window = rolling_window * settings.MONTHS_PER_YEAR if expanding_rolling == "rolling" else None
     titles = {
-        "wealth": "Assets Wealth indexes",
-        "cagr": f"Rolling CAGR (window={rolling_window} years)",
-        "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
-        "correlation": "Correlation Matrix",
+        "td": "Tracking difference",
+        "annualized_td": "Annualized tracking difference",
+        "annual_td_bar": "Annual tracking difference",
+        "te": "Tracking Error",
+        "correlation": "Correlation",
+        "beta": "Beta coefficient"
     }
-
     # Select Plot Type
-    if plot_type == "wealth":
-        df = al_object.wealth_indexes
-    elif plot_type in ("cagr", "real_cagr"):
-        real = False if plot_type == "cagr" else True
-        df = al_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
-    elif plot_type == "correlation":
-        matrix = al_object.assets_ror.corr()
-        matrix = matrix.applymap("{:,.2f}".format)
-        fig = px.imshow(matrix, text_auto=True, aspect="equal", labels=dict(x="", y="", color=""))
+    if plot_type == "td":
+        df = al_object.tracking_difference(rolling_window=rolling_window)
+    elif plot_type == "annualized_td":
+        df = al_object.tracking_difference_annualized(rolling_window=rolling_window)
+    elif plot_type == "annual_td_bar":
+        df = al_object.tracking_difference_annual
+        ind = df.index.to_timestamp("Y")
+        fig = px.bar(df, x=ind, y=df.columns)
         return fig
-
-    ind = df.index.to_timestamp("D")
-    chart_first_date = ind[0]
-    chart_last_date = ind[-1]
-    # inflation must not be in the chart for "Real CAGR"
-    plot_inflation_condition = inflation_on and plot_type != "real_cagr"
+    elif plot_type == "te":
+        df = al_object.tracking_error
+    elif plot_type == "correlation":
+        df = al_object.index_rolling_corr(window=rolling_window) if rolling_window else al_object.index_corr
+    elif plot_type == "beta":
+        df = al_object.index_beta
+    ind = df.index.to_timestamp("M")
 
     fig = px.line(
         df,
         x=ind,
-        y=df.columns[:-1] if plot_inflation_condition else df.columns,
-        log_y=log_scale,
+        y=df.columns,
         title=titles[plot_type],
-        # width=800,
         height=800,
     )
-    # Plot Inflation
-    if plot_inflation_condition:
-        fig.add_trace(
-            go.Scatter(
-                x=ind,
-                y=df.iloc[:, -1],
-                mode="none",
-                fill="tozeroy",
-                fillcolor="rgba(226,150,65,0.5)",
-                name="Inflation",
-            )
-        )
     # Plot x-axis slider
     fig.update_xaxes(rangeslider_visible=True)
     fig.update_layout(
