@@ -14,6 +14,7 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
 from common.symbols import get_symbols
 from common import cache
+import common.validators as validators
 from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
     al_options_tooltip_inflation,
     al_options_tooltip_cagr,
@@ -300,13 +301,21 @@ def disable_link_button(tickers_list) -> bool:
 @app.callback(
     Output("al-submit-button", "disabled"),
     Input("al-symbols-list", "value"),
+    Input("al-rolling-window", "value")
 )
-def disable_submit(tickers_list) -> bool:
+def disable_submit(tickers_list, rolling_window_value) -> bool:
     """
     Disable "Compare" (Submit) button.
 
     conditions:
     - number of tickers is 0
+    - rolling window size is not natural
     """
-    return len(tickers_list) == 0
+    condition1 = len(tickers_list) == 0
+    try:
+        validators.validate_integer(arg_name="_", arg_value=rolling_window_value, min_value=1, inclusive=True)
+        rolling_not_natural = False
+    except (ValueError, TypeError):
+        rolling_not_natural = True
+    return condition1 or rolling_not_natural
 

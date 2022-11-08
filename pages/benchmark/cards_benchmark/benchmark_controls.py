@@ -14,6 +14,7 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
 from common.symbols import get_symbols
 from common import cache
+import common.validators  as validators
 from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import benchmark_options_tooltip_cagr, \
     benchmark_options_tooltip_window
 
@@ -325,13 +326,21 @@ def disable_link_button(tickers_list) -> bool:
 @app.callback(
     Output("benchmark-submit-button", "disabled"),
     Input("benchmark-assets-list", "value"),
+    Input("benchmark-rolling-window", "value")
 )
-def disable_submit(tickers_list) -> bool:
+def disable_submit(tickers_list, rolling_window_value) -> bool:
     """
     Disable "Compare" (Submit) button.
 
     conditions:
     - number of tickers is 0
+    - rolling_window is not Natural number
     """
-    return len(tickers_list) == 0
+    condition1 = len(tickers_list) == 0
+    try:
+        validators.validate_integer(arg_name="_", arg_value=rolling_window_value, min_value=1, inclusive=True)
+        condition2 = False
+    except (ValueError, TypeError):
+        condition2 = True
+    return condition1 or condition2
 

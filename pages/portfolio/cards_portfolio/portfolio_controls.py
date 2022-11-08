@@ -21,6 +21,7 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
 from common.symbols import get_symbols
 from common import cache
+import common.validators as validators
 from pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt import (
     pf_options_tooltip_inflation,
     pf_options_tooltip_cagr,
@@ -384,8 +385,9 @@ def print_weights_sum(values) -> Tuple[str, bool]:
     Output("dynamic-add-filter", "disabled"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
+    Input("pf-rolling-window", "value")
 )
-def disable_submit_add_link_buttons(tickers_list, weights_list) -> Tuple[bool, bool, bool]:
+def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_value) -> Tuple[bool, bool, bool]:
     """
     Disable "Add Asset", "Submit" and "Copy Link" buttons.
     disable "Add Asset" conditions:
@@ -395,6 +397,7 @@ def disable_submit_add_link_buttons(tickers_list, weights_list) -> Tuple[bool, b
     disable "Submit" conditions:
     - sum of weights is not 100
     - number of weights is not equal to the number of assets
+    - rolling window size is natural number
 
     disable "Copy Link" conditions:
     - "Submit"
@@ -411,7 +414,12 @@ def disable_submit_add_link_buttons(tickers_list, weights_list) -> Tuple[bool, b
     weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.0
 
     weights_and_tickers_has_different_length = len(set(tickers_list)) != len(weights_list)
-    submit_result = weights_sum_is_not_100 or weights_and_tickers_has_different_length
+    try:
+        validators.validate_integer(arg_name="_", arg_value=rolling_window_value, min_value=1, inclusive=True)
+        rolling_not_natural = False
+    except (ValueError, TypeError):
+        rolling_not_natural = True
+    submit_result = weights_sum_is_not_100 or weights_and_tickers_has_different_length or rolling_not_natural
 
     link_condition = len(tickers_list) > settings.ALLOWED_NUMBER_OF_TICKERS
     link_result = submit_result or link_condition
