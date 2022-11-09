@@ -87,14 +87,6 @@ def update_graf_benchmark(
         inflation=False,
     )
     fig = get_benchmark_figure(al_object, plot_type, expanding_rolling, rolling_window)
-    # if plot_type == "correlation":
-    #     fig.update(layout_showlegend=False)
-    #     fig.update(layout_coloraxis_showscale=False)
-    # elif plot_type == "wealth":
-    #     fig.update_yaxes(title_text="Wealth Index")
-    # else:
-    #     fig.update_yaxes(title_text="CAGR")
-    # Change layout for mobile screens (except correlation matrix)
     fig, config = adopt_small_screens(fig, screen)
     return fig, config
 
@@ -135,13 +127,18 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
         # Plot x-axis slider
         fig.update_xaxes(rangeslider_visible=True)
     else:
-        ind = df.index.to_timestamp(freq="Y").year
-        fig = px.bar(df, x=ind, y=df.columns, barmode='relative')
+        ind = df.index.to_timestamp(freq="Y")
+        fig = px.bar(df, x=ind, y=df.columns, barmode="relative")
+        fig.update_xaxes(
+            dtick="M12",
+            tickformat="%Y",
+            ticklabelmode="instant"
+        )
     # X and Y-axis titles
     y_title = get_y_title(plot_type)
     fig.update_yaxes(title_text=y_title)
     fig.update_layout(
-        xaxis_title="Date",
+        xaxis_title=None,
         legend_title="Assets",
     )
     return fig
