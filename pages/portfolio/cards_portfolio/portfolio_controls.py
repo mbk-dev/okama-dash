@@ -390,6 +390,7 @@ def print_weights_sum(values) -> Tuple[str, bool]:
 def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_value) -> Tuple[bool, bool, bool]:
     """
     Disable "Add Asset", "Submit" and "Copy Link" buttons.
+
     disable "Add Asset" conditions:
     - weights and assets forms are not empty (don't have None)
     - number of tickers is more or equal than allowed (in settings)
@@ -414,11 +415,7 @@ def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_v
     weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.0
 
     weights_and_tickers_has_different_length = len(set(tickers_list)) != len(weights_list)
-    try:
-        validators.validate_integer(arg_name="_", arg_value=rolling_window_value, min_value=1, inclusive=True)
-        rolling_not_natural = False
-    except (ValueError, TypeError):
-        rolling_not_natural = True
+    rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
     submit_result = weights_sum_is_not_100 or weights_and_tickers_has_different_length or rolling_not_natural
 
     link_condition = len(tickers_list) > settings.ALLOWED_NUMBER_OF_TICKERS

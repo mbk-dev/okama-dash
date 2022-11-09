@@ -311,11 +311,7 @@ def disable_submit(tickers_list, rolling_window_value) -> bool:
     - number of tickers is 0
     - rolling window size is not natural
     """
-    condition1 = len(tickers_list) == 0
-    try:
-        validators.validate_integer(arg_name="_", arg_value=rolling_window_value, min_value=1, inclusive=True)
-        rolling_not_natural = False
-    except (ValueError, TypeError):
-        rolling_not_natural = True
-    return condition1 or rolling_not_natural
+    no_tickers = len(tickers_list) == 0
+    rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
+    return no_tickers or rolling_not_natural
 

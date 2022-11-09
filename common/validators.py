@@ -68,3 +68,12 @@ def validate_integer(
         if custom_max_message is not None:
             raise ValueError(custom_max_message)
         raise ValueError(f"'{arg_name:s}' must be {operator_less} {max_value:d}")
+
+
+def validate_integer_bool(rolling_window_value) -> bool:
+    try:
+        validate_integer(arg_name="_", arg_value=rolling_window_value, min_value=1, inclusive=True)
+        condition = False
+    except (ValueError, TypeError):
+        condition = True
+    return condition
