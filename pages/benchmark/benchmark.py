@@ -112,33 +112,50 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
     }
     # Select Plot Type
     if plot_type == "td":
-        df = al_object.tracking_difference(rolling_window=rolling_window)
+        df = al_object.tracking_difference(rolling_window=rolling_window) * 100
     elif plot_type == "annualized_td":
-        df = al_object.tracking_difference_annualized(rolling_window=rolling_window)
+        df = al_object.tracking_difference_annualized(rolling_window=rolling_window) * 100
     elif plot_type == "annual_td_bar":
-        df = al_object.tracking_difference_annual
-        ind = df.index.to_timestamp("Y")
-        fig = px.bar(df, x=ind, y=df.columns)
-        return fig
+        df = al_object.tracking_difference_annual * 100
     elif plot_type == "te":
-        df = al_object.tracking_error
+        df = al_object.tracking_error * 100
     elif plot_type == "correlation":
         df = al_object.index_rolling_corr(window=rolling_window) if rolling_window else al_object.index_corr
     elif plot_type == "beta":
         df = al_object.index_beta
-    ind = df.index.to_timestamp("M")
 
-    fig = px.line(
-        df,
-        x=ind,
-        y=df.columns,
-        title=titles[plot_type],
-        height=800,
-    )
-    # Plot x-axis slider
-    fig.update_xaxes(rangeslider_visible=True)
+    if plot_type != "annual_td_bar":
+        ind = df.index.to_timestamp("M")
+        fig = px.line(
+            df,
+            x=ind,
+            y=df.columns,
+            title=titles[plot_type],
+            height=800,
+        )
+        # Plot x-axis slider
+        fig.update_xaxes(rangeslider_visible=True)
+    else:
+        ind = df.index.to_timestamp(freq="Y").year
+        fig = px.bar(df, x=ind, y=df.columns, barmode='relative')
+    # X and Y-axis titles
+    y_title = get_y_title(plot_type)
+    fig.update_yaxes(title_text=y_title)
     fig.update_layout(
         xaxis_title="Date",
         legend_title="Assets",
     )
     return fig
+
+
+def get_y_title(plot_type: str) -> str:
+    titles = {
+        "td": "Tracking difference, %",
+        "annualized_td": "Annualized Tracking difference, %",
+        "annual_td_bar": "Annual Tracking difference, %",
+        "te": "Tracking Error, %",
+        "correlation": "Correlation",
+        "beta": "Beta coefficient"
+    }
+    return titles.get(plot_type)
+
