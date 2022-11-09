@@ -1,30 +1,31 @@
 from dash import dcc
 
-benchmark_options_tooltip_inflation = dcc.Markdown(
+benchmark_options_tooltip_plot = dcc.Markdown(
     """
-    If enabled, inflation will be displayed on the chart.  
-    &NewLine;   
-    However, with inflation turned on,   
-    the chart statistics will not include last month data,   
-    as inflation statistics are delayed.  
+    **Tracking difference** - the accumulated difference between the returns of a benchmark and those of 
+    the ETF replicating it (could be mutual funds, or other types of assets).  
+    &NewLine;  
+    **Annualized Tracking difference** - annualized tracking difference time series values for the assets.  
+    &NewLine;  
+    **Annual Tracking difference (bars)** - tracking difference for each calendar year (bar chart).  
+    &NewLine;  
+    **Tracking Error** - tracking error time series for the rate of return of assets. Tracking error is defined as the 
+    standard deviation of the difference between the returns of the asset and the returns of the benchmark.    
+    &NewLine;  
+    **Correlation** - expanding or rolling correlation with the benchmark time series for the assets.    
+    &NewLine;  
+    **Beta coefficient** - expanding or rolling beta coefficient time series for the assets.   
 """
 )
-benchmark_options_tooltip_cagr = dcc.Markdown(
+benchmark_options_tooltip_type = dcc.Markdown(
     """
-    **Wealth index** (Cumulative Wealth Index) - chart of cumulative income for each asset. 
-    Cumulative income depends on the price and dividend (coupon) yield reinvested every month. 
-    The starting investment for each asset is 1000 in the base currency.  
+    **Expanding** chart shows in every point the statistic with all the data available up to that point.
     &NewLine;  
-    **Rolling CAGR** (rolling Compound Annual Growth Rate) - chart of rolling annualized returns calculated 
-    for a moving window (at least 1 year).  
-    &NewLine;  
-    **Rolling Real CAGR** - Inflation adjusted annualized returns (real CAGR) calculated 
-    for a moving window (at least 1 year). Requires base currency inflation data.  
-    &NewLine;  
-    **Correlation Matrix** - show correlation matrix for the assets (heatmap win numbers).  
+    **Rolling** chart shows in every point the statistic for the last N years (N is a rolling window size).
 """
 )
-benchmark_options_tooltip_window = dcc.Markdown(
+
+benchmark_options_tooltip_window_size = dcc.Markdown(
     """
     Size of the moving window in years. Window size should be at least 1 year for CAGR.
 """

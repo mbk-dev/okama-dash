@@ -15,8 +15,8 @@ from common.parse_query import make_list_from_string
 from common.symbols import get_symbols
 from common import cache
 import common.validators as validators
-from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import benchmark_options_tooltip_cagr, \
-    benchmark_options_tooltip_window
+from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import benchmark_options_tooltip_plot, \
+    benchmark_options_tooltip_window_size, benchmark_options_tooltip_type
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -150,7 +150,7 @@ def benchmark_card_controls(
                                             id="benchmark-plot-option",
                                         ),
                                         dbc.Tooltip(
-                                            benchmark_options_tooltip_cagr,
+                                            benchmark_options_tooltip_plot,
                                             target="benchmark-info-plot",
                                         ),
                                     ],
@@ -169,6 +169,10 @@ def benchmark_card_controls(
                                                     id="benchmark-info-chart-type",
                                                 ),
                                             ]
+                                        ),
+                                        dbc.Tooltip(
+                                            benchmark_options_tooltip_type,
+                                            target="benchmark-info-chart-type",
                                         ),
                                         dbc.RadioItems(
                                             options=[
@@ -195,7 +199,7 @@ def benchmark_card_controls(
                                         ),
                                         dbc.FormText("Format: number of years (≥ 1)"),
                                         dbc.Tooltip(
-                                            benchmark_options_tooltip_window,
+                                            benchmark_options_tooltip_window_size,
                                             target="benchmark-info-rolling",
                                         ),
                                     ],
