@@ -1,10 +1,12 @@
 from common import settings as settings
 
 
-def create_link(*, href, tickers_list, weights_list=None, ccy, first_date, last_date, rebal=None):
-    tickers_str = "&tickers=" + ",".join(str(symbol) for symbol in tickers_list)
+def create_link(*, href, tickers_list, weights_list=None, benchmark=None, ccy, first_date, last_date, rebal=None):
+    tickers_str = "tickers=" + ",".join(str(symbol) for symbol in tickers_list)
     reset_href = href.split("?")[0]
     new_url = f"{reset_href}?{tickers_str}"
+    if benchmark:
+        new_url += f"&benchmark={benchmark}"
     if weights_list:
         weights_str = "&weights=" + ",".join(str(w) for w in weights_list)
         new_url += weights_str

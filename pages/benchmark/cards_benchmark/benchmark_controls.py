@@ -268,8 +268,19 @@ def disable_rolling_expanding_switch(plot_options: str, radio_switch_value):
     State("benchmark-first-date", "value"),
     State("benchmark-last-date", "value"),
 )
-def update_link_benchmark(n_clicks, href: str, benchmark: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
-    return create_link(ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list)
+def update_link_benchmark(n_clicks,
+                          href: str,
+                          benchmark: str,
+                          tickers_list: list,
+                          ccy: str,
+                          first_date: str,
+                          last_date: str):
+    return create_link(ccy=ccy,
+                       first_date=first_date,
+                       href=href,
+                       last_date=last_date,
+                       tickers_list=tickers_list,
+                       benchmark=benchmark)
 
 
 @app.callback(
