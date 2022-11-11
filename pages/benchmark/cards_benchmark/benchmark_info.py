@@ -27,14 +27,15 @@ card_benchmark_info = dbc.Card(
     Output("benchmark-info", "children"),
     Input("benchmark-assets-list", "value"),  # assets tickers
     Input("select-benchmark", "value"),  # benchmark ticker
+    Input("benchmark-base-currency", "value"),  # currency
     prevent_initial_call=False,
 )
-def pf_update_asset_names_info(assets: list, benchmark: str) -> Tuple[dash_table.DataTable, dash_table.DataTable]:
+def pf_update_asset_names_info(assets: list, benchmark: str, ccy: str) -> Tuple[dash_table.DataTable, dash_table.DataTable]:
     assets_to_compare = [i for i in assets if i is not None]
     assets = [benchmark] + assets_to_compare if benchmark else assets_to_compare
     if not assets:
         raise PreventUpdate
-    al_object = ok.AssetList(assets)
+    al_object = ok.AssetList(assets, ccy=ccy, inflation=False)
     names_table = get_assets_names(al_object)
     info_table = get_info(al_object)
     return names_table, info_table

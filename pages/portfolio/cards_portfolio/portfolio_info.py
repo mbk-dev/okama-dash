@@ -68,13 +68,15 @@ def generate_pie_chart(tickers, weights, screen):
     Output("pf-assets-names", "children"),
     Output("pf-asset-list-info", "children"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
+    Input("pf-base-currency", "value"),  # currency
+    Input("pf-inflation-switch", "value"),  # inflation
     prevent_initial_call=True,
 )
-def pf_update_asset_names_info(assets: list) -> dash_table.DataTable:
+def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> dash_table.DataTable:
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate
-    al_object = ok.AssetList(assets)
+    al_object = ok.AssetList(assets, ccy=ccy, inflation=inflation)
     names_table = get_assets_names(al_object)
     info_table = get_info(al_object)
     return names_table, info_table

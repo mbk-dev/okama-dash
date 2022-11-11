@@ -24,13 +24,15 @@ card_assets_info = dbc.Card(
     Output("al-assets-names", "children"),
     Output("al-compare-info", "children"),
     Input("al-symbols-list", "value"),  # tickers
+    Input("al-base-currency", "value"),  # currency
+    Input("al-inflation-switch", "value"),  # inflation
     prevent_initial_call=False,
 )
-def pf_update_asset_names_info(assets: list) -> dash_table.DataTable:
+def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> dash_table.DataTable:
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate
-    al_object = ok.AssetList(assets)
+    al_object = ok.AssetList(assets, ccy=ccy, inflation=inflation)
     names_table = get_assets_names(al_object)
     info_table = get_info(al_object)
     return names_table, info_table
