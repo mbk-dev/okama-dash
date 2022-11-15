@@ -2,7 +2,7 @@ default_symbols = ["SPY.US", "BND.US", "GLD.US"]
 default_benchmark = "SP500TR.INDX"
 default_symbols_benchmark = ["SPY.US", "VOO.US"]
 default_currency = "USD"
-namespaces = ["US", "LSE", "XFRA", "XTAE", "MOEX", "INDX", "COMM", "FX", "CC"]
+namespaces = ["US", "LSE", "XFRA", "XTAE", "MOEX", "INDX", "COMM", "FX", "CC", "RE", "PIF"]
 
 MONTHS_PER_YEAR = 12
 MC_MAX = 10000  # Max points in Monte-Carlo simulation
