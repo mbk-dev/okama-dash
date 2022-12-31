@@ -25,7 +25,7 @@ dash.register_page(
     path="/database",
     title="Search financial database : okama",
     name="Database",
-    description="Okama financial database: stocks, etf, mutual funds, indexes, currencies, commodities, rates etc.",
+    description="Okama financial database - free historical data for stocks, etf, mutual funds, indexes, currencies, commodities, rates etc.",
 )
 
 
