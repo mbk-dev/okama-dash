@@ -1,13 +1,8 @@
 import dash
-import numpy as np
 import okama
 from dash import callback, html, dcc
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
-
-import plotly.graph_objects as go
-
-import pandas as pd
 
 import okama as ok
 
@@ -17,6 +12,7 @@ from pages.efficient_frontier.cards_efficient_frontier.ef_info import card_ef_in
 from pages.efficient_frontier.cards_efficient_frontier.ef_chart import card_graf
 from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
 from common.mobile_screens import adopt_small_screens
+from pages.efficient_frontier.prepare_ef_plot import prepare_transition_map, prepare_ef
 
 dash.register_page(
     __name__,
@@ -73,7 +69,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="ef-first-date", component_property="value"),
     State(component_id="ef-last-date", component_property="value"),
     # Options
-    State(component_id="rate-of-return-options", component_property="value"),
+    State(component_id="ef-plot-options", component_property="value"),
     State(component_id="cml-option", component_property="value"),
     State(component_id="risk-free-rate-option", component_property="value"),
     # Monte-Carlo
@@ -90,7 +86,7 @@ def update_ef_cards(
     fd_value: str,
     ld_value: str,
     # Options
-    ror_option: str,
+    plot_option: str,
     cml_option: str,
     rf_rate: float,
     n_monte_carlo: int,
@@ -105,104 +101,15 @@ def update_ef_cards(
         n_points=40,
         full_frontier=True,
     )
-    ef_options = dict(ror=ror_option, cml=cml_option, rf_rate=rf_rate, n_monte_carlo=n_monte_carlo)
-    fig = make_ef_figure(ef_object, ef_options)
+    ef_options = dict(plot_type=plot_option, cml=cml_option, rf_rate=rf_rate, n_monte_carlo=n_monte_carlo)
+    ef = ef_object.ef_points * 100
+    if ef_options["plot_type"] in ["Arithmetic", "Geometric"]:
+        fig = prepare_ef(ef, ef_object, ef_options)
+    elif ef_options["plot_type"] == "Transition":
+        fig = prepare_transition_map(ef, ef_object, ef_options)
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
     return fig, config
-
-
-def make_ef_figure(ef_object: okama.EfficientFrontier, ef_options: dict):
-    ef = ef_object.ef_points * 100
-    # Efficient Frontier
-    y_value = ef["Mean return"] if ef_options["ror"] == "Arithmetic" else ef["CAGR"]
-    weights_array = np.stack([ef[n] for n in ef.columns[3:]], axis=-1)
-    fig = go.Figure(
-        data=go.Scatter(
-            x=ef["Risk"],
-            y=y_value,
-            customdata=weights_array,
-            hovertemplate=("<b>Risk: %{x:.2f}% <br>Return: %{y:.2}%</b>" + "<extra></extra>"),
-            mode="lines",
-            name=f"Efficient Frontier - {ef_options['ror']} mean",
-        )
-    )
-    # CML line
-    if ef_options["cml"] == "On":
-        cagr_option = ef_options["ror"] == "Geometric"
-        rf_rate = ef_options["rf_rate"]
-        tg = ef_object.get_tangency_portfolio(cagr=cagr_option, rf_return=rf_rate / 100)
-        weights_array = np.expand_dims(tg["Weights"], axis=0)
-        x_cml, y_cml = [0, tg["Risk"] * 100], [rf_rate, tg["Rate_of_return"] * 100]
-        fig.add_trace(
-            go.Scatter(
-                x=x_cml,
-                y=y_cml,
-                mode="lines",
-                name="Capital Market Line (CML)",
-                line=dict(width=0.5, color="green"),
-            )
-        )
-        # Tangency portfolio
-        fig.add_trace(
-            go.Scatter(
-                x=[x_cml[1]],
-                y=[y_cml[1]],
-                customdata=weights_array,
-                hovertemplate="Risk: %{x:.2f}%<br>Return: %{y:.2}%",
-                mode="markers+text",
-                text="MSR",
-                textposition="top left",
-                name="Tangency portfolio (MSR)",
-                marker=dict(size=8, color="grey"),
-            )
-        )
-    # Assets Risk-Return points
-    ror_df = ef_object.mean_return if ef_options["ror"] == "Arithmetic" else ef_object.get_cagr()
-    df = pd.concat(
-        [ror_df, ef_object.risk_annual],
-        axis=1,
-        join="outer",
-        copy="false",
-        ignore_index=False,
-    )
-    df *= 100
-    df.rename(columns={0: "Return", 1: "Risk"}, inplace=True)
-    df.reset_index(drop=False, inplace=True)
-    fig.add_trace(
-        go.Scatter(
-            x=df["Risk"],
-            y=df["Return"],
-            mode="markers+text",
-            marker=dict(size=8, color="orange"),
-            text=df.iloc[:, 0].to_list(),
-            textposition="bottom right",
-            name="Assets",
-        )
-    )
-    # Monte-Carlo simulation
-    if ef_options["n_monte_carlo"]:
-        kind = "mean" if ef_options["ror"] == "Arithmetic" else "cagr"
-        df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"], kind=kind) * 100
-        weights_array = np.stack([df[n] for n in df.columns[2:]], axis=-1)
-        fig.add_trace(
-            go.Scatter(
-                x=df["Risk"],
-                y=df["Return"] if ef_options["ror"] == "Arithmetic" else df["CAGR"],
-                customdata=weights_array,
-                # customdata=weights_array,
-                hovertemplate="Risk: %{x:.2f}%<br>Return: %{y:.2}%",
-                mode="markers",
-                name=f"Monte-Carlo Simulation",
-            )
-        )
-    # X and Y titles
-    fig.update_layout(
-        height=800,
-        xaxis_title="Risk (standard deviation)",
-        yaxis_title="Rate of Return",
-    )
-    return fig
 
 
 @callback(

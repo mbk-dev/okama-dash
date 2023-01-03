@@ -100,33 +100,34 @@ def card_controls(
                                     [
                                         dbc.Label(
                                             [
-                                                "Rate of Return",
+                                                "Plot:",
                                                 html.I(
                                                     className="bi bi-info-square ms-2",
                                                     id="info-ror",
                                                 ),
                                             ]
                                         ),
-                                        # data-toggle="tooltip",
-                                        # data-original-title="Optionally render"),
                                         dbc.RadioItems(
                                             options=[
                                                 {
-                                                    "label": "Geometric mean",
+                                                    "label": "Geometric mean vs Risk",
                                                     "value": "Geometric",
                                                 },
                                                 {
-                                                    "label": "Arithemtic mean",
+                                                    "label": "Arithemtic mean vs Risk",
                                                     "value": "Arithmetic",
+                                                },
+                                                {
+                                                    "label": "Transition map",
+                                                    "value": "Transition",
                                                 },
                                             ],
                                             value="Geometric",
-                                            id="rate-of-return-options",
+                                            id="ef-plot-options",
                                         ),
                                         dbc.Tooltip(
                                             tl.ef_options_tooltip_ror,
                                             target="info-ror",
-                                            # className="text-start"
                                         ),
                                     ],
                                     lg=4,
@@ -221,7 +222,6 @@ def card_controls(
                                         dbc.FormFeedback(
                                             f"it should be an integer number ≤{settings.MC_MAX}", type="invalid"
                                         ),
-                                        # dbc.FormText("≤100 000")
                                     ],
                                     width=6,
                                 ),
@@ -237,7 +237,7 @@ def card_controls(
                 html.Div(
                     [
                         dbc.Button(
-                            children="Get the Efficient Frontier",
+                            children="Submit",
                             id="ef-submit-button-state",
                             n_clicks=0,
                             color="primary",
@@ -333,7 +333,7 @@ def disable_link_button(tickers_list) -> bool:
 )
 def disable_submit(tickers_list) -> bool:
     """
-    Disable "Get EF" (Submit) button.
+    Disable Submit button.
 
     conditions:
     - number of tickers is < 2
