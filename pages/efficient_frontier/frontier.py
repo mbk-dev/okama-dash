@@ -128,8 +128,11 @@ def update_ef_cards(
     Output("ef-click-data-return", "children"),
     Output("ef-click-data-weights", "children"),
     Input("ef-graf", "clickData"),
+    # List of tickers
+    Input(component_id="ef-submit-button-state", component_property="n_clicks"),
+    State(component_id="ef-symbols-list", component_property="value"),
 )
-def display_click_data(clickData):
+def display_click_data(clickData, n_clock, symbols):
     """
     Display portfolio weights, risk and return.
     """
@@ -147,5 +150,5 @@ def display_click_data(clickData):
     except KeyError:
         pass
     else:
-        weights_str = "Weights:" + ",".join([f"{x:.2f}% " for x in weights_list])
+        weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for w, t in zip(weights_list, symbols)])
     return rist_str, ror_str, weights_str
