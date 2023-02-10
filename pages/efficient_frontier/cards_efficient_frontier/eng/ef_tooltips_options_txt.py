@@ -32,3 +32,9 @@ ef_options_monte_carlo = dcc.Markdown(
     Risk and Return are calculated for a set of random weights.
     """
 )
+
+ef_options_transition_map = dcc.Markdown(
+    """
+    Transition Map shows the relation between asset weights and optimized portfolios risk (standard deviation).
+    """
+)

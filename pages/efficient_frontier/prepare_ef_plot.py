@@ -6,7 +6,7 @@ from plotly import graph_objects as go
 import plotly.express as px
 
 
-def prepare_transition_map(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options: dict):
+def prepare_transition_map(ef: pd.DataFrame):
     risk_return_columns = ("Risk", "Mean return", "CAGR")
     y_columns = [column for column in ef.columns if column not in risk_return_columns]
     fig = px.line(

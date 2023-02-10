@@ -11,6 +11,7 @@ from pages.efficient_frontier.cards_efficient_frontier.ef_description import car
 from pages.efficient_frontier.cards_efficient_frontier.ef_info import card_ef_info
 from pages.efficient_frontier.cards_efficient_frontier.ef_chart import card_graf
 from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
+from pages.efficient_frontier.cards_efficient_frontier.ef_chart_transition_map import card_transition_map
 from common.mobile_screens import adopt_small_screens
 from pages.efficient_frontier.prepare_ef_plot import prepare_transition_map, prepare_ef
 
@@ -49,6 +50,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                     ]
                 ),
             ),
+            dbc.Row(dbc.Col(card_transition_map, width=12), align="center"),
             dbc.Row(dbc.Col(card_ef_description, width=12), align="left"),
         ],
         class_name="mt-2",
@@ -59,7 +61,10 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
 
 @callback(
     Output(component_id="ef-graf", component_property="figure"),
+    Output(component_id="ef-transition-map-graf", component_property="figure"),
     Output(component_id="ef-graf", component_property="config"),
+    Output(component_id="ef-transition-map-graf", component_property="config"),
+    Output(component_id="ef-transition-map-graf-div", component_property="hidden"),  # hide TM chart
     # Inputs
     Input(component_id="store", component_property="data"),
     # Main input for EF
@@ -74,6 +79,8 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="risk-free-rate-option", component_property="value"),
     # Monte-Carlo
     State(component_id="monte-carlo-option", component_property="value"),
+    # Transition Map
+    State(component_id="transition-map-option", component_property="value"),
     # Input(component_id="ef-return-type-checklist-input", component_property="value"),
     prevent_initial_call=False,
 )
@@ -90,6 +97,7 @@ def update_ef_cards(
     cml_option: str,
     rf_rate: float,
     n_monte_carlo: int,
+    tr_map_option: str,
 ):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     ef_object = ok.EfficientFrontier(
@@ -103,13 +111,16 @@ def update_ef_cards(
     )
     ef_options = dict(plot_type=plot_option, cml=cml_option, rf_rate=rf_rate, n_monte_carlo=n_monte_carlo)
     ef = ef_object.ef_points * 100
-    if ef_options["plot_type"] in ["Arithmetic", "Geometric"]:
-        fig = prepare_ef(ef, ef_object, ef_options)
-    elif ef_options["plot_type"] == "Transition":
-        fig = prepare_transition_map(ef, ef_object, ef_options)
+    fig1 = prepare_ef(ef, ef_object, ef_options)
+    fig2 = prepare_transition_map(ef)
+
     # Change layout for mobile screens
-    fig, config = adopt_small_screens(fig, screen)
-    return fig, config
+    fig1, config1 = adopt_small_screens(fig1, screen)
+    fig2, config2 = adopt_small_screens(fig2, screen)
+
+    # Hide Transition map
+    transition_map_is_hidden = False if tr_map_option == "On" else True
+    return fig1, fig2, config1, config2, transition_map_is_hidden
 
 
 @callback(
@@ -119,6 +130,9 @@ def update_ef_cards(
     Input("ef-graf", "clickData"),
 )
 def display_click_data(clickData):
+    """
+    Display portfolio weights, risk and return.
+    """
     if not clickData:
         raise dash.exceptions.PreventUpdate
     risk = clickData["points"][0]["x"]

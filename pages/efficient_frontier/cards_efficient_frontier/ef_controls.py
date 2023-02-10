@@ -114,12 +114,8 @@ def card_controls(
                                                     "value": "Geometric",
                                                 },
                                                 {
-                                                    "label": "Arithemtic mean vs Risk",
+                                                    "label": "Arithmetic mean vs Risk",
                                                     "value": "Arithmetic",
-                                                },
-                                                {
-                                                    "label": "Transition map",
-                                                    "value": "Transition",
                                                 },
                                             ],
                                             value="Geometric",
@@ -228,6 +224,34 @@ def card_controls(
                                 dbc.Tooltip(
                                     tl.ef_options_monte_carlo,
                                     target="info-monte-carlo",
+                                ),
+                            ],
+                            className="p-1",
+                        ),
+                        dbc.Row(html.H5(children="Transition map")),
+                        dbc.Row(
+                            [
+                                dbc.Label(
+                                    [
+                                        "Show transition map",
+                                        html.I(
+                                            className="bi bi-info-square ms-2",
+                                            id="info-transition-map",
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                dbc.Tooltip(
+                                    tl.ef_options_transition_map,
+                                    target="info-transition-map",
+                                ),
+                                dbc.RadioItems(
+                                    options=[
+                                        {"label": "On", "value": "On"},
+                                        {"label": "Off", "value": "Off"},
+                                    ],
+                                    value="Off",
+                                    id="transition-map-option",
                                 ),
                             ],
                             className="p-1",
