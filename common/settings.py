@@ -7,5 +7,5 @@ default_currency = "USD"
 namespaces = okama.assets_namespaces
 
 MONTHS_PER_YEAR = 12
-MC_MAX = 10000  # Max points in Monte-Carlo simulation
+MC_MAX = 5000  # Max points in Monte-Carlo simulation
 ALLOWED_NUMBER_OF_TICKERS = 12  # max number of tickers in portfolio, EF or AssetList

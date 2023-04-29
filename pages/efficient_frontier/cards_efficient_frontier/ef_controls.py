@@ -210,7 +210,7 @@ def card_controls(
                                         dbc.Input(
                                             type="number",
                                             min=0,
-                                            max=100000,
+                                            max=settings.MC_MAX,
                                             value=0,
                                             id="monte-carlo-option",
                                         ),
