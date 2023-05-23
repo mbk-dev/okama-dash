@@ -109,11 +109,11 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
     elif plot_type == "annual_td_bar":
         df = al_object.tracking_difference_annual * 100
     elif plot_type == "te":
-        df = al_object.tracking_error * 100
+        df = al_object.tracking_error(rolling_window=rolling_window) * 100
     elif plot_type == "correlation":
-        df = al_object.index_rolling_corr(window=rolling_window) if rolling_window else al_object.index_corr
+        df = al_object.index_corr(rolling_window=rolling_window)
     elif plot_type == "beta":
-        df = al_object.index_beta
+        df = al_object.index_beta(rolling_window=rolling_window)
 
     if plot_type != "annual_td_bar":
         ind = df.index.to_timestamp("M")

@@ -238,7 +238,7 @@ def benchmark_card_controls(
 )
 def disable_rolling_input(plot_options: str, expanding_rolling):
     condition1 = expanding_rolling == "expanding"
-    condition2 = plot_options in ("annual_td_bar", "te", "beta")
+    condition2 = plot_options == "annual_td_bar"
     return condition1 or condition2
 
 
@@ -249,7 +249,7 @@ def disable_rolling_input(plot_options: str, expanding_rolling):
     Input("benchmark-chart-expanding-rolling", "value"),
 )
 def disable_rolling_expanding_switch(plot_options: str, radio_switch_value):
-    disabled = True if plot_options in ("annual_td_bar", "te", "beta") else False
+    disabled = True if plot_options == "annual_td_bar" else False
     radio_options = [
         {"label": "Expanding", "value": "expanding"},
         {"label": "Rolling", "value": "rolling", "disabled": disabled}

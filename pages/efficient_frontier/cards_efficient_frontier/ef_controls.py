@@ -361,5 +361,6 @@ def disable_submit(tickers_list) -> bool:
 
     conditions:
     - number of tickers is < 2
+    - MC number is incorrect
     """
     return len(tickers_list) < 2
