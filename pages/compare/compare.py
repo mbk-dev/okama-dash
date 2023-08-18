@@ -26,7 +26,8 @@ dash.register_page(
     path="/compare",
     title="Compare financial assets : okama",
     name="Compare assets",
-    description="Okama widget to compare financial assets properties: rate of return, risk, CVAR, drawdowns",
+    description="""Okama widget to compare financial assets properties: 
+                rate of return, risk, CVAR, drawdowns, correlation""",
 )
 
 
@@ -95,6 +96,7 @@ def update_graf_compare(
     if plot_type == "correlation":
         fig.update(layout_showlegend=False)
         fig.update(layout_coloraxis_showscale=False)
+        fig.update_xaxes(side="top")
     elif plot_type == "wealth":
         fig.update_yaxes(title_text="Wealth Index")
     else:
