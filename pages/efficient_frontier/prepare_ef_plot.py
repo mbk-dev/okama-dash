@@ -80,6 +80,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
         ignore_index=False,
     )
     df *= 100
+    df = df.applymap('{:,.2f}'.format)
     df.rename(columns={0: "Return", 1: "Risk"}, inplace=True)
     df.reset_index(drop=False, inplace=True)
     fig.add_trace(
