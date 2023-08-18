@@ -30,12 +30,13 @@ def prepare_transition_map(ef: pd.DataFrame):
 def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options: dict):
     y_value = ef["Mean return"] if ef_options["plot_type"] == "Arithmetic" else ef["CAGR"]
     weights_array = np.stack([ef[n] for n in ef.columns[3:]], axis=-1)
+    hovertemplate = "<b>Risk: %{x:.2f}%<br>Return: %{y:.2f}%</b>" + "<extra></extra>"
     fig = go.Figure(
         data=go.Scatter(
             x=ef["Risk"],
             y=y_value,
             customdata=weights_array,
-            hovertemplate=("<b>Risk: %{x:.2f}% <br>Return: %{y:.2}%</b>" + "<extra></extra>"),
+            hovertemplate=hovertemplate,
             mode="lines",
             name=f"Efficient Frontier - {ef_options['plot_type']} mean",
         )
@@ -62,7 +63,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
                 x=[x_cml[1]],
                 y=[y_cml[1]],
                 customdata=weights_array,
-                hovertemplate="Risk: %{x:.2f}%<br>Return: %{y:.2}%",
+                hovertemplate=hovertemplate,
                 mode="markers+text",
                 text="MSR",
                 textposition="top left",
@@ -80,7 +81,6 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
         ignore_index=False,
     )
     df *= 100
-    df = df.applymap('{:,.2f}'.format)
     df.rename(columns={0: "Return", 1: "Risk"}, inplace=True)
     df.reset_index(drop=False, inplace=True)
     fig.add_trace(
@@ -90,6 +90,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
             mode="markers+text",
             marker=dict(size=8, color="orange"),
             text=df.iloc[:, 0].to_list(),
+            hovertemplate=hovertemplate,
             textposition="bottom right",
             name="Assets",
         )
@@ -104,7 +105,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
                 x=df["Risk"],
                 y=df["Return"] if ef_options["plot_type"] == "Arithmetic" else df["CAGR"],
                 customdata=weights_array,
-                hovertemplate="Risk: %{x:.2f}%<br>Return: %{y:.2}%",
+                hovertemplate=hovertemplate,
                 mode="markers",
                 name=f"Monte-Carlo Simulation",
             )
