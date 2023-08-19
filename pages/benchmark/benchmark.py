@@ -99,7 +99,7 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
         "annual_td_bar": "Annual tracking difference",
         "te": "Tracking Error",
         "correlation": "Correlation",
-        "beta": "Beta coefficient"
+        "beta": "Beta coefficient",
     }
     # Select Plot Type
     if plot_type == "td":
@@ -129,11 +129,7 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
     else:
         ind = df.index.to_timestamp(freq="Y")
         fig = px.bar(df, x=ind, y=df.columns, barmode="relative")
-        fig.update_xaxes(
-            dtick="M12",
-            tickformat="%Y",
-            ticklabelmode="instant"
-        )
+        fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
     # X and Y-axis titles
     y_title = get_y_title(plot_type)
     fig.update_yaxes(title_text=y_title)
@@ -151,7 +147,6 @@ def get_y_title(plot_type: str) -> str:
         "annual_td_bar": "Annual Tracking difference, %",
         "te": "Tracking Error, %",
         "correlation": "Correlation",
-        "beta": "Beta coefficient"
+        "beta": "Beta coefficient",
     }
     return titles.get(plot_type)
-

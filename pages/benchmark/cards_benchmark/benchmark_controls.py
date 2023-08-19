@@ -15,8 +15,11 @@ from common.parse_query import make_list_from_string
 from common.symbols import get_symbols
 from common import cache
 import common.validators as validators
-from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import benchmark_options_tooltip_plot, \
-    benchmark_options_tooltip_window_size, benchmark_options_tooltip_type
+from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
+    benchmark_options_tooltip_plot,
+    benchmark_options_tooltip_window_size,
+    benchmark_options_tooltip_type,
+)
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -49,7 +52,7 @@ def benchmark_card_controls(
                                             multi=False,
                                             placeholder="Select a benchmark",
                                             id="select-benchmark",
-                                            value=benchmark if benchmark else settings.default_benchmark
+                                            value=benchmark if benchmark else settings.default_benchmark,
                                         ),
                                     ],
                                     lg=6,
@@ -140,11 +143,13 @@ def benchmark_card_controls(
                                             options=[
                                                 {"label": "Tracking difference", "value": "td"},
                                                 {"label": "Annualized Tracking difference", "value": "annualized_td"},
-                                                {"label": "Annual Tracking difference (bars)", "value": "annual_td_bar"},
+                                                {
+                                                    "label": "Annual Tracking difference (bars)",
+                                                    "value": "annual_td_bar",
+                                                },
                                                 {"label": "Tracking Error", "value": "te"},
                                                 {"label": "Correlation", "value": "correlation"},
                                                 {"label": "Beta coefficient", "value": "beta"},
-
                                             ],
                                             value="annualized_td",
                                             id="benchmark-plot-option",
@@ -210,7 +215,7 @@ def benchmark_card_controls(
                                 ),
                             ]
                         ),
-                    ]
+                    ],
                 ),
                 html.Div(
                     [
@@ -252,7 +257,7 @@ def disable_rolling_expanding_switch(plot_options: str, radio_switch_value):
     disabled = True if plot_options == "annual_td_bar" else False
     radio_options = [
         {"label": "Expanding", "value": "expanding"},
-        {"label": "Rolling", "value": "rolling", "disabled": disabled}
+        {"label": "Rolling", "value": "rolling", "disabled": disabled},
     ]
     new_value = "expanding" if disabled else radio_switch_value
     return radio_options, new_value
@@ -268,19 +273,12 @@ def disable_rolling_expanding_switch(plot_options: str, radio_switch_value):
     State("benchmark-first-date", "value"),
     State("benchmark-last-date", "value"),
 )
-def update_link_benchmark(n_clicks,
-                          href: str,
-                          benchmark: str,
-                          tickers_list: list,
-                          ccy: str,
-                          first_date: str,
-                          last_date: str):
-    return create_link(ccy=ccy,
-                       first_date=first_date,
-                       href=href,
-                       last_date=last_date,
-                       tickers_list=tickers_list,
-                       benchmark=benchmark)
+def update_link_benchmark(
+    n_clicks, href: str, benchmark: str, tickers_list: list, ccy: str, first_date: str, last_date: str
+):
+    return create_link(
+        ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list, benchmark=benchmark
+    )
 
 
 @app.callback(
@@ -341,7 +339,7 @@ def disable_link_button(tickers_list) -> bool:
 @app.callback(
     Output("benchmark-submit-button", "disabled"),
     Input("benchmark-assets-list", "value"),
-    Input("benchmark-rolling-window", "value")
+    Input("benchmark-rolling-window", "value"),
 )
 def disable_submit(tickers_list, rolling_window_value) -> bool:
     """

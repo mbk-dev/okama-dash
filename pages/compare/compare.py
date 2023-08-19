@@ -108,7 +108,7 @@ def update_graf_compare(
         # ticks='outside',
         rangeslider_visible=True,
         showgrid=False,
-        gridcolor='lightgrey',
+        gridcolor="lightgrey",
         zeroline=False,
         zerolinewidth=2,
         zerolinecolor="black",
@@ -116,10 +116,10 @@ def update_graf_compare(
     fig.update_yaxes(
         # ticks='outside',
         zeroline=True,
-        zerolinecolor='black',
+        zerolinecolor="black",
         zerolinewidth=1,
         showgrid=False,
-        gridcolor='lightgrey',
+        gridcolor="lightgrey",
     )
     # Asset List describe() risk-return statistics
     statistics_dash_table = get_al_statistics_table(al_object)
@@ -170,7 +170,7 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
     chart_last_date = ind[-1]
 
     annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
-    annotation_series = (return_series * 100).map('{:,.2f}%'.format)
+    annotation_series = (return_series * 100).map("{:,.2f}%".format)
     annotations_text = [cum_return for cum_return in annotation_series]
 
     # inflation must not be in the chart for "Real CAGR"
@@ -222,6 +222,5 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
             xanchor="left",
             bgcolor="grey",
         )
-
 
     return fig

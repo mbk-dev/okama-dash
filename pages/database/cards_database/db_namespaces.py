@@ -12,7 +12,7 @@ import okama as ok
 column1_name = "Namespaces"
 column2_name = "Description"
 
-namespaces_df = pd.DataFrame.from_dict(ok.namespaces, orient='index').reset_index(names=column1_name)
+namespaces_df = pd.DataFrame.from_dict(ok.namespaces, orient="index").reset_index(names=column1_name)
 namespaces_df.rename(columns={0: column2_name}, inplace=True)
 namespaces_df = namespaces_df[[column1_name, column2_name]]
 
@@ -38,4 +38,3 @@ card_db_namespaces = dbc.Card(
     ),
     class_name="mb-3",
 )
-

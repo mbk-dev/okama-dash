@@ -385,7 +385,7 @@ def print_weights_sum(values) -> Tuple[str, bool]:
     Output("dynamic-add-filter", "disabled"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
-    Input("pf-rolling-window", "value")
+    Input("pf-rolling-window", "value"),
 )
 def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_value) -> Tuple[bool, bool, bool]:
     """

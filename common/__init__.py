@@ -11,7 +11,6 @@ if plt == "Linux":
             "CACHE_REDIS_URL": "redis://localhost:6379/0",
             "CACHE_DEFAULT_TIMEOUT": 500,
         },
-
     )
 else:
     print("caching in filesystem")

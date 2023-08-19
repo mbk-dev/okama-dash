@@ -194,18 +194,18 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
         # ticks='outside',
         rangeslider_visible=True,
         showgrid=False,
-        gridcolor='lightgrey',
+        gridcolor="lightgrey",
         zeroline=False,
         zerolinewidth=2,
-        zerolinecolor="black"
+        zerolinecolor="black",
     )
     fig.update_yaxes(
         # ticks='outside',
         zeroline=True,
-        zerolinecolor='black',
+        zerolinecolor="black",
         zerolinewidth=1,
         showgrid=False,
-        gridcolor='lightgrey'
+        gridcolor="lightgrey",
     )
     fig.update_layout(
         xaxis_title="Date",

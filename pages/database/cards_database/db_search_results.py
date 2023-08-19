@@ -27,9 +27,8 @@ card_db_search_results = dbc.Card(
     prevent_initial_call=True,
 )
 def db_search(n_clicks: int, text_to_search: str, namespace: str) -> dash_table.DataTable:
-    search_df = (
-        ok.search(text_to_search, namespace=namespace if namespace != "ANY" else None).
-        drop(columns=["ticker"], errors="ignore")
+    search_df = ok.search(text_to_search, namespace=namespace if namespace != "ANY" else None).drop(
+        columns=["ticker"], errors="ignore"
     )
     if search_df.empty:
         output = "Not found in the database ..." if namespace == "ANY" else f"Not found in {namespace} namespace ..."

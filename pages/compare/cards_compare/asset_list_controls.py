@@ -299,9 +299,7 @@ def disable_link_button(tickers_list) -> bool:
 
 
 @app.callback(
-    Output("al-submit-button", "disabled"),
-    Input("al-symbols-list", "value"),
-    Input("al-rolling-window", "value")
+    Output("al-submit-button", "disabled"), Input("al-symbols-list", "value"), Input("al-rolling-window", "value")
 )
 def disable_submit(tickers_list, rolling_window_value) -> bool:
     """
@@ -314,4 +312,3 @@ def disable_submit(tickers_list, rolling_window_value) -> bool:
     no_tickers = len(tickers_list) == 0
     rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
     return no_tickers or rolling_not_natural
-
