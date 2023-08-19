@@ -101,8 +101,26 @@ def update_graf_compare(
         fig.update_yaxes(title_text="Wealth Index")
     else:
         fig.update_yaxes(title_text="CAGR")
+
     # Change layout for mobile screens (except correlation matrix)
     fig, config = adopt_small_screens(fig, screen)
+    fig.update_xaxes(
+        # ticks='outside',
+        rangeslider_visible=True,
+        showgrid=False,
+        gridcolor='lightgrey',
+        zeroline=False,
+        zerolinewidth=2,
+        zerolinecolor="black",
+    )
+    fig.update_yaxes(
+        # ticks='outside',
+        zeroline=True,
+        zerolinecolor='black',
+        zerolinewidth=1,
+        showgrid=False,
+        gridcolor='lightgrey',
+    )
     # Asset List describe() risk-return statistics
     statistics_dash_table = get_al_statistics_table(al_object)
     return fig, config, statistics_dash_table
@@ -136,9 +154,11 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
     # Select Plot Type
     if plot_type == "wealth":
         df = al_object.wealth_indexes
+        return_series = al_object.get_cumulative_return(real=False)
     elif plot_type in ("cagr", "real_cagr"):
         real = False if plot_type == "cagr" else True
         df = al_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
+        return_series = df.iloc[-1, :]
     elif plot_type == "correlation":
         matrix = al_object.assets_ror.corr()
         matrix = matrix.applymap("{:,.2f}".format)
@@ -148,6 +168,11 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
     ind = df.index.to_timestamp("D")
     chart_first_date = ind[0]
     chart_last_date = ind[-1]
+
+    annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
+    annotation_series = (return_series * 100).map('{:,.2f}%'.format)
+    annotations_text = [cum_return for cum_return in annotation_series]
+
     # inflation must not be in the chart for "Real CAGR"
     plot_inflation_condition = inflation_on and plot_type != "real_cagr"
 
@@ -184,10 +209,19 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
                 opacity=0.25,
                 line_width=0,
             )
-    # Plot x-axis slider
-    fig.update_xaxes(rangeslider_visible=True)
     fig.update_layout(
         xaxis_title="Date",
         legend_title="Assets",
     )
+    for point in zip(annotations_xy, annotations_text):
+        fig.add_annotation(
+            x=point[0][0],
+            y=point[0][1],
+            text=point[1],
+            showarrow=False,
+            xanchor="left",
+            bgcolor="grey",
+        )
+
+
     return fig

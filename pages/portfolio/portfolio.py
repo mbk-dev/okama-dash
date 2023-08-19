@@ -190,7 +190,23 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
                 line_width=0,
             )
     # Plot x-axis slider
-    fig.update_xaxes(rangeslider_visible=True)
+    fig.update_xaxes(
+        # ticks='outside',
+        rangeslider_visible=True,
+        showgrid=False,
+        gridcolor='lightgrey',
+        zeroline=False,
+        zerolinewidth=2,
+        zerolinecolor="black"
+    )
+    fig.update_yaxes(
+        # ticks='outside',
+        zeroline=True,
+        zerolinecolor='black',
+        zerolinewidth=1,
+        showgrid=False,
+        gridcolor='lightgrey'
+    )
     fig.update_layout(
         xaxis_title="Date",
         legend_title="Assets",
