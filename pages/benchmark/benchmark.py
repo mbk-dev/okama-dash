@@ -115,6 +115,7 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
     elif plot_type == "beta":
         df = al_object.index_beta(rolling_window=rolling_window)
 
+
     if plot_type != "annual_td_bar":
         ind = df.index.to_timestamp("M")
         fig = px.line(
@@ -126,10 +127,28 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
         )
         # Plot x-axis slider
         fig.update_xaxes(rangeslider_visible=True)
+
+        return_series = df.iloc[-1, :]
+
+        annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
+        annotation_series = (return_series * 100).map("{:,.2f}%".format)
+        annotations_text = [cum_return for cum_return in annotation_series]
+
+        # plot annotations
+        for point in zip(annotations_xy, annotations_text):
+            fig.add_annotation(
+                x=point[0][0],
+                y=point[0][1],
+                text=point[1],
+                showarrow=False,
+                xanchor="left",
+                bgcolor="grey",
+            )
     else:
         ind = df.index.to_timestamp(freq="Y")
         fig = px.bar(df, x=ind, y=df.columns, barmode="relative")
         fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
+
     # X and Y-axis titles
     y_title = get_y_title(plot_type)
     fig.update_yaxes(title_text=y_title)

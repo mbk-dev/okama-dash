@@ -154,7 +154,8 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
     # Select Plot Type
     if plot_type == "wealth":
         df = al_object.wealth_indexes
-        return_series = al_object.get_cumulative_return(real=False)
+        # TODO: calculate return_series got portfolio + assets
+        return_series = al_object.get_cumulative_return(real=inflation_on)
     elif plot_type in ("cagr", "real_cagr"):
         real = False if plot_type == "cagr" else True
         df = al_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
@@ -213,6 +214,7 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
         xaxis_title="Date",
         legend_title="Assets",
     )
+    # plot annotations
     for point in zip(annotations_xy, annotations_text):
         fig.add_annotation(
             x=point[0][0],

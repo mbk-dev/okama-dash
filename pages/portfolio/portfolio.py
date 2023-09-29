@@ -145,12 +145,20 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
     # Select Plot Type
     if plot_type == "wealth":
         df = pf_object.wealth_index_with_assets
+        return_series = pf_object.get_cumulative_return(real=inflation_on)
     else:
         real = False if plot_type == "cagr" else True
         df = pf_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
+        return_series = df.iloc[-1, :]
+
     ind = df.index.to_timestamp("D")
     chart_first_date = ind[0]
     chart_last_date = ind[-1]
+
+    annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
+    annotation_series = (return_series * 100).map("{:,.2f}%".format)
+    annotations_text = [cum_return for cum_return in annotation_series]
+
     # inflation must not be in the chart for "Real CAGR"
     plot_inflation_condition = inflation_on and plot_type != "real_cagr"
 
@@ -211,4 +219,15 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
         xaxis_title="Date",
         legend_title="Assets",
     )
+
+    # plot annotations
+    for point in zip(annotations_xy, annotations_text):
+        fig.add_annotation(
+            x=point[0][0],
+            y=point[0][1],
+            text=point[1],
+            showarrow=False,
+            xanchor="left",
+            bgcolor="grey",
+        )
     return fig
