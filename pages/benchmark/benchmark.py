@@ -131,7 +131,7 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
         return_series = df.iloc[-1, :]
 
         annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
-        annotation_series = (return_series * 100).map("{:,.2f}%".format)
+        annotation_series = return_series.map("{:,.2f}%".format)
         annotations_text = [cum_return for cum_return in annotation_series]
 
         # plot annotations
