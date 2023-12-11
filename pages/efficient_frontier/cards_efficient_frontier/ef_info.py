@@ -11,9 +11,9 @@ card_ef_info = dbc.Card(
     dbc.CardBody(
         [
             html.H5("Information"),
-            html.Div(id="ef-info"),
+            html.Div(id="ef-info", children="Start to select assets to see the information"),
             html.H5("Assets names"),
-            html.Div(id="ef-assets-names"),
+            html.Div(id="ef-assets-names", children="Start to select assets to see the information"),
         ]
     ),
     class_name="mb-3",
@@ -26,7 +26,7 @@ card_ef_info = dbc.Card(
     Input("ef-symbols-list", "value"),  # tickers
     prevent_initial_call=False,
 )
-def pf_update_asset_names_info(assets: list) -> dash_table.DataTable:
+def pf_update_asset_names_info(assets: list) -> tuple[dash_table.DataTable, dash_table.DataTable]:
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate

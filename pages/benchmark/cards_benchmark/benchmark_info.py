@@ -13,9 +13,9 @@ card_benchmark_info = dbc.Card(
     dbc.CardBody(
         [
             html.H5("Information"),
-            html.Div(id="benchmark-info"),
+            html.Div(id="benchmark-info", children="Start to select assets to see the information"),
             html.H5("Assets names"),
-            html.Div(id="benchmark-assets-names"),
+            html.Div(id="benchmark-assets-names", children="Start to select assets to see the information"),
         ]
     ),
     class_name="mb-3",

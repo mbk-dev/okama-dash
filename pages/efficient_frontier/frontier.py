@@ -1,4 +1,5 @@
 import dash
+import dash.exceptions
 import okama
 from dash import callback, html, dcc
 from dash.dependencies import Input, Output, State
@@ -64,7 +65,6 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     Output(component_id="ef-transition-map-graf", component_property="figure"),
     Output(component_id="ef-graf", component_property="config"),
     Output(component_id="ef-transition-map-graf", component_property="config"),
-    Output(component_id="ef-transition-map-graf-div", component_property="hidden"),  # hide TM chart
     # Inputs
     Input(component_id="store", component_property="data"),
     # Main input for EF
@@ -97,9 +97,10 @@ def update_ef_cards(
     cml_option: str,
     rf_rate: float,
     n_monte_carlo: int,
-    tr_map_option: str,
 ):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
+    if not symbols:
+        raise dash.exceptions.PreventUpdate
     ef_object = ok.EfficientFrontier(
         symbols,
         first_date=fd_value,
@@ -117,11 +118,15 @@ def update_ef_cards(
     # Change layout for mobile screens
     fig1, config1 = adopt_small_screens(fig1, screen)
     fig2, config2 = adopt_small_screens(fig2, screen)
+    return fig1, fig2, config1, config2
 
-    # Hide Transition map
-    transition_map_is_hidden = False if tr_map_option == "On" else True
-    return fig1, fig2, config1, config2, transition_map_is_hidden
-
+@callback(
+    Output(component_id="ef-transition-map-graf-div", component_property="hidden"),
+    Input(component_id="ef-submit-button-state", component_property="n_clicks"),
+    State(component_id="transition-map-option", component_property="value"),
+)
+def hide_ef_transition_map_graf(n_clicks: int, tr_map_option: str) -> bool:
+    return (tr_map_option != "On") or (n_clicks == 0)
 
 @callback(
     Output("ef-click-data-risk", "children"),
@@ -132,7 +137,7 @@ def update_ef_cards(
     Input(component_id="ef-submit-button-state", component_property="n_clicks"),
     State(component_id="ef-symbols-list", component_property="value"),
 )
-def display_click_data(clickData, n_clock, symbols):
+def display_click_data(clickData, n_click, symbols):
     """
     Display portfolio weights, risk and return.
     """

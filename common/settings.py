@@ -1,8 +1,8 @@
 import okama
 
-default_symbols = ["SPY.US", "BND.US", "GLD.US"]
-default_benchmark = "SP500TR.INDX"
-default_symbols_benchmark = ["SPY.US", "VOO.US"]
+default_symbols = []
+default_benchmark = None
+default_symbols_benchmark = []
 default_currency = "USD"
 namespaces = okama.assets_namespaces
 

@@ -1,6 +1,7 @@
 import warnings
 
 import dash
+import dash.exceptions
 from dash import dash_table, callback
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
@@ -68,7 +69,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="al-rolling-window", component_property="value"),
     # Logarithmic scale button
     Input(component_id="logarithmic-scale-switch", component_property="on"),
-    prevent_initial_call=False,
+    prevent_initial_call=True,
 )
 def update_graf_compare(
     screen,
@@ -84,6 +85,8 @@ def update_graf_compare(
     # Log scale
     log_on: bool,
 ):
+    if not selected_symbols:
+        raise dash.exceptions.PreventUpdate
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     al_object = ok.AssetList(
         symbols,

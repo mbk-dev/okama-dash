@@ -216,7 +216,7 @@ def card_controls(
     Input(component_id="al-plot-option", component_property="value"),
 )
 def update_rolling_input(plot_options: str):
-    return plot_options in ("wealth", "correlation")
+    return plot_options in {"wealth", "correlation"}
 
 
 @callback(
@@ -245,6 +245,7 @@ def update_inflation_switch(plot_options: str, inflation_switch_value):
     State("al-base-currency", "value"),
     State("al-first-date", "value"),
     State("al-last-date", "value"),
+    prevent_initial_call=True,
 )
 def update_link_al(n_clicks, href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
     return create_link(ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list)
@@ -269,7 +270,7 @@ def optimize_search_al(search_value, selected_values):
     State(component_id="al-plot-option", component_property="value"),
 )
 def show_log_scale_switch(n_clicks, plot_type: str):
-    return False if plot_type in ("wealth", "cagr", "real_cagr") else True
+    return plot_type not in ("wealth", "cagr", "real_cagr")
 
 
 @app.callback(
@@ -309,6 +310,8 @@ def disable_submit(tickers_list, rolling_window_value) -> bool:
     - number of tickers is 0
     - rolling window size is not natural
     """
+    if not tickers_list:
+        return True
     no_tickers = len(tickers_list) == 0
     rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
     return no_tickers or rolling_not_natural

@@ -77,6 +77,8 @@ def update_graf_benchmark(
     expanding_rolling: str,
     rolling_window: int,
 ):
+    if not selected_symbols or not benchmark:
+        raise dash.exceptions.PreventUpdate
     tickers = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     symbols = [benchmark] + tickers
     al_object = ok.AssetList(

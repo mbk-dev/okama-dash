@@ -11,9 +11,9 @@ card_assets_info = dbc.Card(
     dbc.CardBody(
         [
             html.H5("Information"),
-            html.Div(id="al-compare-info"),
+            html.Div(id="al-compare-info", children="Start to select assets to see the information"),
             html.H5(children="Assets names"),
-            html.Div(id="al-assets-names"),
+            html.Div(id="al-assets-names", children="Start to select assets to see the information"),
         ]
     ),
     class_name="mb-3",
@@ -26,12 +26,12 @@ card_assets_info = dbc.Card(
     Input("al-symbols-list", "value"),  # tickers
     Input("al-base-currency", "value"),  # currency
     Input("al-inflation-switch", "value"),  # inflation
-    prevent_initial_call=False,
+    prevent_initial_call=True,
 )
-def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> dash_table.DataTable:
-    assets = [i for i in assets if i is not None]
+def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> tuple[dash_table.DataTable, dash_table.DataTable]:
     if not assets:
         raise PreventUpdate
+    assets = [i for i in assets if i is not None]
     al_object = ok.AssetList(assets, ccy=ccy, inflation=inflation)
     names_table = get_assets_names(al_object)
     info_table = get_info(al_object)

@@ -29,5 +29,5 @@ card_graf_portfolio = dbc.Card(
 
 
 @callback(Output("portfolio_graf_div", "hidden"), Input("pf-submit-button", "n_clicks"))
-def hide_graf(n_clicks):
-    return True if n_clicks == 0 else False
+def hide_pf_graf(n_clicks):
+    return n_clicks == 0
