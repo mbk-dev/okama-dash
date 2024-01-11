@@ -79,9 +79,6 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="risk-free-rate-option", component_property="value"),
     # Monte-Carlo
     State(component_id="monte-carlo-option", component_property="value"),
-    # Transition Map
-    State(component_id="transition-map-option", component_property="value"),
-    # Input(component_id="ef-return-type-checklist-input", component_property="value"),
     prevent_initial_call=False,
 )
 def update_ef_cards(
