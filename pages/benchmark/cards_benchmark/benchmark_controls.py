@@ -2,6 +2,7 @@ import re
 from typing import Optional
 
 import dash
+import dash.exceptions
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback
@@ -254,7 +255,7 @@ def disable_rolling_input(plot_options: str, expanding_rolling):
     Input("benchmark-chart-expanding-rolling", "value"),
 )
 def disable_rolling_expanding_switch(plot_options: str, radio_switch_value):
-    disabled = True if plot_options == "annual_td_bar" else False
+    disabled = plot_options == "annual_td_bar"
     radio_options = [
         {"label": "Expanding", "value": "expanding"},
         {"label": "Rolling", "value": "rolling", "disabled": disabled},
@@ -283,18 +284,12 @@ def update_link_benchmark(
 
 @app.callback(
     Output("select-benchmark", "options"),
-    Input("select-benchmark", "search_value"),
     Input("select-benchmark", "value"),
 )
-def optimize_search_benchmark(search_value, selected_value):
-    if search_value:
-        ls = [o for o in options if re.match(search_value, o, re.IGNORECASE)]
-    else:
-        if selected_value:
-            ls = [selected_value]
-        else:
-            ls = [settings.default_benchmark]
-    return ls
+def optimize_search_benchmark(search_value):
+    if not search_value:
+        raise dash.exceptions.PreventUpdate
+    return [o for o in options if re.match(search_value, o, re.IGNORECASE)]
 
 
 @app.callback(
