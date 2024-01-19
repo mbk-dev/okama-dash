@@ -146,6 +146,14 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
                 xanchor="left",
                 bgcolor="grey",
             )
+        fig.update_yaxes(
+            # ticks='outside',
+            zeroline=True,
+            zerolinecolor="black",
+            zerolinewidth=1,
+            showgrid=False,
+            gridcolor="lightgrey",
+        )
     else:
         ind = df.index.to_timestamp(freq="Y")
         fig = px.bar(df, x=ind, y=df.columns, barmode="relative")
