@@ -284,12 +284,13 @@ def update_link_benchmark(
 
 @app.callback(
     Output("select-benchmark", "options"),
+    Input("select-benchmark", "search_value"),
     Input("select-benchmark", "value"),
 )
-def optimize_search_benchmark(search_value):
+def optimize_search_benchmark(search_value, selected_value):
     if not search_value:
         raise dash.exceptions.PreventUpdate
-    return [o for o in options if re.match(search_value, o, re.IGNORECASE)]
+    return [o for o in options if re.match(search_value, o, re.IGNORECASE)] if search_value else selected_value
 
 
 @app.callback(
