@@ -90,6 +90,8 @@ def card_controls(
                                 dcc.Dropdown(
                                     options=[
                                         {"label": "Monthly", "value": "month"},
+                                        {"label": "Quarter", "value": "quarter"},
+                                        {"label": "Half-year", "value": "half-year"},
                                         {"label": "Every year", "value": "year"},
                                         {"label": "Not rebalanced", "value": "none"},
                                     ],
