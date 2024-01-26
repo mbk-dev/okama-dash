@@ -103,8 +103,10 @@ def update_graf_portfolio(
     fig = get_pf_figure(pf_object, plot_type, inflation_on, rolling_window, log_on)
     if plot_type == "wealth":
         fig.update_yaxes(title_text="Wealth Indexes")
-    else:
+    elif plot_type in {"cagr", "real_cagr"}:
         fig.update_yaxes(title_text="CAGR")
+    else:
+        fig.update_yaxes(title_text="Drawdowns")
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
     # PF statistics
@@ -161,7 +163,7 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
 
     annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
     annotation_series = (return_series * 100).map("{:,.2f}%".format)
-    annotations_text = [cum_return for cum_return in annotation_series]
+    annotations_text = list(annotation_series)
 
     # inflation must not be in the chart for "Real CAGR"
     plot_inflation_condition = inflation_on and plot_type != "real_cagr"
