@@ -164,6 +164,7 @@ def card_controls(
                                                 {"label": "Wealth Index", "value": "wealth"},
                                                 {"label": "Rolling Cagr", "value": "cagr"},
                                                 {"label": "Rolling Real Cagr", "value": "real_cagr"},
+                                                {"label": "Drawdowns", "value": "drawdowns"},
                                             ],
                                             value="wealth",
                                             id="pf-plot-option",
@@ -262,7 +263,7 @@ def card_controls(
     Input(component_id="pf-plot-option", component_property="value"),
 )
 def update_rolling_input(plot_options: str) -> bool:
-    return plot_options == "wealth"
+    return plot_options in {"wealth", "drawdowns"}
 
 
 @callback(
@@ -279,8 +280,18 @@ def update_inflation_switch(plot_options: str, inflation_switch_value) -> Tuple[
     """
     if plot_options == "real_cagr":
         return True, True
+    elif plot_options == "drawdowns":
+        return False, True
     else:
         return inflation_switch_value, False
+
+@app.callback(
+    Output("pf-logarithmic-scale-switch-div", "hidden"),
+    Input(component_id="pf-submit-button", component_property="n_clicks"),
+    State(component_id="pf-plot-option", component_property="value"),
+)
+def show_log_scale_switch(n_clicks, plot_type: str):
+    return plot_type not in ("wealth",)
 
 
 @callback(

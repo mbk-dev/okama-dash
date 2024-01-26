@@ -11,11 +11,14 @@ card_graf_portfolio = dbc.Card(
                     dcc.Loading(
                         [
                             dcc.Graph(id="pf-wealth-indexes"),
-                            daq.BooleanSwitch(
-                                id="pf-logarithmic-scale-switch",
-                                on=False,
-                                label="Logarithmic Y-Scale",
-                                labelPosition="bottom",
+                            html.Div(
+                                daq.BooleanSwitch(
+                                    id="pf-logarithmic-scale-switch",
+                                    on=False,
+                                    label="Logarithmic Y-Scale",
+                                    labelPosition="bottom",
+                                ),
+                            id="pf-logarithmic-scale-switch-div"
                             ),
                         ],
                     )

@@ -270,7 +270,7 @@ def optimize_search_al(search_value, selected_values):
     State(component_id="al-plot-option", component_property="value"),
 )
 def show_log_scale_switch(n_clicks, plot_type: str):
-    return plot_type not in ("wealth", "cagr", "real_cagr")
+    return plot_type not in ("wealth",)
 
 
 @app.callback(

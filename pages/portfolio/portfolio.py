@@ -140,15 +140,19 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
         "wealth": "Portfolio Wealth index",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
         "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
+        "drawdowns": "Portfolio Drawdowns",
     }
 
     # Select Plot Type
     if plot_type == "wealth":
         df = pf_object.wealth_index_with_assets
         return_series = pf_object.get_cumulative_return(real=inflation_on)
-    else:
-        real = False if plot_type == "cagr" else True
+    elif plot_type in {"cagr", "real_cagr"}:
+        real = plot_type != "cagr"
         df = pf_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
+        return_series = df.iloc[-1, :]
+    else:
+        df = pf_object.drawdowns.to_frame()
         return_series = df.iloc[-1, :]
 
     ind = df.index.to_timestamp("D")
