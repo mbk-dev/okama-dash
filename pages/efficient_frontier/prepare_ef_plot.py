@@ -74,14 +74,14 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
     # Assets Risk-Return points
     ror_df = ef_object.mean_return if ef_options["plot_type"] == "Arithmetic" else ef_object.get_cagr()
     df = pd.concat(
-        [ror_df, ef_object.risk_annual],
+        [ror_df, ef_object.risk_annual.iloc[-1]],
         axis=1,
         join="outer",
         copy="false",
         ignore_index=False,
     )
     df *= 100
-    df.rename(columns={0: "Return", 1: "Risk"}, inplace=True)
+    df.columns = ["Return", "Risk"]
     df.reset_index(drop=False, inplace=True)
     fig.add_trace(
         go.Scatter(

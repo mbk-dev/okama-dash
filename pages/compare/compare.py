@@ -130,9 +130,7 @@ def update_graf_compare(
 
 
 def get_al_statistics_table(al_object):
-    statistics_df = al_object.describe().iloc[:-4, :]
-    # statistics_df = al_object.describe()
-    # statistics_df.iloc[-4:, :] = statistics_df.iloc[-4:, :].applymap(str)
+    statistics_df = al_object.describe().iloc[:-4, :]  # crop from Max drawdown date
     statistics_dict = statistics_df.to_dict(orient="records")
 
     columns = [
