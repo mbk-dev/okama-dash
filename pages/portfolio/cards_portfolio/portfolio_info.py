@@ -2,7 +2,7 @@ import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
 from dash import html, dcc, callback, ALL, dash_table
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import plotly.express as px
 from dash.exceptions import PreventUpdate
 import okama as ok
@@ -31,6 +31,14 @@ card_assets_info = dbc.Card(
             ),
             html.H5(children="Assets names"),
             html.Div(id="pf-assets-names", children="Start to select assets to see the information"),
+            html.Div(
+                [
+                    html.H5(children="Survival period statistics"),
+                    html.Div(id="pf-monte-carlo-statistics")
+                ],
+                id="pf-monte-carlo-statistics-frame",
+                hidden=True
+            ),
         ]
     ),
     class_name="mb-3",
@@ -80,3 +88,21 @@ def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> dash_
     names_table = get_assets_names(al_object)
     info_table = get_info(al_object)
     return names_table, info_table
+
+
+@callback(
+    Output(component_id="pf-monte-carlo-statistics-frame", component_property="hidden"),
+    Input(component_id="pf-submit-button", component_property="n_clicks"),
+    State(component_id="pf-cashflow", component_property="value"),
+    State(component_id="pf-plot-option", component_property="value"),
+    State(component_id="pf-monte-carlo-number", component_property="value"),
+)
+def show_survival_periods_statistcs_table(
+    n_clicks,
+    cashflow: float,
+    plot_type: str,
+    n_monte_carlo: int,
+):
+    hidden_result = n_monte_carlo == 0 or plot_type != "wealth"
+    return hidden_result
+

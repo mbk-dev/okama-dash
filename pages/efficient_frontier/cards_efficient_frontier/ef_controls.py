@@ -51,6 +51,7 @@ def card_controls(
                             options=inflation.get_currency_list(),
                             value=ccy if ccy else "USD",
                             multi=False,
+                            clearable=False,
                             placeholder="Select a base currency",
                             id="ef-base-currency",
                         ),
@@ -191,10 +192,9 @@ def card_controls(
                                 ),
                             ]
                         ),
-                        dbc.Row(html.H5(children="Monte Carlo Simulation")),
+                        dbc.Row(html.H6(children="Monte Carlo Simulation")),
                         dbc.Row(
                             [
-                                # html.Hr(),
                                 dbc.Label(
                                     [
                                         "Number of points",
@@ -228,7 +228,7 @@ def card_controls(
                             ],
                             className="p-1",
                         ),
-                        dbc.Row(html.H5(children="Transition map")),
+                        dbc.Row(html.H6(children="Transition map")),
                         dbc.Row(
                             [
                                 dbc.Label(

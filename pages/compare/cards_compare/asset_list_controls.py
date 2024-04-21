@@ -58,6 +58,7 @@ def card_controls(
                             options=inflation.get_currency_list(),
                             value=ccy if ccy else "USD",
                             multi=False,
+                            clearable=False,
                             placeholder="Select a base currency",
                             id="al-base-currency",
                         ),

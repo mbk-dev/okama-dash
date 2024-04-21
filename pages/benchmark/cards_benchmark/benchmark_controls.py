@@ -83,6 +83,7 @@ def benchmark_card_controls(
                             options=inflation.get_currency_list(),
                             value=ccy if ccy else settings.default_currency,
                             multi=False,
+                            clearable=False,
                             placeholder="Select a base currency",
                             id="benchmark-base-currency",
                         ),

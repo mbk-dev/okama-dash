@@ -1,12 +1,17 @@
+import typing
 import warnings
 
 import dash
+import plotly
 from dash import dash_table, callback, ALL
+from dash.dash_table.Format import Format, Scheme
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
 import plotly.express as px
 import plotly.graph_objects as go
+
+import pandas as pd
 
 import okama as ok
 
@@ -54,6 +59,7 @@ def layout(tickers=None, weights=None, first_date=None, last_date=None, ccy=None
     Output(component_id="pf-wealth-indexes", component_property="figure"),
     Output(component_id="pf-wealth-indexes", component_property="config"),
     Output(component_id="pf-describe-table", component_property="children"),
+    Output(component_id="pf-monte-carlo-statistics", component_property="children"),
     # user screen info
     Input(component_id="store", component_property="data"),
     # main Inputs
@@ -64,10 +70,20 @@ def layout(tickers=None, weights=None, first_date=None, last_date=None, ccy=None
     State(component_id="pf-rebalancing-period", component_property="value"),
     State(component_id="pf-first-date", component_property="value"),
     State(component_id="pf-last-date", component_property="value"),
-    # Options
+    # advanced parameters
+    State(component_id="pf-initial-amount", component_property="value"),
+    State(component_id="pf-cashflow", component_property="value"),
+    State(component_id="pf-discount-rate", component_property="value"),
+    State(component_id="pf-ticker", component_property="value"),
+    # options
     State(component_id="pf-plot-option", component_property="value"),
     State(component_id="pf-inflation-switch", component_property="value"),
     State(component_id="pf-rolling-window", component_property="value"),
+    # monte carlo
+    State(component_id="pf-monte-carlo-number", component_property="value"),
+    State(component_id="pf-monte-carlo-years", component_property="value"),
+    State(component_id="pf-monte-carlo-distribution", component_property="value"),
+    State(component_id="pf-monte-carlo-backtest", component_property="value"),
     # Logarithmic scale button
     Input(component_id="pf-logarithmic-scale-switch", component_property="on"),
     prevent_initial_call=True,
@@ -81,15 +97,27 @@ def update_graf_portfolio(
     rebalancing_period: str,
     fd_value: str,
     ld_value: str,
+    # Advanced parameters
+    initial_amount: float,
+    cashflow: float,
+    discount_rate: float,
+    symbol: str,
     # Options
     plot_type: str,
     inflation_on: bool,
     rolling_window: int,
+    # Monte Carlo
+    n_monte_carlo: int,
+    years_monte_carlo: int,
+    distribution_monte_carlo: str,
+    show_backtest: str,
     # Log scale
     log_on: bool,
 ):
     assets = [i for i in assets if i is not None]
     weights = [i / 100.0 for i in weights if i is not None]
+    symbol = symbol.replace(' ', '_')
+    symbol = symbol + ".PF" if not symbol.lower().endswith(".pf") else symbol
     pf_object = ok.Portfolio(
         assets=assets,
         weights=weights,
@@ -98,9 +126,23 @@ def update_graf_portfolio(
         ccy=ccy,
         rebalancing_period=rebalancing_period,
         inflation=inflation_on,
-        symbol="PORTFOLIO.PF",
+        # advanced
+        initial_amount=initial_amount,
+        cashflow=cashflow,
+        discount_rate=discount_rate if discount_rate else None,
+        symbol=symbol,
     )
-    fig = get_pf_figure(pf_object, plot_type, inflation_on, rolling_window, log_on)
+    fig, df_backtest, df_forecast = get_pf_figure(
+        pf_object,
+        plot_type,
+        inflation_on,
+        rolling_window,
+        n_monte_carlo,
+        years_monte_carlo,
+        distribution_monte_carlo,
+        show_backtest,
+        log_on
+    )
     if plot_type == "wealth":
         fig.update_yaxes(title_text="Wealth Indexes")
     elif plot_type in {"cagr", "real_cagr"}:
@@ -111,19 +153,49 @@ def update_graf_portfolio(
     fig, config = adopt_small_screens(fig, screen)
     # PF statistics
     statistics_dash_table = get_pf_statistics_table(pf_object)
+    # Monte Carlo statistics
+    if n_monte_carlo != 0 and plot_type == "wealth":
+        forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
+            df_forecast,
+            df_backtest,
+            pf_object
+        )
+    else:
+        forecast_survival_statistics_datatable = dash_table.DataTable()
     return (
         fig,
         config,
-        # info_table,
-        # names_table,
         statistics_dash_table,
+        forecast_survival_statistics_datatable
     )
+
+
+def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object) -> dash_table.DataTable:
+    # TODO: add survival period of backtest to forecasted survival period
+    forecast_dates: pd.Series = ok.Frame.get_survival_date(df_forecast)
+    fsp = forecast_dates.apply(ok.Date.get_period_length, args=(pf_object.last_date,))
+    table_list = [
+        {"1": "1st percentile", "2": fsp.quantile(1 / 100), "3": "Min", "4": fsp.min()},
+        {"1": "50th percentile", "2": fsp.quantile(50 / 100), "3": "Max", "4": fsp.max()},
+        {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "Mean", "4": fsp.mean()},
+    ]
+    columns = [
+        dict(id="1", name="1"),
+        dict(id="2", name="2", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+        dict(id="3", name="3"),
+        dict(id="4", name="4", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+    ]
+    forecast_survival_statistics_datatable = dash_table.DataTable(
+        data=table_list,
+        columns=columns,
+        style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
+        style_header={'display': 'none'}
+    )
+    return forecast_survival_statistics_datatable
 
 
 def get_pf_statistics_table(al_object):
     statistics_df = al_object.describe().iloc[:-1, :]
-    # statistics_df = al_object.describe()
-    # statistics_df.iloc[-4:, :] = statistics_df.iloc[-4:, :].applymap(str)
     statistics_dict = statistics_df.to_dict(orient="records")
 
     columns = [
@@ -137,18 +209,45 @@ def get_pf_statistics_table(al_object):
     )
 
 
-def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, rolling_window: int, log_scale: bool):
+def get_pf_figure(
+        pf_object: ok.Portfolio,
+        plot_type: str,
+        inflation_on: bool,
+        rolling_window: int,
+        n_monte_carlo: int,
+        years_monte_carlo: int,
+        distribution_monte_carlo: str,
+        show_backtest: str,
+        log_scale: bool
+) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame, pd.DataFrame]:
     titles = {
         "wealth": "Portfolio Wealth index",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
         "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
         "drawdowns": "Portfolio Drawdowns",
     }
-
+    show_backtest_bool = True if show_backtest == "yes" else False
     # Select Plot Type
+    condition_monte_carlo = plot_type == "wealth" and n_monte_carlo != 0
+    df_backtest = pd.DataFrame()
+    df_forecast = pd.DataFrame()
     if plot_type == "wealth":
-        df = pf_object.wealth_index_with_assets
-        return_series = pf_object.get_cumulative_return(real=inflation_on)
+        if n_monte_carlo == 0:
+            df = pf_object.wealth_index_with_assets if pf_object.cashflow == 0 else pf_object.dcf.wealth_index
+            return_series = pf_object.get_cumulative_return(real=inflation_on)
+        else:
+            df_backtest = pf_object.dcf.wealth_index[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
+            last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else pf_object.initial_amount
+            if last_backtest_value > 0:
+                df_forecast = pf_object.dcf._monte_carlo_wealth(
+                    first_value=last_backtest_value,
+                    distr=distribution_monte_carlo,
+                    years=years_monte_carlo,
+                    n=n_monte_carlo
+                )
+                df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", copy="false", ignore_index=False)
+            else:
+                df = df_backtest
     elif plot_type in {"cagr", "real_cagr"}:
         real = plot_type != "cagr"
         df = pf_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
@@ -161,26 +260,29 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
     chart_first_date = ind[0]
     chart_last_date = ind[-1]
 
-    annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
-    annotation_series = (return_series * 100).map("{:,.2f}%".format)
-    annotations_text = list(annotation_series)
+    if not condition_monte_carlo and pf_object.cashflow == 0:
+        annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
+        annotation_series = (return_series * 100).map("{:,.2f}%".format)
+        annotations_text = list(annotation_series)
 
     # inflation must not be in the chart for "Real CAGR"
-    plot_inflation_condition = inflation_on and plot_type != "real_cagr"
+    condition_plot_inflation = inflation_on and plot_type != "real_cagr"
 
     fig = px.line(
         df,
         x=ind,
-        y=df.columns[:-1] if plot_inflation_condition else df.columns,
+        y=df.columns[:-1] if condition_plot_inflation and not condition_monte_carlo else df.columns,
         log_y=log_scale,
         title=titles[plot_type],
-        # width=800,
         height=800,
     )
     fig.update_traces({"line": {"width": 1}})
-    fig.update_traces(patch={"line": {"width": 3}, "name": "PORTFOLIO"}, selector={"legendgroup": "PORTFOLIO.PF"})
+    fig.update_traces(
+        patch={"line": {"width": 3}, "name": pf_object.symbol},
+        selector={"legendgroup": pf_object.symbol}
+    )
     # Plot Inflation
-    if plot_inflation_condition:
+    if condition_plot_inflation and not condition_monte_carlo:
         fig.add_trace(
             go.Scatter(
                 x=ind,
@@ -227,13 +329,16 @@ def get_pf_figure(pf_object: ok.Portfolio, plot_type: str, inflation_on: bool, r
     )
 
     # plot annotations
-    for point in zip(annotations_xy, annotations_text):
-        fig.add_annotation(
-            x=point[0][0],
-            y=point[0][1],
-            text=point[1],
-            showarrow=False,
-            xanchor="left",
-            bgcolor="grey",
-        )
-    return fig
+    if not condition_monte_carlo and pf_object.cashflow == 0:
+        for point in zip(annotations_xy, annotations_text):
+            fig.add_annotation(
+                x=point[0][0],
+                y=point[0][1],
+                text=point[1],
+                showarrow=False,
+                xanchor="left",
+                bgcolor="grey",
+            )
+    else:
+        fig.update_traces(showlegend=False)
+    return fig, df_backtest, df_forecast

@@ -22,12 +22,7 @@ from common.parse_query import make_list_from_string
 from common.symbols import get_symbols
 from common import cache
 import common.validators as validators
-from pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt import (
-    pf_options_tooltip_inflation,
-    pf_options_tooltip_cagr,
-    pf_options_window,
-    pf_rebalancing_period,
-)
+import pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt as tl
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -71,6 +66,7 @@ def card_controls(
                                     options=inflation.get_currency_list(),
                                     value=ccy if ccy else "USD",
                                     multi=False,
+                                    clearable=False,
                                     placeholder="Select a base currency",
                                     id="pf-base-currency",
                                 ),
@@ -101,7 +97,7 @@ def card_controls(
                                     id="pf-rebalancing-period",
                                 ),
                                 dbc.Tooltip(
-                                    pf_rebalancing_period,
+                                    tl.pf_rebalancing_period,
                                     target="pf-info-rebalancing",
                                 ),
                             ],
@@ -110,6 +106,7 @@ def card_controls(
                 ),
                 html.Div(
                     [
+                        # Attributes
                         dbc.Row(
                             [
                                 dbc.Col(
@@ -136,6 +133,93 @@ def card_controls(
                                 ),
                             ]
                         ),
+                        # Advanced attributes
+                        dbc.Row(
+                            [
+                                dbc.Accordion(
+                                    [
+                                        dbc.AccordionItem(
+                                            [
+                                                dbc.Row(
+                                                    [
+                                                        dbc.Col(
+                                                            [
+                                                                html.Label([
+                                                                    "Initial amount",
+                                                                    html.I(
+                                                                        className="bi bi-info-square ms-2",
+                                                                        id="pf-info-initial-amount",
+                                                                    ),
+                                                                ]),
+                                                                dbc.Input(
+                                                                    id="pf-initial-amount",
+                                                                    value=1000,
+                                                                    type="number",
+                                                                    min=1
+                                                                ),
+                                                                dbc.FormText("Positive number"),
+                                                                dbc.Tooltip(
+                                                                    tl.pf_options_tooltip_initial_amount,
+                                                                    target="pf-info-initial-amount",
+                                                                ),
+                                                            ]
+                                                        ),
+                                                        dbc.Col(
+                                                            [
+                                                                html.Label([
+                                                                    "Monthly cash flow",
+                                                                    html.I(
+                                                                        className="bi bi-info-square ms-2",
+                                                                        id="pf-info-cash-flow",
+                                                                    ),
+                                                                ]),
+                                                                dbc.Input(
+                                                                    id="pf-cashflow",
+                                                                    value=0,
+                                                                    type="number",
+                                                                ),
+                                                                dbc.FormText("Number"),
+                                                            ]
+                                                        ),
+                                                    ]
+                                                ),
+                                                dbc.Row(
+                                                    [
+                                                        dbc.Col(
+                                                            [
+                                                                html.Label("Discount rate"),
+                                                                dbc.Input(
+                                                                    id="pf-discount-rate",
+                                                                    type="number",
+                                                                    min=0,
+                                                                    max=1
+                                                                ),
+                                                                dbc.FormText("0 - 1 (0.05 is equal to 5%)"),
+                                                            ]
+                                                        ),
+                                                        dbc.Col(
+                                                            [
+                                                                html.Label("Portfolio ticker"),
+                                                                dbc.Input(
+                                                                    id="pf-ticker",
+                                                                    type="text",
+                                                                    value="PORTFOLIO",
+                                                                ),
+                                                                dbc.FormText("Symbols without spaces"),
+                                                            ]
+                                                        ),
+                                                    ]
+                                                )
+                                            ],
+                                            title="Advanced parameters",
+                                        ),
+                                    ],
+                                    start_collapsed=True,
+                                    flush=True,
+                                    class_name="p-0",
+                                )
+                            ],
+                        ),
                         dbc.Row(
                             # copy link to clipboard button
                             create_copy_link_div(
@@ -145,7 +229,8 @@ def card_controls(
                                 card_name="Portfolio",
                             ),
                         ),
-                        dbc.Row(html.H5(children="Options")),
+                        dbc.Row(html.H5(children="Options"),
+                                className="p-1",),
                         dbc.Row(
                             [
                                 dbc.Col(
@@ -170,7 +255,7 @@ def card_controls(
                                             id="pf-plot-option",
                                         ),
                                         dbc.Tooltip(
-                                            pf_options_tooltip_cagr,
+                                            tl.pf_options_tooltip_cagr,
                                             target="pf-info-plot",
                                         ),
                                     ],
@@ -196,7 +281,7 @@ def card_controls(
                                             id="pf-inflation-switch",
                                         ),
                                         dbc.Tooltip(
-                                            pf_options_tooltip_inflation,
+                                            tl.pf_options_tooltip_inflation,
                                             target="pf-info-inflation",
                                         ),
                                     ],
@@ -224,7 +309,7 @@ def card_controls(
                                         ),
                                         dbc.FormText("Format: number of years (≥ 1)"),
                                         dbc.Tooltip(
-                                            pf_options_window,
+                                            tl.pf_options_window,
                                             target="pf-info-rolling",
                                         ),
                                     ],
@@ -234,6 +319,139 @@ def card_controls(
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
                             ]
+                        ),
+                        dbc.Row(html.H6(children="Monte Carlo simulation for portfolio future wealth indexes"), className="p-1"),
+                        dbc.Row(
+                            [
+                                dbc.Label(
+                                    [
+                                        "Random simulations number",
+                                        html.I(
+                                            className="bi bi-info-square ms-2",
+                                            id="pf-info-monte-number-label",
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Input(
+                                            type="number",
+                                            min=0,
+                                            value=0,
+                                            id="pf-monte-carlo-number",
+                                        ),
+                                        dbc.FormFeedback("", type="valid"),
+                                        dbc.FormFeedback(
+                                            f"it should be an integer number ≤{settings.MC_MAX}", type="invalid"
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                # dbc.Tooltip(
+                                #     tl.ef_options_monte_carlo,
+                                #     target="pf=info-monte-carlo",
+                                # ),
+                            ],
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Label(
+                                    [
+                                        "Forecast period",
+                                        html.I(
+                                            className="bi bi-info-square ms-2",
+                                            id="pf-info-monte-carlo-years-label",
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Input(
+                                            type="number",
+                                            min=1,
+                                            max=settings.MC_MAX,
+                                            value=10,
+                                            id="pf-monte-carlo-years",
+                                        ),
+                                        dbc.FormFeedback("", type="valid"),
+                                        dbc.FormFeedback(
+                                            f"it should be an integer number ≤{settings.MC_MAX}", type="invalid"
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                # dbc.Tooltip(
+                                #     tl.ef_options_monte_carlo,
+                                #     target="pf=info-monte-carlo",
+                                # ),
+                            ],
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Label(
+                                    [
+                                        "Distribution type",
+                                        html.I(
+                                            className="bi bi-info-square ms-2",
+                                            id="pf-monte-carlo-distribution-label",
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                dbc.Col(
+                                    [
+                                        dcc.Dropdown(
+                                            options=[
+                                                {'label': 'Normal distribution', 'value': 'norm'},
+                                                {'label': 'Lognormal distribution', 'value': 'lognorm'},
+                                            ],
+                                            value="norm",
+                                            multi=False,
+                                            clearable=False,
+                                            placeholder="Select a distribution type",
+                                            id="pf-monte-carlo-distribution",
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                # dbc.Tooltip(
+                                #     tl.ef_options_monte_carlo,
+                                #     target="pf=info-monte-carlo",
+                                # ),
+                            ],
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Label(
+                                    [
+                                        "Include backtest",
+                                        html.I(
+                                            className="bi bi-info-square ms-2",
+                                            id="pf-monte-carlo-backtest-label",
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                dbc.Col(
+                                    [
+                                        dcc.Dropdown(
+                                            options=["yes", "no"],
+                                            value="yes",
+                                            multi=False,
+                                            clearable=False,
+                                            placeholder="Show backtest before Monte Carlo?",
+                                            id="pf-monte-carlo-backtest",
+                                        ),
+                                    ],
+                                    width=6,
+                                ),
+                                # dbc.Tooltip(
+                                #     tl.ef_options_monte_carlo,
+                                #     target="pf=info-monte-carlo",
+                                # ),
+                            ],
                         ),
                     ]
                 ),

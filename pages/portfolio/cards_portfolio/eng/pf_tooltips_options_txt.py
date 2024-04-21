@@ -41,3 +41,8 @@ pf_options_window = dcc.Markdown(
     Size of the moving window in years. Window size should be at least 1 year for CAGR.
 """
 )
+pf_options_tooltip_initial_amount = dcc.Markdown(
+    """
+    Portfolio initial investment FV (at last date).
+    """
+)
