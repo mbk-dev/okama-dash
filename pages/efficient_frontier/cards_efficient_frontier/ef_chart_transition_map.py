@@ -7,6 +7,3 @@ card_transition_map = dbc.Card(
     class_name="mb-3",
 )
 
-# @callback(Output("ef-transition-map-graf-div", "hidden"), Input("ef-submit-button", "n_clicks"))
-# def hide_ef_graf(n_clicks):
-#     return n_clicks == 0

@@ -29,8 +29,3 @@ card_graf_compare = dbc.Card(
     ),
     class_name="mb-3",
 )
-
-
-@callback(Output("al-graf-div", "hidden"), Input("al-submit-button", "n_clicks"))
-def hide_al_graf(n_clicks):
-    return n_clicks == 0

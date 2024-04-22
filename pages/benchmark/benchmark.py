@@ -10,6 +10,7 @@ import plotly.express as px
 import okama as ok
 
 import common.settings as settings
+import common.update_style
 from common.mobile_screens import adopt_small_screens
 from pages.benchmark.cards_benchmark.benchmark_chart import card_graf_benchmark
 from pages.benchmark.cards_benchmark.benchmark_controls import benchmark_card_controls
@@ -24,7 +25,7 @@ dash.register_page(
     path="/benchmark",
     title="Compare with benchmark : okama",
     name="Compare with benchmark",
-    description="Okama widget to compare assets with benchmark: tracking difference, tracking error, correlation, beta",
+    description="Okama.io widget to compare assets with benchmark: tracking difference, tracking error, correlation, beta",
 )
 
 
@@ -37,7 +38,7 @@ def layout(benchmark=None, tickers=None, first_date=None, last_date=None, ccy=No
                     dbc.Col(card_benchmark_info, lg=5),
                 ]
             ),
-            dbc.Row(dbc.Col(card_graf_benchmark, width=12), align="center"),
+            dbc.Row(dbc.Col(card_graf_benchmark, width=12), align="center", style={"display": "none"}, id="benchmark-graf-row"),
             dbc.Row(dbc.Col(card_benchmark_description, width=12), align="left"),
         ],
         class_name="mt-2",
@@ -182,3 +183,15 @@ def get_y_title(plot_type: str) -> str:
         "beta": "Beta coefficient",
     }
     return titles.get(plot_type)
+
+
+@callback(
+    Output(component_id="benchmark-graf-row", component_property="style"),
+    Input(component_id="benchmark-submit-button", component_property="n_clicks"),
+    State(component_id="benchmark-graf-row", component_property="style"),
+)
+def show_graf_row(
+    n_clicks, style
+):
+    style = common.update_style.change_style_for_hidden_row(n_clicks, style)
+    return style

@@ -1,12 +1,12 @@
 import dash
 import dash.exceptions
-import okama
 from dash import callback, html, dcc
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
 import okama as ok
 
+import common.update_style
 from common.parse_query import make_list_from_string
 from pages.efficient_frontier.cards_efficient_frontier.ef_description import card_ef_description
 from pages.efficient_frontier.cards_efficient_frontier.ef_info import card_ef_info
@@ -35,7 +35,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                     dbc.Col(card_ef_info, lg=5),
                 ]
             ),
-            dbc.Row(dbc.Col(card_graf, width=12), align="center"),
+            dbc.Row(dbc.Col(card_graf, width=12), align="center", style={"display": "none"}, id="ef-graf-row"),
             dbc.Row(
                 html.Div(
                     [
@@ -48,10 +48,17 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                         html.P(id="ef-click-data-risk"),
                         html.P(id="ef-click-data-return"),
                         html.Pre(id="ef-click-data-weights"),
-                    ]
+                    ],
+                    style={'display': 'none'},
+                    id="ef-portfolio-data-row"
                 ),
             ),
-            dbc.Row(dbc.Col(card_transition_map, width=12), align="center"),
+            dbc.Row(
+                dbc.Col(card_transition_map, width=12),
+                align="center",
+                style={'display': 'none'},
+                id="ef-transition-map-row"
+            ),
             dbc.Row(dbc.Col(card_ef_description, width=12), align="left"),
         ],
         class_name="mt-2",
@@ -119,15 +126,6 @@ def update_ef_cards(
 
 
 @callback(
-    Output(component_id="ef-transition-map-graf-div", component_property="hidden"),
-    Input(component_id="ef-submit-button-state", component_property="n_clicks"),
-    State(component_id="transition-map-option", component_property="value"),
-)
-def hide_ef_transition_map_graf(n_clicks: int, tr_map_option: str) -> bool:
-    return (tr_map_option != "On") or (n_clicks == 0)
-
-
-@callback(
     Output("ef-click-data-risk", "children"),
     Output("ef-click-data-return", "children"),
     Output("ef-click-data-weights", "children"),
@@ -156,3 +154,32 @@ def display_click_data(clickData, n_click, symbols):
     else:
         weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for w, t in zip(weights_list, symbols)])
     return rist_str, ror_str, weights_str
+
+
+@callback(
+    Output(component_id="ef-graf-row", component_property="style"),
+    Output(component_id="ef-portfolio-data-row", component_property="style"),
+    Input(component_id="ef-submit-button-state", component_property="n_clicks"),
+    State(component_id="ef-graf-row", component_property="style"),
+)
+def show_graf_and_portfolio_data_rows(
+    n_clicks, style
+):
+    style = common.update_style.change_style_for_hidden_row(n_clicks, style)
+    return style, style
+
+
+@callback(
+    Output(component_id="ef-transition-map-row", component_property="style"),
+    Input(component_id="ef-submit-button-state", component_property="n_clicks"),
+    State(component_id="ef-transition-map-row", component_property="style"),
+    State(component_id="transition-map-option", component_property="value"),
+)
+def show_transition_map_row(
+    n_clicks, style, tr_map_option
+):
+    if  tr_map_option == "On":
+        style = None
+    elif tr_map_option == "Off":
+        style = {"display": "none"}
+    return style

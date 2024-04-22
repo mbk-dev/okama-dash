@@ -1,7 +1,6 @@
 import dash_bootstrap_components as dbc
 import dash_daq as daq
-from dash import dcc, html, callback
-from dash.dependencies import Input, Output
+from dash import dcc, html
 
 card_graf_portfolio = dbc.Card(
     dbc.CardBody(
@@ -30,7 +29,3 @@ card_graf_portfolio = dbc.Card(
     class_name="mb-3",
 )
 
-
-@callback(Output("portfolio_graf_div", "hidden"), Input("pf-submit-button", "n_clicks"))
-def hide_pf_graf(n_clicks):
-    return n_clicks == 0

@@ -7,8 +7,3 @@ card_graf_benchmark = dbc.Card(
         class_name="mb-3",
     )
 )
-
-
-@callback(Output("benchmark_graf_div", "hidden"), Input("benchmark-submit-button", "n_clicks"))
-def hide_bch_graf(n_clicks):
-    return n_clicks == 0

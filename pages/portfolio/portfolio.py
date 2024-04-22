@@ -17,6 +17,7 @@ import okama as ok
 
 import common.settings as settings
 from common.mobile_screens import adopt_small_screens
+from common.update_style import change_style_for_hidden_row
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
 from pages.portfolio.cards_portfolio.portfolio_description import card_portfolio_description
 from pages.portfolio.cards_portfolio.portfolio_info import card_assets_info
@@ -32,7 +33,7 @@ dash.register_page(
     title="Investment Portfolio : okama",
     name="Investment Portfolio",
     suppress_callback_exceptions=True,
-    description="Okama widget for Investment Portfolio analysis",
+    description="Okama.io widget for Investment Portfolio analysis",
 )
 
 
@@ -45,8 +46,8 @@ def layout(tickers=None, weights=None, first_date=None, last_date=None, ccy=None
                     dbc.Col(card_assets_info, lg=7),
                 ]
             ),
-            dbc.Row(dbc.Col(card_graf_portfolio, width=12), align="center"),
-            dbc.Row(dbc.Col(card_table, width=12), align="center"),
+            dbc.Row(dbc.Col(card_graf_portfolio, width=12), align="center", style={"display": "none"}, id="pf-graf-row"),
+            dbc.Row(dbc.Col(card_table, width=12), align="center", style={"display": "none"}, id="pf-portfolio-statistics-row"),
             dbc.Row(dbc.Col(card_portfolio_description, width=12), align="left"),
         ],
         class_name="mt-2",
@@ -334,3 +335,16 @@ def get_pf_figure(
     else:
         fig.update_traces(showlegend=False)
     return fig, df_backtest, df_forecast
+
+
+@callback(
+    Output(component_id="pf-graf-row", component_property="style"),
+    Output(component_id="pf-portfolio-statistics-row", component_property="style"),
+    Input(component_id="pf-submit-button", component_property="n_clicks"),
+    State(component_id="pf-graf-row", component_property="style"),
+)
+def show_graf_and_portfolio_data_rows(
+    n_clicks, style
+):
+    style = change_style_for_hidden_row(n_clicks, style)
+    return style, style

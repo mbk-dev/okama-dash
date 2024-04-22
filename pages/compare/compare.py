@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 import okama as ok
 
 import common.settings as settings
+import common.update_style
 from common.mobile_screens import adopt_small_screens
 from pages.compare.cards_compare.asset_list_controls import card_controls
 from pages.compare.cards_compare.assets_info import card_assets_info
@@ -27,7 +28,7 @@ dash.register_page(
     path="/compare",
     title="Compare financial assets : okama",
     name="Compare assets",
-    description="""Okama widget to compare financial assets properties: 
+    description="""Okama.io widget to compare financial assets properties: 
                 rate of return, risk, CVAR, drawdowns, correlation""",
 )
 
@@ -41,8 +42,8 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                     dbc.Col(card_assets_info, lg=5),
                 ]
             ),
-            dbc.Row(dbc.Col(card_graf_compare, width=12), align="center"),
-            dbc.Row(dbc.Col(card_table, width=12), align="center"),
+            dbc.Row(dbc.Col(card_graf_compare, width=12), align="center", style={"display": "none"}, id="al-graf-row"),
+            dbc.Row(dbc.Col(card_table, width=12), align="center", style={"display": "none"}, id="al-statistics-table-row"),
             dbc.Row(dbc.Col(card_compare_description, width=12), align="left"),
         ],
         class_name="mt-2",
@@ -227,3 +228,16 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
         )
 
     return fig
+
+
+@callback(
+    Output(component_id="al-graf-row", component_property="style"),
+    Output(component_id="al-statistics-table-row", component_property="style"),
+    Input(component_id="al-submit-button", component_property="n_clicks"),
+    State(component_id="al-graf-row", component_property="style"),
+)
+def show_graf_and_statistics_table_rows(
+    n_clicks, style
+):
+    style = common.update_style.change_style_for_hidden_row(n_clicks, style)
+    return style, style
