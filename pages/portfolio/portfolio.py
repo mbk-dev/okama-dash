@@ -116,7 +116,7 @@ def update_graf_portfolio(
 ):
     assets = [i for i in assets if i is not None]
     weights = [i / 100.0 for i in weights if i is not None]
-    symbol = symbol.replace(' ', '_')
+    symbol = symbol.replace(" ", "_")
     symbol = symbol + ".PF" if not symbol.lower().endswith(".pf") else symbol
     pf_object = ok.Portfolio(
         assets=assets,
@@ -141,7 +141,7 @@ def update_graf_portfolio(
         years_monte_carlo,
         distribution_monte_carlo,
         show_backtest,
-        log_on
+        log_on,
     )
     if plot_type == "wealth":
         fig.update_yaxes(title_text="Wealth Indexes")
@@ -156,18 +156,11 @@ def update_graf_portfolio(
     # Monte Carlo statistics
     if n_monte_carlo != 0 and plot_type == "wealth":
         forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
-            df_forecast,
-            df_backtest,
-            pf_object
+            df_forecast, df_backtest, pf_object
         )
     else:
         forecast_survival_statistics_datatable = dash_table.DataTable()
-    return (
-        fig,
-        config,
-        statistics_dash_table,
-        forecast_survival_statistics_datatable
-    )
+    return (fig, config, statistics_dash_table, forecast_survival_statistics_datatable)
 
 
 def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object) -> dash_table.DataTable:
@@ -189,7 +182,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object)
         data=table_list,
         columns=columns,
         style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
-        style_header={'display': 'none'}
+        style_header={"display": "none"},
     )
     return forecast_survival_statistics_datatable
 
@@ -210,15 +203,15 @@ def get_pf_statistics_table(al_object):
 
 
 def get_pf_figure(
-        pf_object: ok.Portfolio,
-        plot_type: str,
-        inflation_on: bool,
-        rolling_window: int,
-        n_monte_carlo: int,
-        years_monte_carlo: int,
-        distribution_monte_carlo: str,
-        show_backtest: str,
-        log_scale: bool
+    pf_object: ok.Portfolio,
+    plot_type: str,
+    inflation_on: bool,
+    rolling_window: int,
+    n_monte_carlo: int,
+    years_monte_carlo: int,
+    distribution_monte_carlo: str,
+    show_backtest: str,
+    log_scale: bool,
 ) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame, pd.DataFrame]:
     titles = {
         "wealth": "Portfolio Wealth index",
@@ -243,7 +236,7 @@ def get_pf_figure(
                     first_value=last_backtest_value,
                     distr=distribution_monte_carlo,
                     years=years_monte_carlo,
-                    n=n_monte_carlo
+                    n=n_monte_carlo,
                 )
                 df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", copy="false", ignore_index=False)
             else:
@@ -278,8 +271,7 @@ def get_pf_figure(
     )
     fig.update_traces({"line": {"width": 1}})
     fig.update_traces(
-        patch={"line": {"width": 3}, "name": pf_object.symbol},
-        selector={"legendgroup": pf_object.symbol}
+        patch={"line": {"width": 3}, "name": pf_object.symbol}, selector={"legendgroup": pf_object.symbol}
     )
     # Plot Inflation
     if condition_plot_inflation and not condition_monte_carlo:

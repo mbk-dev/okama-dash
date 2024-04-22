@@ -3,10 +3,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 
 card_graf = dbc.Card(
-    dbc.CardBody([html.Div(
-        [dcc.Loading(dcc.Graph(id="ef-graf"))],
-        id="ef-graf-div"
-    )]),
+    dbc.CardBody([html.Div([dcc.Loading(dcc.Graph(id="ef-graf"))], id="ef-graf-div")]),
     class_name="mb-3",
 )
 

@@ -18,7 +18,7 @@ card_graf_portfolio = dbc.Card(
                                     label="Logarithmic Y-Scale",
                                     labelPosition="bottom",
                                 ),
-                            id="pf-logarithmic-scale-switch-div"
+                                id="pf-logarithmic-scale-switch-div",
                             ),
                         ],
                     )

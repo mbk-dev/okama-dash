@@ -32,12 +32,9 @@ card_assets_info = dbc.Card(
             html.H5(children="Assets names"),
             html.Div(id="pf-assets-names", children="Start to select assets to see the information"),
             html.Div(
-                [
-                    html.H5(children="Survival period statistics"),
-                    html.Div(id="pf-monte-carlo-statistics")
-                ],
+                [html.H5(children="Survival period statistics"), html.Div(id="pf-monte-carlo-statistics")],
                 id="pf-monte-carlo-statistics-frame",
-                hidden=True
+                hidden=True,
             ),
         ]
     ),
@@ -105,4 +102,3 @@ def show_survival_periods_statistcs_table(
 ):
     hidden_result = n_monte_carlo == 0 or plot_type != "wealth"
     return hidden_result
-

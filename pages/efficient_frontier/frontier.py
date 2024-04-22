@@ -117,6 +117,7 @@ def update_ef_cards(
     fig2, config2 = adopt_small_screens(fig2, screen)
     return fig1, fig2, config1, config2
 
+
 @callback(
     Output(component_id="ef-transition-map-graf-div", component_property="hidden"),
     Input(component_id="ef-submit-button-state", component_property="n_clicks"),
@@ -124,6 +125,7 @@ def update_ef_cards(
 )
 def hide_ef_transition_map_graf(n_clicks: int, tr_map_option: str) -> bool:
     return (tr_map_option != "On") or (n_clicks == 0)
+
 
 @callback(
     Output("ef-click-data-risk", "children"),

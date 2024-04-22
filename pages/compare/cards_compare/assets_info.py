@@ -28,7 +28,9 @@ card_assets_info = dbc.Card(
     Input("al-inflation-switch", "value"),  # inflation
     prevent_initial_call=True,
 )
-def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> tuple[dash_table.DataTable, dash_table.DataTable]:
+def pf_update_asset_names_info(
+    assets: list, ccy: str, inflation: bool
+) -> tuple[dash_table.DataTable, dash_table.DataTable]:
     if not assets:
         raise PreventUpdate
     assets = [i for i in assets if i is not None]

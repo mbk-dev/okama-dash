@@ -144,18 +144,20 @@ def card_controls(
                                                     [
                                                         dbc.Col(
                                                             [
-                                                                html.Label([
-                                                                    "Initial amount",
-                                                                    html.I(
-                                                                        className="bi bi-info-square ms-2",
-                                                                        id="pf-info-initial-amount",
-                                                                    ),
-                                                                ]),
+                                                                html.Label(
+                                                                    [
+                                                                        "Initial amount",
+                                                                        html.I(
+                                                                            className="bi bi-info-square ms-2",
+                                                                            id="pf-info-initial-amount",
+                                                                        ),
+                                                                    ]
+                                                                ),
                                                                 dbc.Input(
                                                                     id="pf-initial-amount",
                                                                     value=1000,
                                                                     type="number",
-                                                                    min=1
+                                                                    min=1,
                                                                 ),
                                                                 dbc.FormText("Positive number"),
                                                                 dbc.Tooltip(
@@ -166,13 +168,15 @@ def card_controls(
                                                         ),
                                                         dbc.Col(
                                                             [
-                                                                html.Label([
-                                                                    "Monthly cash flow",
-                                                                    html.I(
-                                                                        className="bi bi-info-square ms-2",
-                                                                        id="pf-info-cash-flow",
-                                                                    ),
-                                                                ]),
+                                                                html.Label(
+                                                                    [
+                                                                        "Monthly cash flow",
+                                                                        html.I(
+                                                                            className="bi bi-info-square ms-2",
+                                                                            id="pf-info-cash-flow",
+                                                                        ),
+                                                                    ]
+                                                                ),
                                                                 dbc.Input(
                                                                     id="pf-cashflow",
                                                                     value=0,
@@ -191,18 +195,17 @@ def card_controls(
                                                     [
                                                         dbc.Col(
                                                             [
-                                                                html.Label([
-                                                                    "Discount rate",
-                                                                    html.I(
-                                                                        className="bi bi-info-square ms-2",
-                                                                        id="pf-info-discount-rate",
-                                                                    ),
-                                                                ]),
+                                                                html.Label(
+                                                                    [
+                                                                        "Discount rate",
+                                                                        html.I(
+                                                                            className="bi bi-info-square ms-2",
+                                                                            id="pf-info-discount-rate",
+                                                                        ),
+                                                                    ]
+                                                                ),
                                                                 dbc.Input(
-                                                                    id="pf-discount-rate",
-                                                                    type="number",
-                                                                    min=0,
-                                                                    max=1
+                                                                    id="pf-discount-rate", type="number", min=0, max=1
                                                                 ),
                                                                 dbc.FormText("0 - 1 (0.05 is equivalent to 5%)"),
                                                                 dbc.Tooltip(
@@ -213,13 +216,15 @@ def card_controls(
                                                         ),
                                                         dbc.Col(
                                                             [
-                                                                html.Label([
-                                                                    "Portfolio ticker",
-                                                                    html.I(
-                                                                        className="bi bi-info-square ms-2",
-                                                                        id="pf-info-ticker",
-                                                                    ),
-                                                                ]),
+                                                                html.Label(
+                                                                    [
+                                                                        "Portfolio ticker",
+                                                                        html.I(
+                                                                            className="bi bi-info-square ms-2",
+                                                                            id="pf-info-ticker",
+                                                                        ),
+                                                                    ]
+                                                                ),
                                                                 dbc.Input(
                                                                     id="pf-ticker",
                                                                     type="text",
@@ -233,7 +238,7 @@ def card_controls(
                                                             ]
                                                         ),
                                                     ]
-                                                )
+                                                ),
                                             ],
                                             title="Advanced parameters",
                                         ),
@@ -253,8 +258,10 @@ def card_controls(
                                 card_name="Portfolio",
                             ),
                         ),
-                        dbc.Row(html.H5(children="Options"),
-                                className="p-1",),
+                        dbc.Row(
+                            html.H5(children="Options"),
+                            className="p-1",
+                        ),
                         dbc.Row(
                             [
                                 dbc.Col(
@@ -344,7 +351,10 @@ def card_controls(
                                 ),
                             ]
                         ),
-                        dbc.Row(html.H6(children="Monte Carlo simulation for portfolio future wealth indexes"), className="p-1"),
+                        dbc.Row(
+                            html.H6(children="Monte Carlo simulation for portfolio future wealth indexes"),
+                            className="p-1",
+                        ),
                         dbc.Row(
                             [
                                 dbc.Label(
@@ -373,7 +383,7 @@ def card_controls(
                                         dbc.FormFeedback("", type="valid"),
                                         dbc.FormFeedback(
                                             f"it should be an integer number ≤{settings.MC_PORTFOLIO_MAX}",
-                                            type="invalid"
+                                            type="invalid",
                                         ),
                                     ],
                                     width=6,
@@ -434,8 +444,8 @@ def card_controls(
                                     [
                                         dcc.Dropdown(
                                             options=[
-                                                {'label': 'Normal distribution', 'value': 'norm'},
-                                                {'label': 'Lognormal distribution', 'value': 'lognorm'},
+                                                {"label": "Normal distribution", "value": "norm"},
+                                                {"label": "Lognormal distribution", "value": "lognorm"},
                                             ],
                                             value="norm",
                                             multi=False,
@@ -532,6 +542,7 @@ def update_inflation_switch(plot_options: str, inflation_switch_value) -> Tuple[
         return False, True
     else:
         return inflation_switch_value, False
+
 
 @app.callback(
     Output("pf-logarithmic-scale-switch-div", "hidden"),
@@ -649,7 +660,9 @@ def print_weights_sum(values) -> Tuple[str, bool]:
     Input("pf-rolling-window", "value"),
     Input("pf-monte-carlo-number", "value"),
 )
-def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_value, mc_number) -> Tuple[bool, bool, bool]:
+def disable_submit_add_link_buttons(
+    tickers_list, weights_list, rolling_window_value, mc_number
+) -> Tuple[bool, bool, bool]:
     """
     Disable "Add Asset", "Submit" and "Copy Link" buttons.
 
@@ -682,7 +695,12 @@ def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_v
 
     mc_number_is_incorrect = mc_number is None
 
-    submit_result = weights_sum_is_not_100 or weights_and_tickers_has_different_length or rolling_not_natural or mc_number_is_incorrect
+    submit_result = (
+        weights_sum_is_not_100
+        or weights_and_tickers_has_different_length
+        or rolling_not_natural
+        or mc_number_is_incorrect
+    )
 
     link_condition = len(tickers_list) > settings.ALLOWED_NUMBER_OF_TICKERS
     link_result = submit_result or link_condition
