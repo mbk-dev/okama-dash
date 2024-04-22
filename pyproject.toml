@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "okama-dash"
-version = "0.7.0"
+version = "1.0.0"
 description = "Python financial widgets with okama and Dash (plotly)"
 authors = ["Sergey Kikevich <sergey@rostsber.ru>"]
 license = "MIT"
