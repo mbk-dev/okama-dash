@@ -179,6 +179,10 @@ def card_controls(
                                                                     type="number",
                                                                 ),
                                                                 dbc.FormText("Number"),
+                                                                dbc.Tooltip(
+                                                                    tl.pf_options_tooltip_cash_flow,
+                                                                    target="pf-info-cash-flow",
+                                                                ),
                                                             ]
                                                         ),
                                                     ]
@@ -187,25 +191,45 @@ def card_controls(
                                                     [
                                                         dbc.Col(
                                                             [
-                                                                html.Label("Discount rate"),
+                                                                html.Label([
+                                                                    "Discount rate",
+                                                                    html.I(
+                                                                        className="bi bi-info-square ms-2",
+                                                                        id="pf-info-discount-rate",
+                                                                    ),
+                                                                ]),
                                                                 dbc.Input(
                                                                     id="pf-discount-rate",
                                                                     type="number",
                                                                     min=0,
                                                                     max=1
                                                                 ),
-                                                                dbc.FormText("0 - 1 (0.05 is equal to 5%)"),
+                                                                dbc.FormText("0 - 1 (0.05 is equivalent to 5%)"),
+                                                                dbc.Tooltip(
+                                                                    tl.pf_options_tooltip_discount_rate,
+                                                                    target="pf-info-discount-rate",
+                                                                ),
                                                             ]
                                                         ),
                                                         dbc.Col(
                                                             [
-                                                                html.Label("Portfolio ticker"),
+                                                                html.Label([
+                                                                    "Portfolio ticker",
+                                                                    html.I(
+                                                                        className="bi bi-info-square ms-2",
+                                                                        id="pf-info-ticker",
+                                                                    ),
+                                                                ]),
                                                                 dbc.Input(
                                                                     id="pf-ticker",
                                                                     type="text",
                                                                     value="PORTFOLIO",
                                                                 ),
                                                                 dbc.FormText("Symbols without spaces"),
+                                                                dbc.Tooltip(
+                                                                    tl.pf_options_tooltip_ticker,
+                                                                    target="pf-info-ticker",
+                                                                ),
                                                             ]
                                                         ),
                                                     ]
@@ -330,6 +354,10 @@ def card_controls(
                                             className="bi bi-info-square ms-2",
                                             id="pf-info-monte-number-label",
                                         ),
+                                        dbc.Tooltip(
+                                            tl.pf_mc_tooltip_mc_number,
+                                            target="pf-info-monte-number-label",
+                                        ),
                                     ],
                                     width=6,
                                 ),
@@ -338,20 +366,18 @@ def card_controls(
                                         dbc.Input(
                                             type="number",
                                             min=0,
+                                            max=settings.MC_PORTFOLIO_MAX,
                                             value=0,
                                             id="pf-monte-carlo-number",
                                         ),
                                         dbc.FormFeedback("", type="valid"),
                                         dbc.FormFeedback(
-                                            f"it should be an integer number ≤{settings.MC_MAX}", type="invalid"
+                                            f"it should be an integer number ≤{settings.MC_PORTFOLIO_MAX}",
+                                            type="invalid"
                                         ),
                                     ],
                                     width=6,
                                 ),
-                                # dbc.Tooltip(
-                                #     tl.ef_options_monte_carlo,
-                                #     target="pf=info-monte-carlo",
-                                # ),
                             ],
                         ),
                         dbc.Row(
@@ -363,6 +389,10 @@ def card_controls(
                                             className="bi bi-info-square ms-2",
                                             id="pf-info-monte-carlo-years-label",
                                         ),
+                                        dbc.Tooltip(
+                                            tl.pf_mc_tooltip_forecast_period,
+                                            target="pf-info-monte-carlo-years-label",
+                                        ),
                                     ],
                                     width=6,
                                 ),
@@ -371,21 +401,17 @@ def card_controls(
                                         dbc.Input(
                                             type="number",
                                             min=1,
-                                            max=settings.MC_MAX,
+                                            max=100,
                                             value=10,
                                             id="pf-monte-carlo-years",
                                         ),
                                         dbc.FormFeedback("", type="valid"),
                                         dbc.FormFeedback(
-                                            f"it should be an integer number ≤{settings.MC_MAX}", type="invalid"
+                                            f"it should be an integer number ≤{settings.MC_EF_MAX}", type="invalid"
                                         ),
                                     ],
                                     width=6,
                                 ),
-                                # dbc.Tooltip(
-                                #     tl.ef_options_monte_carlo,
-                                #     target="pf=info-monte-carlo",
-                                # ),
                             ],
                         ),
                         dbc.Row(
@@ -396,6 +422,10 @@ def card_controls(
                                         html.I(
                                             className="bi bi-info-square ms-2",
                                             id="pf-monte-carlo-distribution-label",
+                                        ),
+                                        dbc.Tooltip(
+                                            tl.pf_mc_tooltip_distribution,
+                                            target="pf-monte-carlo-distribution-label",
                                         ),
                                     ],
                                     width=6,
@@ -416,10 +446,6 @@ def card_controls(
                                     ],
                                     width=6,
                                 ),
-                                # dbc.Tooltip(
-                                #     tl.ef_options_monte_carlo,
-                                #     target="pf=info-monte-carlo",
-                                # ),
                             ],
                         ),
                         dbc.Row(
@@ -430,6 +456,10 @@ def card_controls(
                                         html.I(
                                             className="bi bi-info-square ms-2",
                                             id="pf-monte-carlo-backtest-label",
+                                        ),
+                                        dbc.Tooltip(
+                                            tl.pf_mc_tooltip_backtest,
+                                            target="pf-monte-carlo-backtest-label",
                                         ),
                                     ],
                                     width=6,
@@ -617,8 +647,9 @@ def print_weights_sum(values) -> Tuple[str, bool]:
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
     Input("pf-rolling-window", "value"),
+    Input("pf-monte-carlo-number", "value"),
 )
-def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_value) -> Tuple[bool, bool, bool]:
+def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_value, mc_number) -> Tuple[bool, bool, bool]:
     """
     Disable "Add Asset", "Submit" and "Copy Link" buttons.
 
@@ -630,6 +661,7 @@ def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_v
     - sum of weights is not 100
     - number of weights is not equal to the number of assets
     - rolling window size is natural number
+    - MC number is incorrect
 
     disable "Copy Link" conditions:
     - "Submit"
@@ -647,8 +679,26 @@ def disable_submit_add_link_buttons(tickers_list, weights_list, rolling_window_v
 
     weights_and_tickers_has_different_length = len(set(tickers_list)) != len(weights_list)
     rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
-    submit_result = weights_sum_is_not_100 or weights_and_tickers_has_different_length or rolling_not_natural
+
+    mc_number_is_incorrect = mc_number is None
+
+    submit_result = weights_sum_is_not_100 or weights_and_tickers_has_different_length or rolling_not_natural or mc_number_is_incorrect
 
     link_condition = len(tickers_list) > settings.ALLOWED_NUMBER_OF_TICKERS
     link_result = submit_result or link_condition
     return submit_result, link_result, add_result
+
+
+@app.callback(
+    Output("pf-monte-carlo-number", "valid"),
+    Output("pf-monte-carlo-number", "invalid"),
+    Input("pf-monte-carlo-number", "value"),
+)
+def check_validity_monte_carlo(number: int):
+    """
+    Check if input is an integer in range for 0 to MC_PORTFOLIO_MAX.
+    """
+    if number:
+        is_correct_number = number in range(0, settings.MC_PORTFOLIO_MAX + 1) and isinstance(number, int)
+        return is_correct_number, not is_correct_number
+    return False, False

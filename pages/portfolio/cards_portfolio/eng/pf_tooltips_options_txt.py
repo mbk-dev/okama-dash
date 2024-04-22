@@ -43,6 +43,45 @@ pf_options_window = dcc.Markdown(
 )
 pf_options_tooltip_initial_amount = dcc.Markdown(
     """
-    Portfolio initial investment FV (at last date).
+    Portfolio initial investment FV (at "Last Date").
+    """
+)
+pf_options_tooltip_cash_flow = dcc.Markdown(
+    """
+    Portfolio monthly cash flow FV (at last_date). Negative value corresponds to withdrawals. 
+    Positive value corresponds to contributions. Cash flow value is indexed each month by discount rate.
+    """
+)
+pf_options_tooltip_discount_rate = dcc.Markdown(
+    """
+    Cash flow discount rate required to calculate PV values. If not provided geometric mean of inflation is taken.
+    For portfolios without inflation the default value from settings is used.
+    """
+)
+pf_options_tooltip_ticker = dcc.Markdown(
+    """
+    Text symbol of portfolio. It is similar to tickers but have a namespace information.
+    Portfolio symbol must end with .PF (all_weather_portfolio.PF). No spaces in ticker are allowed.
+    """
+)
+# Monte Carlo parameters
+pf_mc_tooltip_mc_number = dcc.Markdown(
+    """
+    Number of random wealth indexes to generate with Monte Carlo simulation.
+    """
+)
+pf_mc_tooltip_forecast_period = dcc.Markdown(
+    """
+    Investment period length for new wealth indexes.
+    """
+)
+pf_mc_tooltip_distribution = dcc.Markdown(
+    """
+    Distribution type for the rate of return time series.
+    """
+)
+pf_mc_tooltip_backtest = dcc.Markdown(
+    """
+    Show historical wealth index in the chart or plot only Monte Carlo wealth indexes.
     """
 )

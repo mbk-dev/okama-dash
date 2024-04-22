@@ -210,13 +210,13 @@ def card_controls(
                                         dbc.Input(
                                             type="number",
                                             min=0,
-                                            max=settings.MC_MAX,
+                                            max=settings.MC_EF_MAX,
                                             value=0,
                                             id="monte-carlo-option",
                                         ),
                                         dbc.FormFeedback("", type="valid"),
                                         dbc.FormFeedback(
-                                            f"it should be an integer number ≤{settings.MC_MAX}", type="invalid"
+                                            f"it should be an integer number ≤{settings.MC_EF_MAX}", type="invalid"
                                         ),
                                     ],
                                     width=6,
@@ -320,7 +320,7 @@ def check_validity_monte_carlo(number: int):
     Check if input is an integer in range for 0 to MC_MAX.
     """
     if number:
-        is_correct_number = number in range(0, settings.MC_MAX) and isinstance(number, int)
+        is_correct_number = number in range(0, settings.MC_EF_MAX) and isinstance(number, int)
         return is_correct_number, not is_correct_number
     return False, False
 
