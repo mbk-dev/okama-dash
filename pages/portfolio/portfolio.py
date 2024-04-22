@@ -166,25 +166,43 @@ def update_graf_portfolio(
 
 def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object) -> dash_table.DataTable:
     # TODO: add survival period of backtest to forecasted survival period
-    forecast_dates: pd.Series = ok.Frame.get_survival_date(df_forecast)
-    fsp = forecast_dates.apply(ok.Date.get_period_length, args=(pf_object.last_date,))
-    table_list = [
-        {"1": "1st percentile", "2": fsp.quantile(1 / 100), "3": "Min", "4": fsp.min()},
-        {"1": "50th percentile", "2": fsp.quantile(50 / 100), "3": "Max", "4": fsp.max()},
-        {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "Mean", "4": fsp.mean()},
-    ]
-    columns = [
-        dict(id="1", name="1"),
-        dict(id="2", name="2", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
-        dict(id="3", name="3"),
-        dict(id="4", name="4", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
-    ]
-    forecast_survival_statistics_datatable = dash_table.DataTable(
-        data=table_list,
-        columns=columns,
-        style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
-        style_header={"display": "none"},
-    )
+    if not df_forecast.empty:
+        backtest_survival_period = 0 if df_backtsest.empty else pf_object.dcf.survival_period
+        forecast_dates: pd.Series = ok.Frame.get_survival_date(df_forecast)
+        fsp = forecast_dates.apply(ok.Date.get_period_length, args=(pf_object.last_date,))
+        fsp += backtest_survival_period
+        table_list = [
+            {"1": "1st percentile", "2": fsp.quantile(1 / 100), "3": "Min", "4": fsp.min()},
+            {"1": "50th percentile", "2": fsp.quantile(50 / 100), "3": "Max", "4": fsp.max()},
+            {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "Mean", "4": fsp.mean()},
+        ]
+        columns = [
+            dict(id="1", name="1"),
+            dict(id="2", name="2", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+            dict(id="3", name="3"),
+            dict(id="4", name="4", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+        ]
+        forecast_survival_statistics_datatable = dash_table.DataTable(
+            data=table_list,
+            columns=columns,
+            style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
+            style_header={"display": "none"},
+        )
+    else:
+        backtest_survival_period = pf_object.dcf.survival_period
+        table_list = [
+            {"1": "Backtest survival period", "2": backtest_survival_period}
+        ]
+        columns = [
+            dict(id="1", name="1"),
+            dict(id="2", name="2", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+        ]
+        forecast_survival_statistics_datatable = dash_table.DataTable(
+            data=table_list,
+            columns=columns,
+            style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
+            style_header={"display": "none"},
+        )
     return forecast_survival_statistics_datatable
 
 
