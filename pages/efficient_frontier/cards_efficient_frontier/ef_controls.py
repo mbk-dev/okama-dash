@@ -209,8 +209,6 @@ def card_controls(
                                     [
                                         dbc.Input(
                                             type="number",
-                                            min=0,
-                                            max=settings.MC_EF_MAX,
                                             value=0,
                                             id="monte-carlo-option",
                                         ),
@@ -319,8 +317,8 @@ def check_validity_monte_carlo(number: int):
     """
     Check if input is an integer in range for 0 to MC_MAX.
     """
-    if number:
-        is_correct_number = number in range(0, settings.MC_EF_MAX) and isinstance(number, int)
+    if number is not None:
+        is_correct_number = number in range(0, settings.MC_EF_MAX + 1) and isinstance(number, int)
         return is_correct_number, not is_correct_number
     return False, False
 
@@ -354,8 +352,9 @@ def disable_link_button(tickers_list) -> bool:
 @app.callback(
     Output("ef-submit-button-state", "disabled"),
     Input("ef-symbols-list", "value"),
+    Input("monte-carlo-option", "valid"),
 )
-def disable_submit(tickers_list) -> bool:
+def disable_submit(tickers_list, mc_number_valid) -> bool:
     """
     Disable Submit button.
 
@@ -363,4 +362,8 @@ def disable_submit(tickers_list) -> bool:
     - number of tickers is < 2
     - MC number is incorrect
     """
-    return len(tickers_list) < 2
+    number_of_tickers_is_too_small = len(tickers_list) < 2
+    mc_number_is_incorrect = mc_number_valid == False
+
+    submit_result = number_of_tickers_is_too_small or mc_number_is_incorrect
+    return submit_result

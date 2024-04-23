@@ -375,8 +375,6 @@ def card_controls(
                                     [
                                         dbc.Input(
                                             type="number",
-                                            min=0,
-                                            max=settings.MC_PORTFOLIO_MAX,
                                             value=0,
                                             id="pf-monte-carlo-number",
                                         ),
@@ -389,6 +387,7 @@ def card_controls(
                                     width=6,
                                 ),
                             ],
+                            class_name="pt-2",
                         ),
                         dbc.Row(
                             [
@@ -423,6 +422,7 @@ def card_controls(
                                     width=6,
                                 ),
                             ],
+                            class_name="pt-2",
                         ),
                         dbc.Row(
                             [
@@ -457,6 +457,7 @@ def card_controls(
                                     width=6,
                                 ),
                             ],
+                            class_name="pt-2",
                         ),
                         dbc.Row(
                             [
@@ -487,11 +488,8 @@ def card_controls(
                                     ],
                                     width=6,
                                 ),
-                                # dbc.Tooltip(
-                                #     tl.ef_options_monte_carlo,
-                                #     target="pf=info-monte-carlo",
-                                # ),
                             ],
+                            class_name="pt-2",
                         ),
                     ]
                 ),
@@ -658,10 +656,10 @@ def print_weights_sum(values) -> Tuple[str, bool]:
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
     Input("pf-rolling-window", "value"),
-    Input("pf-monte-carlo-number", "value"),
+    Input("pf-monte-carlo-number", "valid"),
 )
 def disable_submit_add_link_buttons(
-    tickers_list, weights_list, rolling_window_value, mc_number
+    tickers_list, weights_list, rolling_window_value, mc_number_valid
 ) -> Tuple[bool, bool, bool]:
     """
     Disable "Add Asset", "Submit" and "Copy Link" buttons.
@@ -674,7 +672,7 @@ def disable_submit_add_link_buttons(
     - sum of weights is not 100
     - number of weights is not equal to the number of assets
     - rolling window size is natural number
-    - MC number is incorrect
+    - MC number is valid
 
     disable "Copy Link" conditions:
     - "Submit"
@@ -693,7 +691,7 @@ def disable_submit_add_link_buttons(
     weights_and_tickers_has_different_length = len(set(tickers_list)) != len(weights_list)
     rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
 
-    mc_number_is_incorrect = mc_number is None
+    mc_number_is_incorrect = mc_number_valid == False
 
     submit_result = (
         weights_sum_is_not_100
@@ -716,7 +714,7 @@ def check_validity_monte_carlo(number: int):
     """
     Check if input is an integer in range for 0 to MC_PORTFOLIO_MAX.
     """
-    if number:
+    if number is not None:
         is_correct_number = number in range(0, settings.MC_PORTFOLIO_MAX + 1) and isinstance(number, int)
         return is_correct_number, not is_correct_number
     return False, False
