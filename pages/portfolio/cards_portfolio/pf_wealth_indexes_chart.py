@@ -28,4 +28,3 @@ card_graf_portfolio = dbc.Card(
     ),
     class_name="mb-3",
 )
-

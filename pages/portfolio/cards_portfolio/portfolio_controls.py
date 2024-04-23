@@ -42,7 +42,7 @@ def card_controls(
     initial_amount: Optional[float],
     cashflow: Optional[float],
     discount_rate: Optional[float],
-    symbol: Optional[str]
+    symbol: Optional[str],
 ):
     tickers_list = make_list_from_string(tickers, char_type="str")
     weights_list = make_list_from_string(weights, char_type="float")
@@ -210,7 +210,8 @@ def card_controls(
                                                                     ]
                                                                 ),
                                                                 dbc.Input(
-                                                                    id="pf-discount-rate", type="number",
+                                                                    id="pf-discount-rate",
+                                                                    type="number",
                                                                     min=0,
                                                                     max=1,
                                                                     value=discount_rate if discount_rate else None,
@@ -589,7 +590,7 @@ def update_link_pf(
     initial_amount: Optional[float],
     cashflow: Optional[float],
     discount_rate: Optional[float],
-    symbol: Optional[str]
+    symbol: Optional[str],
 ):
     return create_link(
         ccy=ccy,
@@ -603,7 +604,7 @@ def update_link_pf(
         initial_amount=initial_amount,
         cashflow=cashflow,
         discount_rate=discount_rate,
-        symbol=symbol
+        symbol=symbol,
     )
 
 

@@ -43,7 +43,9 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                 ]
             ),
             dbc.Row(dbc.Col(card_graf_compare, width=12), align="center", style={"display": "none"}, id="al-graf-row"),
-            dbc.Row(dbc.Col(card_table, width=12), align="center", style={"display": "none"}, id="al-statistics-table-row"),
+            dbc.Row(
+                dbc.Col(card_table, width=12), align="center", style={"display": "none"}, id="al-statistics-table-row"
+            ),
             dbc.Row(dbc.Col(card_compare_description, width=12), align="left"),
         ],
         class_name="mt-2",
@@ -236,8 +238,6 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
     Input(component_id="al-submit-button", component_property="n_clicks"),
     State(component_id="al-graf-row", component_property="style"),
 )
-def show_graf_and_statistics_table_rows(
-    n_clicks, style
-):
+def show_graf_and_statistics_table_rows(n_clicks, style):
     style = common.update_style.change_style_for_hidden_row(n_clicks, style)
     return style, style

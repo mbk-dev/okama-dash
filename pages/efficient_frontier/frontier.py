@@ -49,15 +49,15 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                         html.P(id="ef-click-data-return"),
                         html.Pre(id="ef-click-data-weights"),
                     ],
-                    style={'display': 'none'},
-                    id="ef-portfolio-data-row"
+                    style={"display": "none"},
+                    id="ef-portfolio-data-row",
                 ),
             ),
             dbc.Row(
                 dbc.Col(card_transition_map, width=12),
                 align="center",
-                style={'display': 'none'},
-                id="ef-transition-map-row"
+                style={"display": "none"},
+                id="ef-transition-map-row",
             ),
             dbc.Row(dbc.Col(card_ef_description, width=12), align="left"),
         ],
@@ -162,9 +162,7 @@ def display_click_data(clickData, n_click, symbols):
     Input(component_id="ef-submit-button-state", component_property="n_clicks"),
     State(component_id="ef-graf-row", component_property="style"),
 )
-def show_graf_and_portfolio_data_rows(
-    n_clicks, style
-):
+def show_graf_and_portfolio_data_rows(n_clicks, style):
     style = common.update_style.change_style_for_hidden_row(n_clicks, style)
     return style, style
 
@@ -175,10 +173,8 @@ def show_graf_and_portfolio_data_rows(
     State(component_id="ef-transition-map-row", component_property="style"),
     State(component_id="transition-map-option", component_property="value"),
 )
-def show_transition_map_row(
-    n_clicks, style, tr_map_option
-):
-    if  tr_map_option == "On":
+def show_transition_map_row(n_clicks, style, tr_map_option):
+    if tr_map_option == "On":
         style = None
     elif tr_map_option == "Off":
         style = {"display": "none"}

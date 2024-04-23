@@ -2,23 +2,22 @@ from common import settings as settings
 
 
 def create_link(
-        *,
-        href,
-        tickers_list,
-        ccy,
-        first_date,
-        last_date,
-        # portfolio
-        weights_list=None,
-        rebal=None,
-        initial_amount=None,
-        cashflow=None,
-        discount_rate=None,
-        symbol=None,
-        # benchmark
-        benchmark=None,
-
-)->str:
+    *,
+    href,
+    tickers_list,
+    ccy,
+    first_date,
+    last_date,
+    # portfolio
+    weights_list=None,
+    rebal=None,
+    initial_amount=None,
+    cashflow=None,
+    discount_rate=None,
+    symbol=None,
+    # benchmark
+    benchmark=None,
+) -> str:
     tickers_str = "tickers=" + ",".join(str(symbol) for symbol in tickers_list)
     reset_href = href.split("?")[0]
     new_url = f"{reset_href}?{tickers_str}"

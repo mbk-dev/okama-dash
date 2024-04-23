@@ -38,18 +38,18 @@ dash.register_page(
 
 
 def layout(
-        tickers=None,
-        weights=None,
-        first_date=None,
-        last_date=None,
-        ccy=None,
-        rebal=None,
-        # advanced
-        initial_amount=None,
-        cashflow=None,
-        discount_rate=None,
-        symbol=None,
-        **kwargs
+    tickers=None,
+    weights=None,
+    first_date=None,
+    last_date=None,
+    ccy=None,
+    rebal=None,
+    # advanced
+    initial_amount=None,
+    cashflow=None,
+    discount_rate=None,
+    symbol=None,
+    **kwargs,
 ):
     page = dbc.Container(
         [
@@ -66,14 +66,22 @@ def layout(
                             initial_amount=initial_amount,
                             cashflow=cashflow,
                             discount_rate=discount_rate,
-                            symbol=symbol
+                            symbol=symbol,
                         ),
-                        lg=5),
+                        lg=5,
+                    ),
                     dbc.Col(card_assets_info, lg=7),
                 ]
             ),
-            dbc.Row(dbc.Col(card_graf_portfolio, width=12), align="center", style={"display": "none"}, id="pf-graf-row"),
-            dbc.Row(dbc.Col(card_table, width=12), align="center", style={"display": "none"}, id="pf-portfolio-statistics-row"),
+            dbc.Row(
+                dbc.Col(card_graf_portfolio, width=12), align="center", style={"display": "none"}, id="pf-graf-row"
+            ),
+            dbc.Row(
+                dbc.Col(card_table, width=12),
+                align="center",
+                style={"display": "none"},
+                id="pf-portfolio-statistics-row",
+            ),
             dbc.Row(dbc.Col(card_portfolio_description, width=12), align="left"),
         ],
         class_name="mt-2",
@@ -216,9 +224,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object)
         )
     else:
         backtest_survival_period = pf_object.dcf.survival_period
-        table_list = [
-            {"1": "Backtest survival period", "2": backtest_survival_period}
-        ]
+        table_list = [{"1": "Backtest survival period", "2": backtest_survival_period}]
         columns = [
             dict(id="1", name="1"),
             dict(id="2", name="2", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
@@ -387,8 +393,6 @@ def get_pf_figure(
     Input(component_id="pf-submit-button", component_property="n_clicks"),
     State(component_id="pf-graf-row", component_property="style"),
 )
-def show_graf_and_portfolio_data_rows(
-    n_clicks, style
-):
+def show_graf_and_portfolio_data_rows(n_clicks, style):
     style = change_style_for_hidden_row(n_clicks, style)
     return style, style
