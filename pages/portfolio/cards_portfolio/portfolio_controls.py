@@ -38,6 +38,11 @@ def card_controls(
     last_date: Optional[str],
     ccy: Optional[str],
     rebal: Optional[str],
+    # advanced
+    initial_amount: Optional[float],
+    cashflow: Optional[float],
+    discount_rate: Optional[float],
+    symbol: Optional[str]
 ):
     tickers_list = make_list_from_string(tickers, char_type="str")
     weights_list = make_list_from_string(weights, char_type="float")
@@ -155,7 +160,7 @@ def card_controls(
                                                                 ),
                                                                 dbc.Input(
                                                                     id="pf-initial-amount",
-                                                                    value=1000,
+                                                                    value=initial_amount if initial_amount else 1000,
                                                                     type="number",
                                                                     min=1,
                                                                 ),
@@ -179,7 +184,7 @@ def card_controls(
                                                                 ),
                                                                 dbc.Input(
                                                                     id="pf-cashflow",
-                                                                    value=0,
+                                                                    value=cashflow if cashflow else 0,
                                                                     type="number",
                                                                 ),
                                                                 dbc.FormText("Number"),
@@ -205,7 +210,10 @@ def card_controls(
                                                                     ]
                                                                 ),
                                                                 dbc.Input(
-                                                                    id="pf-discount-rate", type="number", min=0, max=1
+                                                                    id="pf-discount-rate", type="number",
+                                                                    min=0,
+                                                                    max=1,
+                                                                    value=discount_rate if discount_rate else None,
                                                                 ),
                                                                 dbc.FormText("0 - 1 (0.05 is equivalent to 5%)"),
                                                                 dbc.Tooltip(
@@ -228,7 +236,7 @@ def card_controls(
                                                                 dbc.Input(
                                                                     id="pf-ticker",
                                                                     type="text",
-                                                                    value="PORTFOLIO",
+                                                                    value=symbol if symbol else "PORTFOLIO",
                                                                 ),
                                                                 dbc.FormText("Symbols without spaces"),
                                                                 dbc.Tooltip(
@@ -561,6 +569,11 @@ def show_log_scale_switch(n_clicks, plot_type: str):
     State("pf-first-date", "value"),
     State("pf-last-date", "value"),
     State("pf-rebalancing-period", "value"),
+    # Advanced
+    State("pf-initial-amount", "value"),
+    State("pf-cashflow", "value"),
+    State("pf-discount-rate", "value"),
+    State("pf-ticker", "value"),
     prevent_initial_call=True,
 )
 def update_link_pf(
@@ -572,6 +585,11 @@ def update_link_pf(
     first_date: str,
     last_date: str,
     rebal: str,
+    # Advanced
+    initial_amount: Optional[float],
+    cashflow: Optional[float],
+    discount_rate: Optional[float],
+    symbol: Optional[str]
 ):
     return create_link(
         ccy=ccy,
@@ -581,6 +599,11 @@ def update_link_pf(
         tickers_list=tickers_list,
         weights_list=weights_list,
         rebal=rebal,
+        # Advanced
+        initial_amount=initial_amount,
+        cashflow=cashflow,
+        discount_rate=discount_rate,
+        symbol=symbol
     )
 
 

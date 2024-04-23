@@ -37,12 +37,38 @@ dash.register_page(
 )
 
 
-def layout(tickers=None, weights=None, first_date=None, last_date=None, ccy=None, rebal=None, **kwargs):
+def layout(
+        tickers=None,
+        weights=None,
+        first_date=None,
+        last_date=None,
+        ccy=None,
+        rebal=None,
+        # advanced
+        initial_amount=None,
+        cashflow=None,
+        discount_rate=None,
+        symbol=None,
+        **kwargs
+):
     page = dbc.Container(
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls(tickers, weights, first_date, last_date, ccy, rebal), lg=5),
+                    dbc.Col(
+                        card_controls(
+                            tickers=tickers,
+                            weights=weights,
+                            first_date=first_date,
+                            last_date=last_date,
+                            ccy=ccy,
+                            rebal=rebal,
+                            initial_amount=initial_amount,
+                            cashflow=cashflow,
+                            discount_rate=discount_rate,
+                            symbol=symbol
+                        ),
+                        lg=5),
                     dbc.Col(card_assets_info, lg=7),
                 ]
             ),

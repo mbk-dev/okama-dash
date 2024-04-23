@@ -1,7 +1,24 @@
 from common import settings as settings
 
 
-def create_link(*, href, tickers_list, weights_list=None, benchmark=None, ccy, first_date, last_date, rebal=None):
+def create_link(
+        *,
+        href,
+        tickers_list,
+        ccy,
+        first_date,
+        last_date,
+        # portfolio
+        weights_list=None,
+        rebal=None,
+        initial_amount=None,
+        cashflow=None,
+        discount_rate=None,
+        symbol=None,
+        # benchmark
+        benchmark=None,
+
+)->str:
     tickers_str = "tickers=" + ",".join(str(symbol) for symbol in tickers_list)
     reset_href = href.split("?")[0]
     new_url = f"{reset_href}?{tickers_str}"
@@ -15,6 +32,14 @@ def create_link(*, href, tickers_list, weights_list=None, benchmark=None, ccy, f
     new_url += f"&last_date={last_date}"
     if rebal:
         new_url += f"&rebal={rebal}"
+    if initial_amount:
+        new_url += f"&initial_amount={initial_amount}"
+    if cashflow:
+        new_url += f"&cashflow={cashflow}"
+    if discount_rate:
+        new_url += f"&discount_rate={discount_rate}"
+    if symbol:
+        new_url += f"&symbol={symbol}"
     return new_url
 
 
