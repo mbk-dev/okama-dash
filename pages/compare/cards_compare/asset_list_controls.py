@@ -43,7 +43,7 @@ def card_controls(
                     [
                         html.Label("Tickers to compare"),
                         dcc.Dropdown(
-                            options=options,
+                            options=tickers_list if tickers_list else [],
                             value=tickers_list if tickers_list else settings.default_symbols,
                             multi=True,
                             placeholder="Select assets",

@@ -36,7 +36,7 @@ def card_controls(
                     [
                         html.Label("Tickers in the Efficient Frontier"),
                         dcc.Dropdown(
-                            options=options,
+                            options=tickers if tickers else [],
                             value=tickers if tickers else settings.default_symbols,
                             multi=True,
                             placeholder="Select assets",

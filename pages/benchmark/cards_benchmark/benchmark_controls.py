@@ -49,7 +49,7 @@ def benchmark_card_controls(
                                     [
                                         html.Label("Benchmark"),
                                         dcc.Dropdown(
-                                            options=options,
+                                            options=[benchmark] if benchmark else [],
                                             multi=False,
                                             placeholder="Select a benchmark",
                                             id="select-benchmark",
@@ -68,7 +68,7 @@ def benchmark_card_controls(
                     [
                         html.Label("Tickers to compare with benchmark"),
                         dcc.Dropdown(
-                            options=options,
+                            # options=options,
                             value=tickers_list if tickers_list else settings.default_symbols_benchmark,
                             multi=True,
                             placeholder="Select tickers",
