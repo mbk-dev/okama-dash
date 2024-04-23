@@ -119,7 +119,7 @@ def layout(
     State(component_id="pf-monte-carlo-years", component_property="value"),
     State(component_id="pf-monte-carlo-distribution", component_property="value"),
     State(component_id="pf-monte-carlo-backtest", component_property="value"),
-    # Logarithmic scale button
+    # logarithmic scale button
     Input(component_id="pf-logarithmic-scale-switch", component_property="on"),
     prevent_initial_call=True,
 )
@@ -162,9 +162,9 @@ def update_graf_portfolio(
         rebalancing_period=rebalancing_period,
         inflation=inflation_on,
         # advanced
-        initial_amount=initial_amount,
-        cashflow=cashflow,
-        discount_rate=discount_rate if discount_rate else None,
+        initial_amount=float(initial_amount),
+        cashflow=float(cashflow),
+        discount_rate=float(discount_rate) if discount_rate is not None else None,
         symbol=symbol,
     )
     fig, df_backtest, df_forecast = get_pf_figure(
