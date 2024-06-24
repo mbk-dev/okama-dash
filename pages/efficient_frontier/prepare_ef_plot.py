@@ -28,19 +28,53 @@ def prepare_transition_map(ef: pd.DataFrame):
 
 
 def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options: dict):
-    y_value = ef["Mean return"] if ef_options["plot_type"] == "Arithmetic" else ef["CAGR"]
+    y_column = "Mean return" if ef_options["plot_type"] == "Arithmetic" else "CAGR"
     weights_array = np.stack([ef[n] for n in ef.columns[3:]], axis=-1)
     hovertemplate = "<b>Risk: %{x:.2f}%<br>Return: %{y:.2f}%</b>" + "<extra></extra>"
     fig = go.Figure(
         data=go.Scatter(
             x=ef["Risk"],
-            y=y_value,
+            y=ef[y_column],
             customdata=weights_array,
             hovertemplate=hovertemplate,
             mode="lines",
             name=f"Efficient Frontier - {ef_options['plot_type']} mean",
         )
     )
+    # MDP frontier
+    if ef_options["mdp"] == "On":
+        mdp_frontier = ef_object.mdp_points * 100
+        # TODO: add Diversification Ratio to hovertemplate
+        # hovertemplate = "<b>Risk: %{x:.2f}%<br>Return: %{y:.2f}%<br>Diversification Ratio:%{text:.2f}</b>" + "<extra></extra>"
+        weights_array = np.stack([mdp_frontier[n] for n in mdp_frontier.columns[3:]], axis=-1)
+        fig.add_trace(
+            go.Scatter(
+                x=mdp_frontier["Risk"],
+                y=mdp_frontier[y_column],
+                customdata=weights_array,
+                hovertemplate=hovertemplate,
+                # text=[],
+                mode="lines",
+                name=f"Most diversified portfolios",
+            )
+        )
+        # MPD portfolio
+        mdp_portfolio = ef_object.get_most_diversified_portfolio()
+        # TODO: add customdata with weights
+        # weights_array_mdp = np.expand_dims(mdp_portfolio["Weights"], axis=0)
+        fig.add_trace(
+            go.Scatter(
+                x=[mdp_portfolio['Risk'] * 100],
+                y=[mdp_portfolio[y_column] * 100],
+                # customdata=weights_array_mdp,
+                hovertemplate=hovertemplate,
+                mode="markers+text",
+                text="MDP",
+                textposition="top left",
+                name="Most diversified portfolio (MDP)",
+                marker=dict(size=8, color="grey"),
+            )
+        )
     # CML line
     if ef_options["cml"] == "On":
         cagr_option = "cagr" if ef_options["plot_type"] == "Geometric" else "mean_return"

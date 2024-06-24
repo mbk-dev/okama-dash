@@ -127,11 +127,45 @@ def card_controls(
                                             target="info-ror",
                                         ),
                                     ],
-                                    lg=4,
-                                    md=4,
+                                    lg=6,
+                                    md=6,
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
+                                dbc.Col(
+                                    [
+                                        dbc.Label(
+                                            [
+                                                "Most diversified portfolios line",
+                                                html.I(
+                                                    className="bi bi-info-square ms-2",
+                                                    id="info-mdp-line",
+                                                ),
+                                            ]
+                                        ),
+                                        dbc.RadioItems(
+                                            options=[
+                                                {"label": "On", "value": "On"},
+                                                {"label": "Off", "value": "Off"},
+                                            ],
+                                            value="Off",
+                                            id="mdp-line-option",
+                                        ),
+                                        dbc.Tooltip(
+                                            tl.ef_options_tooltip_cml,
+                                            target="info-mdp-line",
+                                        ),
+                                    ],
+                                    lg=6,
+                                    md=6,
+                                    sm=12,
+                                    class_name="pt-4 pt-sm-4 pt-md-1",
+                                ),
+                            ],
+                            className="p-1",
+                        ),
+                        dbc.Row(
+                            [
                                 dbc.Col(
                                     [
                                         dbc.Label(
@@ -156,8 +190,8 @@ def card_controls(
                                             target="info-cml",
                                         ),
                                     ],
-                                    lg=4,
-                                    md=4,
+                                    lg=6,
+                                    md=6,
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
@@ -185,12 +219,13 @@ def card_controls(
                                             target="info-rf-rate",
                                         ),
                                     ],
-                                    lg=4,
-                                    md=4,
+                                    lg=6,
+                                    md=6,
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
-                            ]
+                            ],
+                            className="p-1",
                         ),
                         dbc.Row(html.H6(children="Monte Carlo Simulation")),
                         dbc.Row(

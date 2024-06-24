@@ -82,6 +82,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="ef-last-date", component_property="value"),
     # Options
     State(component_id="ef-plot-options", component_property="value"),
+    State(component_id="mdp-line-option", component_property="value"),
     State(component_id="cml-option", component_property="value"),
     State(component_id="risk-free-rate-option", component_property="value"),
     # Monte-Carlo
@@ -98,6 +99,7 @@ def update_ef_cards(
     ld_value: str,
     # Options
     plot_option: str,
+    mdp_option: str,
     cml_option: str,
     rf_rate: float,
     n_monte_carlo: int,
@@ -114,7 +116,9 @@ def update_ef_cards(
         n_points=40,
         full_frontier=True,
     )
-    ef_options = dict(plot_type=plot_option, cml=cml_option, rf_rate=rf_rate, n_monte_carlo=n_monte_carlo)
+    ef_options = dict(
+        plot_type=plot_option, mdp=mdp_option, cml=cml_option, rf_rate=rf_rate, n_monte_carlo=n_monte_carlo
+    )
     ef = ef_object.ef_points * 100
     fig1 = prepare_ef(ef, ef_object, ef_options)
     fig2 = prepare_transition_map(ef)
