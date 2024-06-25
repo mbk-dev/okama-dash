@@ -238,6 +238,7 @@ def show_transition_map_row(n_clicks, style, tr_map_option):
     Output("ef-find-portfolio-cagr", "children"),
     Output("ef-find-portfolio-risk", "children"),
     Output("ef-find-portfolio-weights", "children"),
+    Output("ef-backtest-optimized-potfolio-button", "href"),
     # Target return & ef file name
     Input(component_id="ef-find-portfolio-button", component_property="n_clicks"),
     State(component_id="ef-find-portfolio-input", component_property="value"),
@@ -260,12 +261,26 @@ def find_portfolio(n_clicks, ror, file_name):
         cagr_str = f"CAGR: {cagr:.2f}%"
         risk_str = f"Risk: {risk:.2f}%"
         weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for t, w in optimized_portfolio.items()])
+        print(weights_str)
+        weights_for_link = [round(w * 100, 2) for w in optimized_portfolio.values()]
+        delta = round(100. - sum(weights_for_link), 3)
+        weights_for_link[-1] += delta
+        link = common.create_link.create_link(
+            href='/portfolio/',
+            tickers_list=ef_object.symbols,
+            ccy=ef_object.currency,
+            first_date=ef_object.first_date.strftime('%Y-%m'),
+            last_date = ef_object.last_date.strftime('%Y-%m'),
+            weights_list=weights_for_link
+        )
+        print(link)
     except RecursionError:
         mean_return_str = ''
         cagr_str = ''
         risk_str = ''
         weights_str = "No solution was found."
-    return mean_return_str, cagr_str, risk_str, weights_str
+        link = None
+    return mean_return_str, cagr_str, risk_str, weights_str, link
 
 
 @callback(

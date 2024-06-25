@@ -100,7 +100,26 @@ card_ef_find_weights = dbc.Card(
                                 ],
                                 style={"display": "none"},
                                 id="ef-find-portfolio-output-row",
-                            )
+                            ),
+                            dbc.Row(
+                                [
+                                    dbc.Col(
+                                        html.Div(
+                                            [dbc.Button(
+                                                "Backtest portfolio",
+                                                id="ef-backtest-optimized-potfolio-button",
+                                                external_link=True,
+                                                color="primary"
+                                            )],
+                                            style={"text-align": "center"},
+                                            className="p-3",
+                                        )
+                                    ),
+                                ],
+                                style={"display": "none"},
+                                id="ef-backtest-optimized-potfolio-button-row",
+
+                            ),
                         ],
                     ),
                 ]
@@ -131,9 +150,10 @@ def disable_find_portfolio(ror_input) -> bool:
 
 @callback(
     Output(component_id="ef-find-portfolio-output-row", component_property="style"),
+    Output(component_id="ef-backtest-optimized-potfolio-button-row", component_property="style"),
     Input(component_id="ef-find-portfolio-button", component_property="n_clicks"),
     State(component_id="ef-find-portfolio-output-row", component_property="style"),
 )
 def show_find_portfolio_output_row(n_clicks, style):
     style = common.update_style.change_style_for_hidden_row(n_clicks, style)
-    return style
+    return style, style
