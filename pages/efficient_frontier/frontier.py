@@ -10,6 +10,7 @@ import dash_bootstrap_components as dbc
 import okama as ok
 
 import common
+import common.create_link
 import common.settings
 import common.update_style
 from common.parse_query import make_list_from_string
@@ -103,7 +104,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="risk-free-rate-option", component_property="value"),
     # Monte-Carlo
     State(component_id="monte-carlo-option", component_property="value"),
-    prevent_initial_call=False,
+    prevent_initial_call=True,
 )
 def update_ef_cards(
     screen,
@@ -123,21 +124,37 @@ def update_ef_cards(
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     if not symbols:
         raise dash.exceptions.PreventUpdate
-    ef_object = ok.EfficientFrontier(
-        symbols,
-        first_date=fd_value,
-        last_date=ld_value,
-        ccy=ccy,
-        inflation=False,
-        n_points=40,
-        full_frontier=True,
-    )
+    new_ef_file_name_str = common.create_link.create_filename(tickers_list=sorted(symbols),
+                                                          ccy=ccy,
+                                                          first_date=fd_value,
+                                                          last_date=ld_value
+                                                          )
+    new_ef_file = data_folder / new_ef_file_name_str
+    if new_ef_file.is_file():
+        with open(new_ef_file, 'rb') as f:
+            print("found cached EF file...")
+            ef_object = pickle.load(f)
+    else:
+        print("Downloading data from API...")
+        ef_object = ok.EfficientFrontier(
+            symbols,
+            first_date=fd_value,
+            last_date=ld_value,
+            ccy=ccy,
+            inflation=False,
+            n_points=40,
+            full_frontier=True,
+        )
     ef_options = dict(
         plot_type=plot_option, mdp=mdp_option, cml=cml_option, rf_rate=rf_rate, n_monte_carlo=n_monte_carlo
     )
     ef = ef_object.ef_points * 100
     # Cache ef to pickle file
-    ef_file_name = 'ef.pkl'
+    ef_file_name = common.create_link.create_filename(tickers_list=ef_object.symbols,
+                                                      ccy=ef_object.currency,
+                                                      first_date=ef_object.first_date.strftime('%Y-%m'),
+                                                      last_date=ef_object.last_date.strftime('%Y-%m')
+                                                      )
     data_file = data_folder / ef_file_name
     with open(data_file, 'wb') as f:  # open a text file
         pickle.dump(ef_object, f, protocol=pickle.HIGHEST_PROTOCOL)  # serialize the EF

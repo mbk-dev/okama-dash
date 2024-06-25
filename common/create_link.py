@@ -42,6 +42,23 @@ def create_link(
     return new_url
 
 
+def create_filename(
+    *,
+    tickers_list: list[str],
+    ccy: str,
+    first_date: str,
+    last_date: str,
+) -> str:
+    """
+    Create filename to serialize EF objects to pickle.
+    """
+    file_name = "-".join(str(symbol) for symbol in sorted(tickers_list))
+    file_name += f"-ccy={ccy}"
+    file_name += f"-first_date={first_date}"
+    file_name += f"-last_date={last_date}"
+    return file_name + ".pkl"
+
+
 def check_if_list_empty_or_big(tickers_list) -> bool:
     """
     Check if list is empty or larger than allowed.
