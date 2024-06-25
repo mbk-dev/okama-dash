@@ -3,6 +3,10 @@ import platform
 from flask_caching import Cache
 
 plt = platform.system()
+
+# Set caching
+cache_directory = "cache-directory"
+
 if plt == "Linux":
     print("caching in redis")
     cache = Cache(
@@ -17,7 +21,7 @@ else:
     cache = Cache(
         config={
             "CACHE_TYPE": "filesystem",
-            "CACHE_DIR": "cache-directory",
+            "CACHE_DIR": cache_directory,
             "CACHE_DEFAULT_TIMEOUT": 500,
         },
     )
