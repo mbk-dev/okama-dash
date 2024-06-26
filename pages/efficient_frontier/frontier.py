@@ -263,8 +263,6 @@ def find_portfolio(n_clicks, ror, file_name):
         weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for t, w in optimized_portfolio.items()])
         print(weights_str)
         weights_for_link = [round(w * 100, 2) for w in optimized_portfolio.values()]
-        delta = round(100. - sum(weights_for_link), 3)
-        weights_for_link[-1] += delta
         link = common.create_link.create_link(
             href='/portfolio/',
             tickers_list=ef_object.symbols,
