@@ -152,7 +152,7 @@ def card_controls(
                                             id="mdp-line-option",
                                         ),
                                         dbc.Tooltip(
-                                            tl.ef_options_tooltip_cml,
+                                            tl.ef_options_tooltip_mdp,
                                             target="info-mdp-line",
                                         ),
                                     ],
