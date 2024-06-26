@@ -41,7 +41,7 @@ card_ef_find_weights = dbc.Card(
                                             dbc.Col(
                                                 dbc.Input(
                                                     id="ef-find-portfolio-input",
-                                                    placeholder="Rate of return (0.10 for 10%)",
+                                                    placeholder="Rate of return (Format XX.XX)",
                                                     type="number",
                                                 ),
                                                 lg=4,
@@ -50,12 +50,12 @@ card_ef_find_weights = dbc.Card(
                                             ),
                                             dbc.Col(
                                                 [
-                                                    # html.Label("Portfolio data"),
                                                     html.Div(
                                                         [
                                                             html.P(id="ef-find-portfolio-info-return-range"),
                                                         ],
                                                         id="ef-optimized-find-portfolio-info",
+                                                        style={'display': 'inline-block', 'verticalAlign': 'middle'}
                                                     )
                                                 ],
                                                 lg=8,

@@ -51,7 +51,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                 html.Div(
                     [
                         dcc.Markdown(
-                            """
+                        """
                         **Portfolio data**  
                         Click on points to get portfolio data.
                         """
@@ -81,7 +81,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                     ),
                 ],
                 style={"display": "none"},
-                id="ef-backtest-optimized-potfolio-button-row",
+                id="ef-backtest-portfolio-button-row",
             ),
             dbc.Row(
                 dbc.Col(card_ef_find_weights, width=12),
@@ -155,7 +155,6 @@ def update_ef_cards(
             print("found cached EF file...")
             ef_object = pickle.load(f)
     else:
-        print("Downloading data from API...")
         ef_object = ok.EfficientFrontier(
             symbols,
             first_date=fd_value,
@@ -179,14 +178,6 @@ def update_ef_cards(
     with open(data_file, 'wb') as f:  # open a text file
         pickle.dump(ef_object, f, protocol=pickle.HIGHEST_PROTOCOL)  # serialize the EF
 
-    # Cache to redis
-    # https://stackoverflow.com/questions/15219858/how-to-store-a-complex-object-in-redis-using-redis-py
-    # r = redis.StrictRedis(host='localhost', port=6379, db=0)
-    # pickled_object = pickle.dumps(ef)
-    # r.set('stored_portfolio', pickled_object)
-    # unpacked_object = pickle.loads(r.get('some_key'))
-    # print(ef == unpacked_object)
-
     fig1 = prepare_ef(ef, ef_object, ef_options)
     fig2 = prepare_transition_map(ef)
 
@@ -200,12 +191,14 @@ def update_ef_cards(
     Output("ef-click-data-risk", "children"),
     Output("ef-click-data-return", "children"),
     Output("ef-click-data-weights", "children"),
+    Output("ef-backtest-portfolio-button", "href"),
     Input("ef-graf", "clickData"),
-    # List of tickers
+    # Portfolio data
     Input(component_id="ef-submit-button-state", component_property="n_clicks"),
     State(component_id="ef-symbols-list", component_property="value"),
+    State(component_id="ef_portfolio_file_name", component_property="data")
 )
-def display_click_data(clickData, n_click, symbols):
+def display_click_data(clickData, n_click, symbols, file_name):
     """
     Display portfolio weights, risk and return.
     """
@@ -224,7 +217,18 @@ def display_click_data(clickData, n_click, symbols):
         pass
     else:
         weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for w, t in zip(weights_list, symbols)])
-    return risk_str, ror_str, weights_str
+    weights_for_link = common.math.round_list(weights_list, 2)
+    with open(data_folder / file_name, 'rb') as f:
+        ef_object = pickle.load(f)
+    link = common.create_link.create_link(
+        href='/portfolio/',
+        tickers_list=ef_object.symbols,
+        ccy=ef_object.currency,
+        first_date=ef_object.first_date.strftime('%Y-%m'),
+        last_date=ef_object.last_date.strftime('%Y-%m'),
+        weights_list=weights_for_link
+    )
+    return risk_str, ror_str, weights_str, link
 
 
 @callback(
@@ -237,6 +241,14 @@ def display_click_data(clickData, n_click, symbols):
 def show_graf_and_portfolio_data_and_find_portfolio_rows(n_clicks, style):
     style = common.update_style.change_style_for_hidden_row(n_clicks, style)
     return style, style, style
+
+
+@callback(
+    Output(component_id="ef-backtest-portfolio-button-row", component_property="style"),
+    Input(component_id="ef-click-data-risk", component_property="children"),
+)
+def show_backtest_portfolio_button_row(text):
+    return None if text else {"display": "none"}
 
 
 @callback(
@@ -273,7 +285,7 @@ def find_portfolio(n_clicks, ror, file_name):
     with open(data_folder / file_name, 'rb') as f:
         ef_object = pickle.load(f)
     try:
-        optimized_portfolio: dict = ef_object.minimize_risk(target_return=ror, monthly_return=False)
+        optimized_portfolio: dict = ef_object.minimize_risk(target_return=ror / 100., monthly_return=False)
         optimized_portfolio.update((x , y * 100) for x, y in optimized_portfolio.items())
         mean_return = optimized_portfolio.pop('Mean return')
         cagr = optimized_portfolio.pop('CAGR')
@@ -282,7 +294,6 @@ def find_portfolio(n_clicks, ror, file_name):
         cagr_str = f"CAGR: {cagr:.2f}%"
         risk_str = f"Risk: {risk:.2f}%"
         weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for t, w in optimized_portfolio.items()])
-        print(weights_str)
         weights_for_link = common.math.round_list(list(optimized_portfolio.values()), 2)
         link = common.create_link.create_link(
             href='/portfolio/',
@@ -292,7 +303,6 @@ def find_portfolio(n_clicks, ror, file_name):
             last_date = ef_object.last_date.strftime('%Y-%m'),
             weights_list=weights_for_link
         )
-        print(link)
     except RecursionError:
         mean_return_str = ''
         cagr_str = ''
@@ -318,4 +328,4 @@ def show_max_min_return(n_clicks, file_name):
     mean_return_range = ef_object.mean_return_range
     min_ror = (mean_return_range[0] + 1.) ** common.settings.MONTHS_PER_YEAR - 1.
     max_ror = (mean_return_range[-1] + 1.) ** common.settings.MONTHS_PER_YEAR - 1.
-    return f"Portfolios rate of return range: {min_ror:.2f} - {max_ror:.2f} ({min_ror * 100:.2f} - {max_ror * 100:.2f}%)"
+    return f"Portfolios rate of return range: {min_ror * 100:.2f} - {max_ror * 100:.2f}%"
