@@ -93,13 +93,35 @@ def card_controls(
                             ]
                         ),
                         dbc.Row(
-                            # copy link to clipboard button
-                            create_copy_link_div(
-                                location_id="al-url",
-                                hidden_div_with_url_id="al-show-url",
-                                button_id="al-copy-link-button",
-                                card_name="asset list",
-                            ),
+                            [
+                                dbc.Col(
+                                    # copy link to clipboard button
+                                    create_copy_link_div(
+                                        location_id="al-url",
+                                        hidden_div_with_url_id="al-show-url",
+                                        button_id="al-copy-link-button",
+                                        card_name="asset list",
+                                        style={"text-align": "right"}
+                                    )
+                                ),
+                                dbc.Col(
+                                    # link to EF button
+                                    html.Div(
+                                        [
+                                            dbc.Button(
+                                                "Open in Efficient Frontier",
+                                                id="al-controls-switch-to-ef-link",
+                                                className="position-relative",
+                                                color="link",
+                                                outline=False,
+                                                external_link=True,
+                                                target="_blank",
+                                            ),
+                                        ],
+                                        style={"text-align": "left"},
+                                    )
+                                )
+                            ]
                         ),
                         dbc.Row(html.H5("Options")),
                         dbc.Row(
@@ -252,6 +274,18 @@ def update_link_al(n_clicks, href: str, tickers_list: Optional[list], ccy: str, 
     return create_link(ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list)
 
 
+@callback(
+    Output("al-controls-switch-to-ef-link", "href"),
+    Input("al-symbols-list", "value"),  # get selected tickers
+    State("al-base-currency", "value"),
+    State("al-first-date", "value"),
+    State("al-last-date", "value"),
+    prevent_initial_call=False,
+)
+def update_link_to_ef(tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
+    return create_link(ccy=ccy, first_date=first_date, href="/", last_date=last_date, tickers_list=tickers_list)
+
+
 @app.callback(
     Output("al-symbols-list", "options"),
     Input("al-symbols-list", "search_value"),
@@ -289,7 +323,7 @@ def disable_search(tickers_list) -> bool:
     Output("al-copy-link-button", "disabled"),
     Input("al-symbols-list", "value"),
 )
-def disable_link_button(tickers_list) -> bool:
+def disable_al_link_button(tickers_list) -> bool:
     """
     Disable "Copy Link" button.
 
@@ -298,6 +332,24 @@ def disable_link_button(tickers_list) -> bool:
     - number of tickers is more than allowed (in settings)
     """
     return check_if_list_empty_or_big(tickers_list)
+
+
+@app.callback(
+    Output("al-controls-switch-to-ef-link", "disabled"),
+    Input("al-symbols-list", "value"),
+)
+def disable_ef_link_button(tickers_list) -> bool:
+    """
+    Disable "Copy Link" button.
+
+    Conditions:
+    - list of tickers is empty
+    - number of tickers is more than allowed (in settings)
+    - number of tickers is 1
+    """
+    first_condition = check_if_list_empty_or_big(tickers_list)
+    second_condition = len(tickers_list) == 1
+    return first_condition or second_condition
 
 
 @app.callback(
