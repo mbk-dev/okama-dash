@@ -109,6 +109,7 @@ card_ef_find_weights = dbc.Card(
                                                 "Backtest portfolio",
                                                 id="ef-backtest-optimized-potfolio-button",
                                                 external_link=True,
+                                                target="_blank",
                                                 color="primary"
                                             )],
                                             style={"text-align": "center"},
@@ -118,7 +119,6 @@ card_ef_find_weights = dbc.Card(
                                 ],
                                 style={"display": "none"},
                                 id="ef-backtest-optimized-potfolio-button-row",
-
                             ),
                         ],
                     ),

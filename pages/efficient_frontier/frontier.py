@@ -11,6 +11,7 @@ import okama as ok
 
 import common
 import common.create_link
+import common.math
 import common.settings
 import common.update_style
 from common.parse_query import make_list_from_string
@@ -62,6 +63,25 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                     style={"display": "none"},
                     id="ef-portfolio-data-row",
                 ),
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        html.Div(
+                            [dbc.Button(
+                                "Backtest portfolio",
+                                id="ef-backtest-portfolio-button",
+                                external_link=True,
+                                target="_blank",
+                                color="primary"
+                            )],
+                            style={"text-align": "center"},
+                            className="p-3",
+                        )
+                    ),
+                ],
+                style={"display": "none"},
+                id="ef-backtest-optimized-potfolio-button-row",
             ),
             dbc.Row(
                 dbc.Col(card_ef_find_weights, width=12),
@@ -254,6 +274,7 @@ def find_portfolio(n_clicks, ror, file_name):
         ef_object = pickle.load(f)
     try:
         optimized_portfolio: dict = ef_object.minimize_risk(target_return=ror, monthly_return=False)
+        optimized_portfolio.update((x , y * 100) for x, y in optimized_portfolio.items())
         mean_return = optimized_portfolio.pop('Mean return')
         cagr = optimized_portfolio.pop('CAGR')
         risk = optimized_portfolio.pop('Risk')
@@ -262,7 +283,7 @@ def find_portfolio(n_clicks, ror, file_name):
         risk_str = f"Risk: {risk:.2f}%"
         weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for t, w in optimized_portfolio.items()])
         print(weights_str)
-        weights_for_link = [round(w * 100, 2) for w in optimized_portfolio.values()]
+        weights_for_link = common.math.round_list(list(optimized_portfolio.values()), 2)
         link = common.create_link.create_link(
             href='/portfolio/',
             tickers_list=ef_object.symbols,
