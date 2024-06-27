@@ -98,7 +98,8 @@ def update_graf_compare(
         ccy=ccy,
         inflation=inflation_on,
     )
-    fig = get_al_figure(al_object, plot_type, inflation_on, rolling_window, log_on)
+    log_scale = log_on if plot_type == "wealth" else False  # log scale Y must be available only for wealth chart
+    fig = get_al_figure(al_object, plot_type, inflation_on, rolling_window, log_scale)
     if plot_type == "correlation":
         fig.update(layout_showlegend=False)
         fig.update(layout_coloraxis_showscale=False)
