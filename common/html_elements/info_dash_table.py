@@ -32,15 +32,15 @@ def get_info(al_object) -> dash_table.DataTable:
     eldest_ticker = list(al_object.assets_first_dates)[0]
     eldest_asset_date = al_object.assets_first_dates[eldest_ticker].strftime("%Y-%m")
     info_list = [
-        {"Property": "First Date", "Value": al_object.first_date.strftime("%Y-%m")},
-        {"Property": "Last Date", "Value": al_object.last_date.strftime("%Y-%m")},
-        {"Property": "Period length", "Value": al_object._pl_txt},
+        {"Property": "First available date", "Value": al_object.first_date.strftime("%Y-%m")},
+        {"Property": "Last available date", "Value": al_object.last_date.strftime("%Y-%m")},
+        {"Property": "Available period length", "Value": al_object._pl_txt},
         {
-            "Property": "Shortest history",
+            "Property": "Shortest available history",
             "Value": f"{al_object.newest_asset} - {newest_asset_date}",
         },
         {
-            "Property": "Longest history",
+            "Property": "Longest available history",
             "Value": f"{eldest_ticker} - {eldest_asset_date}",
         },
     ]
