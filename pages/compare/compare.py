@@ -112,7 +112,7 @@ def update_graf_compare(
     fig, config = adopt_small_screens(fig, screen)
     fig.update_xaxes(
         # ticks='outside',
-        rangeslider_visible=True,
+        rangeslider_visible=False if plot_type == "correlation" else True,
         showgrid=False,
         gridcolor="lightgrey",
         zeroline=False,
