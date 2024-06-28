@@ -106,6 +106,9 @@ def card_controls(
                                     target="pf-info-rebalancing",
                                 ),
                             ],
+                            lg=6,
+                            md=6,
+                            sm=12,
                         ),
                     ]
                 ),
@@ -192,7 +195,26 @@ def card_controls(
                                                                     tl.pf_options_tooltip_cash_flow,
                                                                     target="pf-info-cash-flow",
                                                                 ),
-                                                            ]
+                                                            ],
+                                                            lg=5,
+                                                            md=5,
+                                                            sm=12,
+                                                        ),
+                                                        dbc.Col(
+                                                            [
+                                                                html.Label("Rate"),
+                                                                dbc.Input(
+                                                                    id="pf-withdrawal-rate",
+                                                                    disabled=True
+                                                                ),
+                                                                dbc.Tooltip(
+                                                                    tl.pf_options_tooltip_cash_flow,
+                                                                    target="pf-info-withdrawal-rate",
+                                                                ),
+                                                            ],
+                                                            lg=2,
+                                                            md=2,
+                                                            sm=12,
                                                         ),
                                                     ]
                                                 ),
@@ -670,7 +692,20 @@ def optimize_search_al(search_value) -> list:
 def print_weights_sum(values) -> Tuple[str, bool]:
     weights_sum = sum(float(x) for x in values if x)
     weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.0
-    return f"Total: {weights_sum}", weights_sum_is_not_100
+    return f"Total: {np.around(weights_sum, decimals=3)}", weights_sum_is_not_100
+
+
+@app.callback(
+    Output("pf-withdrawal-rate", "value"),
+    Input("pf-initial-amount", "value"),  #
+    Input("pf-cashflow", "value")
+)
+def print_withdrawal_rate(initial_amount, cashflow) -> str:
+    if initial_amount and cashflow:
+        withdrawal_rate = abs(int(cashflow)) * settings.MONTHS_PER_YEAR / int(initial_amount) * 100
+    else:
+        withdrawal_rate = 0
+    return f"{withdrawal_rate:.0f}%"
 
 
 @app.callback(
