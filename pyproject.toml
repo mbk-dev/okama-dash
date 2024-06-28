@@ -27,6 +27,7 @@ packages = [{include = "okama_dash"}]
 [tool.poetry.dependencies]
 python = ">=3.9, <4.0.0"
 okama = "^1.4.0"
+numpy = "^1.0.0"  # temporal limitation (until okama 1.4.1)
 dash = "^2.5.1"
 dash-daq = "^0.5.0"
 dash-bootstrap-components = "^1.2.0"
