@@ -56,8 +56,8 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
                         Click on points to get portfolio data.
                         """
                         ),
-                        html.P(id="ef-click-data-risk"),
                         html.P(id="ef-click-data-return"),
+                        html.P(id="ef-click-data-risk"),
                         html.Pre(id="ef-click-data-weights"),
                     ],
                     style={"display": "none"},
@@ -144,7 +144,7 @@ def update_ef_cards(
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     if not symbols:
         raise dash.exceptions.PreventUpdate
-    new_ef_file_name_str = common.create_link.create_filename(tickers_list=sorted(symbols),
+    new_ef_file_name_str = common.create_link.create_filename(tickers_list=symbols,
                                                           ccy=ccy,
                                                           first_date=fd_value,
                                                           last_date=ld_value

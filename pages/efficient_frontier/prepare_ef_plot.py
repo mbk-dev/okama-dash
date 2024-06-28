@@ -30,7 +30,7 @@ def prepare_transition_map(ef: pd.DataFrame):
 def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options: dict):
     y_column = "Mean return" if ef_options["plot_type"] == "Arithmetic" else "CAGR"
     weights_array = np.stack([ef[n] for n in ef.columns[3:]], axis=-1)
-    hovertemplate = "<b>Risk: %{x:.2f}%<br>Return: %{y:.2f}%</b>" + "<extra></extra>"
+    hovertemplate = "<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b>" + "<extra></extra>"
     fig = go.Figure(
         data=go.Scatter(
             x=ef["Risk"],

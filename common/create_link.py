@@ -54,7 +54,7 @@ def create_filename(
     """
     Create filename to serialize EF objects to pickle.
     """
-    file_name = "-".join(str(symbol) for symbol in sorted(tickers_list))
+    file_name = "-".join(str(symbol) for symbol in tickers_list)
     file_name += f"-ccy={ccy}"
     file_name += f"-first_date={first_date}"
     file_name += f"-last_date={last_date}"
