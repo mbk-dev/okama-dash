@@ -243,7 +243,10 @@ def card_controls(
                                                                     tl.pf_options_tooltip_discount_rate,
                                                                     target="pf-info-discount-rate",
                                                                 ),
-                                                            ]
+                                                            ],
+                                                            lg=5,
+                                                            md=5,
+                                                            sm=12,
                                                         ),
                                                         dbc.Col(
                                                             [
@@ -266,7 +269,10 @@ def card_controls(
                                                                     tl.pf_options_tooltip_ticker,
                                                                     target="pf-info-ticker",
                                                                 ),
-                                                            ]
+                                                            ],
+                                                            lg=5,
+                                                            md=5,
+                                                            sm=12,
                                                         ),
                                                     ]
                                                 ),
