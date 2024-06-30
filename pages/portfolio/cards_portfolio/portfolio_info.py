@@ -36,6 +36,8 @@ card_assets_info = dbc.Card(
                     html.H5(children="Survival period statistics", className="mt-1 align-top"),
                     html.Div(id="pf-monte-carlo-statistics", className="m-0 p-0"),
                     html.Small("All periods are in years."),
+                    html.H5(children="Wealth statistics", className="mt-1 align-top"),
+                    html.Div(id="pf-monte-carlo-wealth-statistics", className="m-0 p-0"),
                 ],
                 id="pf-monte-carlo-statistics-frame",
                 hidden=True,

@@ -95,6 +95,7 @@ def layout(
     Output(component_id="pf-wealth-indexes", component_property="config"),
     Output(component_id="pf-describe-table", component_property="children"),
     Output(component_id="pf-monte-carlo-statistics", component_property="children"),
+    Output(component_id="pf-monte-carlo-wealth-statistics", component_property="children"),
     # user screen info
     Input(component_id="store", component_property="data"),
     # main Inputs
@@ -193,9 +194,11 @@ def update_graf_portfolio(
         forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
             df_forecast, df_backtest, pf_object
         )
+        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(df_forecast)
     else:
         forecast_survival_statistics_datatable = dash_table.DataTable()
-    return (fig, config, statistics_dash_table, forecast_survival_statistics_datatable)
+        forecast_wealth_statistics_datatable = dash_table.DataTable()
+    return fig, config, statistics_dash_table, forecast_survival_statistics_datatable, forecast_wealth_statistics_datatable
 
 
 def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object) -> dash_table.DataTable:
@@ -236,6 +239,41 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object)
             style_header={"display": "none"},
         )
     return forecast_survival_statistics_datatable
+
+
+def get_forecast_wealth_statistics_table(df_forecast) -> dash_table.DataTable:
+    if not df_forecast.empty:
+        wealth = df_forecast.iloc[-1, :]
+        table_list = [
+            {"1": "1st percentile", "2": wealth.quantile(1 / 100), "3": "Min", "4": wealth.min()},
+            {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": "Max", "4": wealth.max()},
+            {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": "Mean", "4": wealth.mean()},
+        ]
+        columns = [
+            dict(id="1", name="1"),
+            dict(id="2", name="2", type="numeric", format=Format(precision=4, scheme=Scheme.decimal)),
+            dict(id="3", name="3"),
+            dict(id="4", name="4", type="numeric", format=Format(precision=4, scheme=Scheme.decimal)),
+        ]
+        forecast_wealth_statistics_datatable = dash_table.DataTable(
+            data=table_list,
+            columns=columns,
+            style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
+            style_header={"display": "none"},
+        )
+    else:
+        table_list = [{"1": "Wealth", "2": 0}]
+        columns = [
+            dict(id="1", name="1"),
+            dict(id="2", name="2", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+        ]
+        forecast_wealth_statistics_datatable = dash_table.DataTable(
+            data=table_list,
+            columns=columns,
+            style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
+            style_header={"display": "none"},
+        )
+    return forecast_wealth_statistics_datatable
 
 
 def get_pf_statistics_table(al_object):
