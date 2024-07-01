@@ -392,6 +392,7 @@ def card_controls(
                         dbc.Row(
                             html.H6(children="Monte Carlo simulation for portfolio future wealth indexes"),
                             className="p-1",
+                            id="pf-monte-carlo-header-row"
                         ),
                         dbc.Row(
                             [
@@ -426,6 +427,7 @@ def card_controls(
                                 ),
                             ],
                             class_name="pt-2",
+                            id="pf-monte-carlo-number-row"
                         ),
                         dbc.Row(
                             [
@@ -461,6 +463,7 @@ def card_controls(
                                 ),
                             ],
                             class_name="pt-2",
+                            id="pf-monte-carlo-period-row"
                         ),
                         dbc.Row(
                             [
@@ -496,6 +499,7 @@ def card_controls(
                                 ),
                             ],
                             class_name="pt-2",
+                            id="pf-monte-carlo-distribution-row"
                         ),
                         dbc.Row(
                             [
@@ -528,6 +532,7 @@ def card_controls(
                                 ),
                             ],
                             class_name="pt-2",
+                            id="pf-monte-carlo-backtest-row"
                         ),
                     ]
                 ),
@@ -556,8 +561,21 @@ def card_controls(
     Output(component_id="pf-rolling-window", component_property="disabled"),
     Input(component_id="pf-plot-option", component_property="value"),
 )
-def update_rolling_input(plot_options: str) -> bool:
-    return plot_options in {"wealth", "drawdowns"}
+def disable_rolling_input(plot_options: str) -> bool:
+    return plot_options in {"wealth", "drawdowns", "distribution"}
+
+
+@callback(
+    Output(component_id="pf-monte-carlo-header-row", component_property="style"),
+    Output(component_id="pf-monte-carlo-number-row", component_property="style"),
+    Output(component_id="pf-monte-carlo-period-row", component_property="style"),
+    Output(component_id="pf-monte-carlo-distribution-row", component_property="style"),
+    Output(component_id="pf-monte-carlo-backtest-row", component_property="style"),
+    Input(component_id="pf-plot-option", component_property="value"),
+)
+def hide_monte_carlo_rows(plot_options: str):
+    style = {"display": "none"} if plot_options != "wealth" else None
+    return tuple((style for i in range(0, 5)))
 
 
 @callback(

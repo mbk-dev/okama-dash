@@ -193,10 +193,10 @@ def update_graf_portfolio(
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
     # PF statistics
-    if plot_type != "distribution":
-        statistics_dash_table = get_pf_statistics_table(pf_object)
-    else:
+    if plot_type == "distribution":
         statistics_dash_table = get_statistics_for_distribution(pf_object)
+    else:
+        statistics_dash_table = get_pf_statistics_table(pf_object)
     # Monte Carlo statistics
     if n_monte_carlo != 0 and plot_type == "wealth":
         forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
