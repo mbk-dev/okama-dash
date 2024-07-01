@@ -318,6 +318,7 @@ def card_controls(
                                                 {"label": "Rolling Cagr", "value": "cagr"},
                                                 {"label": "Rolling Real Cagr", "value": "real_cagr"},
                                                 {"label": "Drawdowns", "value": "drawdowns"},
+                                                {"label": "Distribution test", "value": "distribution"},
                                             ],
                                             value="wealth",
                                             id="pf-plot-option",
