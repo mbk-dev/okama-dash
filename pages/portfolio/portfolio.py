@@ -3,7 +3,7 @@ import warnings
 
 import dash
 import plotly
-from dash import dash_table, callback, ALL
+from dash import dash_table, callback, ALL, html, dcc
 from dash.dash_table.Format import Format, Scheme
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
@@ -13,6 +13,7 @@ import plotly.graph_objects as go
 
 import pandas as pd
 import numpy as np
+import scipy
 from scipy.stats import t, norm, lognorm
 
 import okama as ok
@@ -192,7 +193,10 @@ def update_graf_portfolio(
     # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
     # PF statistics
-    statistics_dash_table = get_pf_statistics_table(pf_object)
+    if plot_type != "distribution":
+        statistics_dash_table = get_pf_statistics_table(pf_object)
+    else:
+        statistics_dash_table = get_statistics_for_distribution(pf_object)
     # Monte Carlo statistics
     if n_monte_carlo != 0 and plot_type == "wealth":
         forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
@@ -205,8 +209,61 @@ def update_graf_portfolio(
     return fig, config, statistics_dash_table, forecast_survival_statistics_datatable, forecast_wealth_statistics_datatable
 
 
-def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object) -> dash_table.DataTable:
-    # TODO: add survival period of backtest to forecasted survival period
+def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
+    ks_norm = pf_object.kstest('norm')
+    ks_lognorm = pf_object.kstest('lognorm')
+    # TODO: change to okama methods after new release
+    ks_t = scipy.stats.kstest(pf_object.ror, "t", args=scipy.stats.t.fit(pf_object.ror))
+    table_list = [
+        {"distribution": "Normal", "statistics": ks_norm['statistic'], "p-value": ks_norm['p-value']},
+        {"distribution": "Lognormal", "statistics": ks_lognorm['statistic'], "p-value": ks_norm['p-value']},
+        {"distribution": "Student's T", "statistics": ks_t[0], "p-value": ks_t[1]},
+    ]
+    columns = [
+        dict(id="distribution", name="distribution"),
+        dict(id="statistics", name="statistics", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+        dict(id="p-value", name="p-value", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+    ]
+    statistics_html = html.Div(
+        [
+            dcc.Markdown(
+                """
+                **Distribution moments**  
+                All values correspond to the monthly rate of return.
+                """
+            ),
+            html.P(f"Mean: {pf_object.ror.mean() * 100:.2f}"),
+            html.P(f"Standard deviation: {pf_object.ror.std() * 100:.2f}"),
+            html.P(f"Skewness: {pf_object.skewness.iloc[-1]:.2f}"),
+            html.P(f"Kurtosis: {pf_object.kurtosis.iloc[-1]:.2f}"),
+            dcc.Markdown(
+                """
+                **Popular distributions tests**  
+                """
+            ),
+            html.P(
+                f"Jarque-Bera test statistic: {pf_object.jarque_bera['statistic']:.2f}, p-value: {pf_object.jarque_bera['p-value']:.2f}"),
+            dcc.Markdown(
+                """
+                **Kolmogorov-Smirnov test**  
+                """
+            ),
+            html.Div(
+                [
+
+                    dash_table.DataTable(
+                        data=table_list,
+                        columns=columns,
+                        style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
+                    )
+                ],
+            ),
+        ]
+    )
+    return statistics_html
+
+
+def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio) -> dash_table.DataTable:
     if not df_forecast.empty:
         backtest_survival_period = 0 if df_backtsest.empty else pf_object.dcf.survival_period
         forecast_dates: pd.Series = ok.Frame.get_survival_date(df_forecast)
