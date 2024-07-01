@@ -379,7 +379,7 @@ def get_pf_figure(
         p1 = t.pdf(x, loc=loc, scale=scale, df=df) * bin_size
         p2 = norm.pdf(x, mu, std) * bin_size
         p3 = lognorm.pdf(x, std_lognorm, loc_lognorm, scale_lognorm) * bin_size
-        df = pd.DataFrame({'Student’s t': p1, 'Normal': p2, 'Lognormal':p3}, index=x)
+        df = pd.DataFrame({'Student’s t': p1, 'Normal': p2, 'Lognormal':p3}, index=x + bin_size / 2)
         fig = px.line(df)
         fig.add_trace(
             go.Histogram(
