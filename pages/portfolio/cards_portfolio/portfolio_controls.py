@@ -287,13 +287,35 @@ def card_controls(
                             ],
                         ),
                         dbc.Row(
-                            # copy link to clipboard button
-                            create_copy_link_div(
-                                location_id="pf-url",
-                                hidden_div_with_url_id="pf-show-url",
-                                button_id="pf-copy-link-button",
-                                card_name="Portfolio",
-                            ),
+                            [
+                                dbc.Col(
+                                    # copy link to clipboard button
+                                    create_copy_link_div(
+                                        location_id="pf-url",
+                                        hidden_div_with_url_id="pf-show-url",
+                                        button_id="pf-copy-link-button",
+                                        card_name="Portfolio",
+                                        # style={"text-align": "right"}
+                                    ),
+                                ),
+                                # dbc.Col(
+                                #     # save portfolio button
+                                #     html.Div(
+                                #         [
+                                #             dbc.Button(
+                                #                 "Save portfolio",
+                                #                 id="pf-save-portfolio-button",
+                                #                 className="position-relative",
+                                #                 color="link",
+                                #                 outline=False,
+                                #                 external_link=False,
+                                #                 n_clicks=0
+                                #             ),
+                                #         ],
+                                #         style={"text-align": "left"},
+                                #     )
+                                # )
+                            ]
                         ),
                         dbc.Row(
                             html.H5(children="Options"),
@@ -550,6 +572,7 @@ def card_controls(
                 ),
                 dcc.Store(id="pf_tickers_url", data=tickers_list),
                 dcc.Store(id="pf_weights_url", data=weights_list),
+                dcc.Store(id="pf_saved_portfolios_file_names", storage_type='session'),
             ]
         ),
         class_name="mb-3",

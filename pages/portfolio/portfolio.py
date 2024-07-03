@@ -1,5 +1,7 @@
 import typing
 import warnings
+import pickle
+from pathlib import Path
 
 import dash
 import plotly
@@ -18,6 +20,8 @@ from scipy.stats import t, norm, lognorm
 
 import okama as ok
 
+import common
+import common.create_link
 import common.settings as settings
 from common.mobile_screens import adopt_small_screens
 from common.update_style import change_style_for_hidden_row
@@ -29,6 +33,8 @@ from pages.portfolio.cards_portfolio.pf_wealth_indexes_chart import card_graf_po
 import common.crisis.crisis_data as cr
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
+
+data_folder = Path(__file__).parent.parent.parent / common.cache_directory
 
 dash.register_page(
     __name__,
@@ -157,20 +163,49 @@ def update_graf_portfolio(
     weights = [i / 100.0 for i in weights if i is not None]
     symbol = symbol.replace(" ", "_")
     symbol = symbol + ".PF" if not symbol.lower().endswith(".pf") else symbol
-    pf_object = ok.Portfolio(
-        assets=assets,
-        weights=weights,
-        first_date=fd_value,
-        last_date=ld_value,
-        ccy=ccy,
-        rebalancing_period=rebalancing_period,
-        inflation=inflation_on,
-        # advanced
-        initial_amount=float(initial_amount),
-        cashflow=float(cashflow),
-        discount_rate=float(discount_rate) if discount_rate is not None else None,
-        symbol=symbol,
-    )
+    new_pf_file_name = common.create_link.create_filename(tickers_list=assets,
+                                                          ccy=ccy,
+                                                          first_date=fd_value,
+                                                          last_date=ld_value,
+                                                          weights_list=weights,
+                                                          rebal=rebalancing_period,
+                                                          initial_amount=initial_amount,
+                                                          cashflow=cashflow,
+                                                          discount_rate=discount_rate if discount_rate else 0.05)
+    new_pf_file = data_folder / new_pf_file_name
+    if new_pf_file.is_file():
+        with open(new_pf_file, 'rb') as f:
+            print("found cached Portfolio file...")
+            pf_object = pickle.load(f)
+    else:
+        pf_object = ok.Portfolio(
+            assets=assets,
+            weights=weights,
+            first_date=fd_value,
+            last_date=ld_value,
+            ccy=ccy,
+            rebalancing_period=rebalancing_period,
+            inflation=inflation_on,
+            # advanced
+            initial_amount=float(initial_amount),
+            cashflow=float(cashflow),
+            discount_rate=float(discount_rate) if discount_rate is not None else None,
+            symbol=symbol,
+        )
+        # Cache ef to pickle file
+        pf_file_name = common.create_link.create_filename(tickers_list=pf_object.symbols,
+                                                          ccy=pf_object.currency,
+                                                          first_date=pf_object.first_date.strftime('%Y-%m'),
+                                                          last_date=pf_object.last_date.strftime('%Y-%m'),
+                                                          weights_list=pf_object.weights,
+                                                          rebal=pf_object.rebalancing_period,
+                                                          initial_amount=int(pf_object.initial_amount),
+                                                          cashflow=pf_object.cashflow,
+                                                          discount_rate=pf_object.discount_rate)
+        data_file = data_folder / pf_file_name
+        with open(data_file, 'wb') as f:  # open a text file
+            pickle.dump(pf_object, f, protocol=pickle.HIGHEST_PROTOCOL)  # serialize the Portfolio
+
     fig, df_backtest, df_forecast = get_pf_figure(
         pf_object,
         plot_type,

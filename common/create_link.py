@@ -1,5 +1,3 @@
-import typing
-
 from common import settings as settings
 
 
@@ -50,14 +48,34 @@ def create_filename(
     ccy: str,
     first_date: str,
     last_date: str,
+    # portfolio
+    weights_list=None,
+    rebal=None,
+    initial_amount=None,
+    cashflow=None,
+    discount_rate=None,
+    symbol=None,
 ) -> str:
     """
-    Create filename to serialize EF objects to pickle.
+    Create filename to serialize EF, Portfolio objects to pickle.
     """
     file_name = "-".join(str(symbol) for symbol in tickers_list)
+    if weights_list:
+        weights_str = "-w=" + ",".join(str(w) for w in weights_list)
+        file_name += weights_str
     file_name += f"-ccy={ccy}"
-    file_name += f"-first_date={first_date}"
-    file_name += f"-last_date={last_date}"
+    file_name += f"-fd={first_date}"
+    file_name += f"-ld={last_date}"
+    if rebal:
+        file_name += f"-rb={rebal}"
+    if initial_amount:
+        file_name += f"-ia={initial_amount}"
+    if cashflow:
+        file_name += f"-cf={cashflow}"
+    if discount_rate:
+        file_name += f"-dr={discount_rate}"
+    if symbol:
+        file_name += f"-sb={symbol}"
     return file_name + ".pkl"
 
 

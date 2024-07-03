@@ -124,7 +124,7 @@ card_ef_find_weights = dbc.Card(
                     ),
                 ]
             ),
-            dcc.Store(id="ef_portfolio_file_name", storage_type='session'),
+            dcc.Store(id="ef_portfolio_file_name"),
         ]
     ),
     class_name="mb-3",
