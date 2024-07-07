@@ -1,3 +1,5 @@
+import typing
+
 from common import settings as settings
 
 
@@ -50,6 +52,7 @@ def create_filename(
     last_date: str,
     # portfolio
     weights_list=None,
+    inflation: typing.Optional[bool] = None,
     rebal=None,
     initial_amount=None,
     cashflow=None,
@@ -66,6 +69,8 @@ def create_filename(
     file_name += f"-ccy={ccy}"
     file_name += f"-fd={first_date}"
     file_name += f"-ld={last_date}"
+    if inflation != None:
+        file_name += f"-infl={str(inflation)}"
     if rebal:
         file_name += f"-rb={rebal}"
     if initial_amount:

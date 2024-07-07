@@ -6,6 +6,8 @@ from dash import dash_table, callback
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
+import pandas as pd
+
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -13,6 +15,7 @@ import okama as ok
 
 import common.settings as settings
 import common.update_style
+
 from common.mobile_screens import adopt_small_screens
 from pages.compare.cards_compare.asset_list_controls import card_controls
 from pages.compare.cards_compare.assets_info import card_assets_info
@@ -135,6 +138,7 @@ def update_graf_compare(
 
 def get_al_statistics_table(al_object):
     statistics_df = al_object.describe().iloc[:-4, :]  # crop from Max drawdown date
+    statistics_df = add_sharpe_ratio_row(al_object, statistics_df)
     statistics_dict = statistics_df.to_dict(orient="records")
 
     columns = [
@@ -146,6 +150,20 @@ def get_al_statistics_table(al_object):
         columns=columns,
         style_table={"overflowX": "auto"},
     )
+
+
+def add_sharpe_ratio_row(al_object, statistics_df):
+    # get rf rate
+    inflation_ts = al_object.inflation_ts if hasattr(al_object, "inflation") else pd.Series()
+    inflation = ok.Frame.get_cagr(inflation_ts) if not inflation_ts.empty else None
+    rf_rate = inflation if inflation else settings.RISK_FREE_RATE_DEFAULT
+    # add row
+    row = al_object.get_sharpe_ratio(rf_return=rf_rate).to_dict()
+    row.update(
+        period=al_object._pl_txt,
+        property=f"Sharpe ratio (risk free rate: {rf_rate * 100:.2f})",
+    )
+    return pd.concat([statistics_df, pd.DataFrame(row, index=[0])], ignore_index=True)
 
 
 def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, rolling_window: int, log_scale: bool):

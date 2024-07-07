@@ -163,15 +163,18 @@ def update_graf_portfolio(
     weights = [i / 100.0 for i in weights if i is not None]
     symbol = symbol.replace(" ", "_")
     symbol = symbol + ".PF" if not symbol.lower().endswith(".pf") else symbol
-    new_pf_file_name = common.create_link.create_filename(tickers_list=assets,
-                                                          ccy=ccy,
-                                                          first_date=fd_value,
-                                                          last_date=ld_value,
-                                                          weights_list=weights,
-                                                          rebal=rebalancing_period,
-                                                          initial_amount=initial_amount,
-                                                          cashflow=cashflow,
-                                                          discount_rate=discount_rate if discount_rate else 0.05)
+    new_pf_file_name = common.create_link.create_filename(
+        tickers_list=assets,
+        ccy=ccy,
+        first_date=fd_value,
+        last_date=ld_value,
+        weights_list=weights,
+        inflation=inflation_on,
+        rebal=rebalancing_period,
+        initial_amount=initial_amount,
+        cashflow=cashflow,
+        # discount_rate=discount_rate if discount_rate else settings.RISK_FREE_RATE_DEFAULT
+    )
     new_pf_file = data_folder / new_pf_file_name
     if new_pf_file.is_file():
         with open(new_pf_file, 'rb') as f:
@@ -193,15 +196,18 @@ def update_graf_portfolio(
             symbol=symbol,
         )
         # Cache ef to pickle file
-        pf_file_name = common.create_link.create_filename(tickers_list=pf_object.symbols,
-                                                          ccy=pf_object.currency,
-                                                          first_date=pf_object.first_date.strftime('%Y-%m'),
-                                                          last_date=pf_object.last_date.strftime('%Y-%m'),
-                                                          weights_list=pf_object.weights,
-                                                          rebal=pf_object.rebalancing_period,
-                                                          initial_amount=int(pf_object.initial_amount),
-                                                          cashflow=pf_object.cashflow,
-                                                          discount_rate=pf_object.discount_rate)
+        pf_file_name = common.create_link.create_filename(
+            tickers_list=pf_object.symbols,
+            ccy=pf_object.currency,
+            first_date=pf_object.first_date.strftime('%Y-%m'),
+            last_date=pf_object.last_date.strftime('%Y-%m'),
+            weights_list=pf_object.weights,
+            inflation=inflation_on,
+            rebal=pf_object.rebalancing_period,
+            initial_amount=int(pf_object.initial_amount),
+            cashflow=pf_object.cashflow,
+            # discount_rate=pf_object.discount_rate
+        )
         data_file = data_folder / pf_file_name
         with open(data_file, 'wb') as f:  # open a text file
             pickle.dump(pf_object, f, protocol=pickle.HIGHEST_PROTOCOL)  # serialize the Portfolio
@@ -374,6 +380,8 @@ def get_forecast_wealth_statistics_table(df_forecast) -> dash_table.DataTable:
 
 def get_pf_statistics_table(al_object):
     statistics_df = al_object.describe().iloc[:-1, :]
+    statistics_df = add_sharpe_ratio_row(al_object, statistics_df)
+
     statistics_dict = statistics_df.to_dict(orient="records")
 
     columns = [
@@ -385,6 +393,21 @@ def get_pf_statistics_table(al_object):
         columns=columns,
         style_table={"overflowX": "auto"},
     )
+
+
+def add_sharpe_ratio_row(al_object, statistics_df):
+    # add Sharpe ratio
+    inflation_ts = al_object.inflation_ts if hasattr(al_object, "inflation") else pd.Series()
+    inflation = ok.Frame.get_cagr(inflation_ts) if not inflation_ts.empty else None
+    rf_rate = inflation if inflation else settings.RISK_FREE_RATE_DEFAULT
+    sh_ratio = al_object.get_sharpe_ratio(rf_return=rf_rate)
+    # add row
+    row = {al_object.symbol: sh_ratio}
+    row.update(
+        period=al_object._pl_txt,
+        property=f"Sharpe ratio (risk free rate: {rf_rate * 100:.2f})",
+    )
+    return pd.concat([statistics_df, pd.DataFrame(row, index=[0])], ignore_index=True)
 
 
 def get_pf_figure(
@@ -403,7 +426,7 @@ def get_pf_figure(
         df_backtest = pd.DataFrame()
         df_forecast = pd.DataFrame()
         # Fit distributions to the data:
-        df, loc, scale = t.fit(data)
+        df, loc, scale = t.fit(data)  # Student's T distrbution
         mu, std = norm.fit(data)  # mu - mean value
         std_lognorm, loc_lognorm, scale_lognorm = lognorm.fit(data)
         # set PDF
