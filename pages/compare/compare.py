@@ -204,7 +204,7 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
         df,
         x=ind,
         y=df.columns[:-1] if plot_inflation_condition else df.columns,
-        log_y=log_scale,
+        log_y=log_scale if plot_type == "wealth" else False,
         title=titles[plot_type],
         # width=800,
         height=800,

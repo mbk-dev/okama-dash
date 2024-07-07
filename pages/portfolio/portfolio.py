@@ -517,7 +517,7 @@ def get_pf_figure(
             df,
             x=ind,
             y=df.columns[:-1] if condition_plot_inflation and not condition_monte_carlo else df.columns,
-            log_y=log_scale,
+            log_y=log_scale if plot_type == "wealth" else False,
             title=titles[plot_type],
             height=800,
         )
