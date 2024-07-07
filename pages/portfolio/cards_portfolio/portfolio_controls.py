@@ -509,6 +509,7 @@ def card_controls(
                                             options=[
                                                 {"label": "Normal distribution", "value": "norm"},
                                                 {"label": "Lognormal distribution", "value": "lognorm"},
+                                                {"label": "Student's t distribution", "value": "t"},
                                             ],
                                             value="norm",
                                             multi=False,

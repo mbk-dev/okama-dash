@@ -312,8 +312,9 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
         fsp += backtest_survival_period
         table_list = [
             {"1": "1st percentile", "2": fsp.quantile(1 / 100), "3": "Min", "4": fsp.min()},
-            {"1": "50th percentile", "2": fsp.quantile(50 / 100), "3": "Max", "4": fsp.max()},
-            {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "Mean", "4": fsp.mean()},
+            {"1": "5th percentile", "2": fsp.quantile(5 / 100), "3": "Max", "4": fsp.max()},
+            {"1": "50th percentile", "2": fsp.quantile(50 / 100), "3": "Mean", "4": fsp.mean()},
+            {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "Std", "4": fsp.std()},
         ]
         columns = [
             dict(id="1", name="1"),
@@ -348,8 +349,9 @@ def get_forecast_wealth_statistics_table(df_forecast) -> dash_table.DataTable:
         wealth = df_forecast.iloc[-1, :]
         table_list = [
             {"1": "1st percentile", "2": wealth.quantile(1 / 100), "3": "Min", "4": wealth.min()},
-            {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": "Max", "4": wealth.max()},
-            {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": "Mean", "4": wealth.mean()},
+            {"1": "5th percentile", "2": wealth.quantile(5 / 100), "3": "Max", "4": wealth.max()},
+            {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": "Mean", "4": wealth.mean()},
+            {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": "Std", "4": wealth.std()},
         ]
         columns = [
             dict(id="1", name="1"),
@@ -484,7 +486,7 @@ def get_pf_figure(
                 df_backtest = pf_object.dcf.wealth_index[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
                 last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else pf_object.initial_amount
                 if last_backtest_value > 0:
-                    df_forecast = pf_object.dcf._monte_carlo_wealth(
+                    df_forecast = pf_object.dcf.monte_carlo_wealth(
                         first_value=last_backtest_value,
                         distr=distribution_monte_carlo,
                         years=years_monte_carlo,
