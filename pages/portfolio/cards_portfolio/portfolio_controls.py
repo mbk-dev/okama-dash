@@ -472,7 +472,7 @@ def card_controls(
                                         dbc.Input(
                                             type="number",
                                             min=1,
-                                            max=100,
+                                            max=50,
                                             value=10,
                                             id="pf-monte-carlo-years",
                                         ),
