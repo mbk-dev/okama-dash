@@ -596,10 +596,20 @@ def disable_rolling_input(plot_options: str) -> bool:
     Output(component_id="pf-monte-carlo-distribution-row", component_property="style"),
     Output(component_id="pf-monte-carlo-backtest-row", component_property="style"),
     Input(component_id="pf-plot-option", component_property="value"),
+    Input(component_id="pf-monte-carlo-number", component_property="value"),
 )
-def hide_monte_carlo_rows(plot_options: str):
-    style = {"display": "none"} if plot_options != "wealth" else None
-    return tuple((style for i in range(0, 5)))
+def hide_monte_carlo_rows(plot_options: str, random_simulations_number):
+    if plot_options != "wealth":
+        # don't show rows
+        style = {"display": "none"}
+        return tuple((style for i in range(0, 5)))
+    else:
+        if random_simulations_number in [0, None]:
+            # show only first row
+            return None, None, {"display": "none"}, {"display": "none"}, {"display": "none"}
+        else:
+            # show all rows
+            return tuple((None for i in range(0, 5)))
 
 
 @callback(
