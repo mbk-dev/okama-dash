@@ -354,7 +354,7 @@ def get_forecast_wealth_statistics_table(df_forecast) -> dash_table.DataTable:
             {"1": "5th percentile", "2": wealth.quantile(5 / 100), "3": "Max", "4": wealth.max()},
             {"1": "25th percentile", "2": wealth.quantile(25 / 100), "3": "Mean", "4": wealth.mean()},
             {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": "Std", "4": wealth.std()},
-            {"1": "75th percentile", "2": wealth.quantile(25 / 100), "3": "-", "4": None},
+            {"1": "75th percentile", "2": wealth.quantile(75 / 100), "3": "-", "4": None},
             {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": "-", "4": None},
         ]
         columns = [
