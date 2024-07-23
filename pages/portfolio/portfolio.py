@@ -316,6 +316,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             {"1": "25th percentile", "2": fsp.quantile(25 / 100), "3": "Mean", "4": fsp.mean()},
             {"1": "50th percentile", "2": fsp.quantile(50 / 100), "3": "Std", "4": fsp.std()},
             {"1": "75th percentile", "2": fsp.quantile(75 / 100), "3": "-", "4": None},
+            {"1": "95th percentile", "2": fsp.quantile(95 / 100), "3": "-", "4": None},
             {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "-", "4": None},
         ]
         columns = [
@@ -355,6 +356,7 @@ def get_forecast_wealth_statistics_table(df_forecast) -> dash_table.DataTable:
             {"1": "25th percentile", "2": wealth.quantile(25 / 100), "3": "Mean", "4": wealth.mean()},
             {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": "Std", "4": wealth.std()},
             {"1": "75th percentile", "2": wealth.quantile(75 / 100), "3": "-", "4": None},
+            {"1": "95th percentile", "2": wealth.quantile(95 / 100), "3": "-", "4": None},
             {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": "-", "4": None},
         ]
         columns = [
