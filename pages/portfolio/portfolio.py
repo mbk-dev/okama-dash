@@ -471,7 +471,7 @@ def get_pf_figure(
         )
 
         # Add X and Y labels
-        fig.update_xaxes(title_text="")
+        fig.update_xaxes(title_text=None)
         fig.update_yaxes(title_text="Probability")
     else:
         titles = {
@@ -577,7 +577,7 @@ def get_pf_figure(
             gridcolor="lightgrey",
         )
         fig.update_layout(
-            xaxis_title="Date",
+            xaxis_title=None,
             legend_title="Assets",
         )
 

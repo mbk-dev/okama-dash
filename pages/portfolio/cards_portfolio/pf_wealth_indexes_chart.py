@@ -1,10 +1,9 @@
-import dash.exceptions
 from dash import dcc, html, callback
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 
-import pandas as pd
+from common.xlsx import json_to_download_xlsx_object
 
 card_graf_portfolio = dbc.Card(
     dbc.CardBody(
@@ -17,6 +16,7 @@ card_graf_portfolio = dbc.Card(
                             html.Div(
                                 dbc.Row(
                                     [
+                                        dbc.Col(lg=2, md=2, sm=0,),
                                         dbc.Col(
                                             # logarithmic scale button
                                             html.Div(
@@ -45,9 +45,9 @@ card_graf_portfolio = dbc.Card(
                                                     dcc.Store(id="pf-store-chart-data", storage_type='session'),
                                                     dcc.Download(id="pf-download-dataframe-xlsx"),
                                                 ],
-                                                style={"text-align": "right"},
+                                                style={"text-align": "center"},
                                             )],
-                                            lg=2, md=2, sm=6,
+                                            lg=2, md=2, sm=12,
                                         )
                                     ]
                                 ),
@@ -71,9 +71,4 @@ card_graf_portfolio = dbc.Card(
     prevent_initial_call=True,
 )
 def pf_download_excel(n_clicks, json_data):
-    if not json_data:
-        raise dash.exceptions.PreventUpdate
-    df = pd.read_json(json_data, convert_axes=False, orient="split")
-    return dcc.send_data_frame(df.to_excel, "okama.xlsx", sheet_name="okama_data")
-
-
+    return json_to_download_xlsx_object(json_data)

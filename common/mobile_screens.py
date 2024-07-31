@@ -9,7 +9,7 @@ def adopt_small_screens(fig, screen: dict):
         )
         fig.update_yaxes(
             # tickangle=90,
-            title_text="",
+            title_text=None,
             # title_font={"size": 8},
             title_standoff=0,
             visible=True,

@@ -1,7 +1,9 @@
+import typing
 import warnings
 
 import dash
 import dash.exceptions
+import plotly
 from dash import dash_table, callback
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
@@ -61,6 +63,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     Output(component_id="al-wealth-indexes", component_property="figure"),
     Output(component_id="al-wealth-indexes", component_property="config"),
     Output(component_id="al-describe-table", component_property="children"),
+    Output(component_id="al-store-chart-data", component_property="data"),
     # user screen info
     Input(component_id="store", component_property="data"),
     # main Inputs
@@ -102,7 +105,8 @@ def update_graf_compare(
         inflation=inflation_on,
     )
     log_scale = log_on if plot_type == "wealth" else False  # log scale Y must be available only for wealth chart
-    fig = get_al_figure(al_object, plot_type, inflation_on, rolling_window, log_scale)
+    fig, df_data = get_al_figure(al_object, plot_type, inflation_on, rolling_window, log_scale)
+    json_data = df_data.to_json(orient="split", default_handler=str)
     if plot_type == "correlation":
         fig.update(layout_showlegend=False)
         fig.update(layout_coloraxis_showscale=False)
@@ -133,7 +137,7 @@ def update_graf_compare(
     )
     # Asset List describe() risk-return statistics
     statistics_dash_table = get_al_statistics_table(al_object)
-    return fig, config, statistics_dash_table
+    return fig, config, statistics_dash_table, json_data
 
 
 def get_al_statistics_table(al_object):
@@ -166,7 +170,13 @@ def add_sharpe_ratio_row(al_object, statistics_df):
     return pd.concat([statistics_df, pd.DataFrame(row, index=[0])], ignore_index=True)
 
 
-def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, rolling_window: int, log_scale: bool):
+def get_al_figure(
+        al_object: ok.AssetList,
+        plot_type: str,
+        inflation_on: bool,
+        rolling_window: int,
+        log_scale: bool
+) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame]:
     titles = {
         "wealth": "Assets Wealth indexes",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
@@ -177,7 +187,7 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
     # Select Plot Type
     if plot_type == "wealth":
         df = al_object.wealth_indexes
-        # TODO: calculate return_series got portfolio + assets
+        # TODO: calculate return_series: portfolio + assets
         return_series = al_object.get_cumulative_return(real=inflation_on)
     elif plot_type in ("cagr", "real_cagr"):
         real = False if plot_type == "cagr" else True
@@ -187,7 +197,7 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
         matrix = al_object.assets_ror.corr()
         matrix = matrix.applymap("{:,.2f}".format)
         fig = px.imshow(matrix, text_auto=True, aspect="equal", labels=dict(x="", y="", color=""))
-        return fig
+        return fig, matrix
 
     ind = df.index.to_timestamp("D")
     chart_first_date = ind[0]
@@ -234,7 +244,7 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
                 line_width=0,
             )
     fig.update_layout(
-        xaxis_title="Date",
+        xaxis_title=None,
         legend_title="Assets",
     )
     # plot annotations
@@ -248,7 +258,7 @@ def get_al_figure(al_object: ok.AssetList, plot_type: str, inflation_on: bool, r
             bgcolor="grey",
         )
 
-    return fig
+    return fig, df
 
 
 @callback(

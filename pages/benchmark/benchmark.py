@@ -1,3 +1,4 @@
+import typing
 import warnings
 
 import dash
@@ -5,8 +6,9 @@ from dash import callback
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
+import plotly
 import plotly.express as px
-
+import pandas as pd
 import okama as ok
 
 import common.settings as settings
@@ -55,6 +57,7 @@ def layout(benchmark=None, tickers=None, first_date=None, last_date=None, ccy=No
 @callback(
     Output("benchmark-graph", "figure"),
     Output("benchmark-graph", "config"),
+    Output("benchmark-store-chart-data", "data"),
     # user screen info
     Input("store", "data"),
     # main Inputs
@@ -94,12 +97,18 @@ def update_graf_benchmark(
         ccy=ccy,
         inflation=False,
     )
-    fig = get_benchmark_figure(al_object, plot_type, expanding_rolling, rolling_window)
+    fig, df_data = get_benchmark_figure(al_object, plot_type, expanding_rolling, rolling_window)
+    json_data = df_data.to_json(orient="split", default_handler=str)
     fig, config = adopt_small_screens(fig, screen)
-    return fig, config
+    return fig, config, json_data
 
 
-def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_rolling: str, rolling_window: int):
+def get_benchmark_figure(
+        al_object: ok.AssetList,
+        plot_type: str,
+        expanding_rolling: str,
+        rolling_window: int
+) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame]:
     rolling_window = rolling_window * settings.MONTHS_PER_YEAR if expanding_rolling == "rolling" else None
     titles = {
         "td": "Tracking difference",
@@ -175,7 +184,7 @@ def get_benchmark_figure(al_object: ok.AssetList, plot_type: str, expanding_roll
         xaxis_title=None,
         legend_title="Assets",
     )
-    return fig
+    return fig, df
 
 
 def get_y_title(plot_type: str) -> str:
