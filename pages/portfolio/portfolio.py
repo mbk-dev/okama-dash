@@ -105,6 +105,7 @@ def layout(
     Output(component_id="pf-describe-table", component_property="children"),
     Output(component_id="pf-monte-carlo-statistics", component_property="children"),
     Output(component_id="pf-monte-carlo-wealth-statistics", component_property="children"),
+    Output(component_id="pf-store-chart-data", component_property="data"),
     # user screen info
     Input(component_id="store", component_property="data"),
     # main Inputs
@@ -212,7 +213,7 @@ def update_graf_portfolio(
         with open(data_file, 'wb') as f:  # open a text file
             pickle.dump(pf_object, f, protocol=pickle.HIGHEST_PROTOCOL)  # serialize the Portfolio
 
-    fig, df_backtest, df_forecast = get_pf_figure(
+    fig, df_backtest, df_forecast, df_data = get_pf_figure(
         pf_object,
         plot_type,
         inflation_on,
@@ -223,6 +224,7 @@ def update_graf_portfolio(
         show_backtest,
         log_on,
     )
+    json_data = df_data.to_json(orient="split", default_handler=str)
     if plot_type == "wealth":
         fig.update_yaxes(title_text="Wealth Indexes")
     elif plot_type in {"cagr", "real_cagr"}:
@@ -247,18 +249,17 @@ def update_graf_portfolio(
     else:
         forecast_survival_statistics_datatable = dash_table.DataTable()
         forecast_wealth_statistics_datatable = dash_table.DataTable()
-    return fig, config, statistics_dash_table, forecast_survival_statistics_datatable, forecast_wealth_statistics_datatable
+    return fig, config, statistics_dash_table, forecast_survival_statistics_datatable, forecast_wealth_statistics_datatable, json_data
 
 
 def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
     ks_norm = pf_object.kstest('norm')
     ks_lognorm = pf_object.kstest('lognorm')
-    # TODO: change to okama methods after new release
-    ks_t = scipy.stats.kstest(pf_object.ror, "t", args=scipy.stats.t.fit(pf_object.ror))
+    ks_t = pf_object.kstest('t')
     table_list = [
         {"distribution": "Normal", "statistics": ks_norm['statistic'], "p-value": ks_norm['p-value']},
         {"distribution": "Lognormal", "statistics": ks_lognorm['statistic'], "p-value": ks_norm['p-value']},
-        {"distribution": "Student's T", "statistics": ks_t[0], "p-value": ks_t[1]},
+        {"distribution": "Student's T", "statistics": ks_t['statistic'], "p-value": ks_t['p-value']},
     ]
     columns = [
         dict(id="distribution", name="distribution"),
@@ -428,7 +429,7 @@ def get_pf_figure(
     distribution_monte_carlo: str,
     show_backtest: str,
     log_scale: bool,
-) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame, pd.DataFrame]:
+) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if plot_type == "distribution":
         data = pf_object.ror
         df_backtest = pd.DataFrame()
@@ -593,7 +594,7 @@ def get_pf_figure(
                 )
         else:
             fig.update_traces(showlegend=False)
-    return fig, df_backtest, df_forecast
+    return fig, df_backtest, df_forecast, df
 
 
 @callback(
