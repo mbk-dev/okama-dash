@@ -33,6 +33,7 @@ dash-bootstrap-components = "^1.2.0"
 plotly = "^5.9.0"
 Flask-Caching = "*"
 pandas = "^2.0.0"
+scipy = "1.12"  # https://github.com/numpy/numpy/issues/27135
 redis = "*"
 xlsxwriter = "*"
 
