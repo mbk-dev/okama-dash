@@ -163,7 +163,7 @@ def card_controls(
                                                                 ),
                                                                 dbc.Input(
                                                                     id="pf-initial-amount",
-                                                                    value=initial_amount if initial_amount else 1000,
+                                                                    value=initial_amount if initial_amount else settings.INITIAL_INVESTMENT_DEFAULT,
                                                                     type="number",
                                                                     min=1,
                                                                 ),

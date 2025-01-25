@@ -190,12 +190,17 @@ def update_graf_portfolio(
             ccy=ccy,
             rebalancing_period=rebalancing_period,
             inflation=inflation_on,
-            # advanced
-            initial_amount=float(initial_amount),
-            cashflow=float(cashflow),
-            discount_rate=float(discount_rate) if discount_rate is not None else None,
             symbol=symbol,
         )
+        pf_object.dcf.use_discounted_values = True  # TODO: add a switch
+        ind = ok.IndexationStrategy(pf_object)
+        ind.initial_investment = float(initial_amount)  # the initial investments size
+        ind.amount = float(cashflow)  # set withdrawal/contribution size
+        ind.frequency = "month"  # set cash flow frequency TODO: add parameter
+        indexation = float(discount_rate) if discount_rate is not None else None
+        ind.indexation = indexation  # set indexation size
+        pf_object.dcf.cashflow_parameters = ind
+
         # Cache ef to pickle file
         pf_file_name = common.create_link.create_filename(
             tickers_list=pf_object.symbols,
@@ -205,9 +210,9 @@ def update_graf_portfolio(
             weights_list=pf_object.weights,
             inflation=inflation_on,
             rebal=pf_object.rebalancing_period,
-            initial_amount=int(pf_object.initial_amount),
-            cashflow=pf_object.cashflow,
-            # discount_rate=pf_object.discount_rate
+            initial_amount=float(initial_amount),
+            cashflow=float(cashflow),
+            discount_rate=indexation
         )
         data_file = data_folder / pf_file_name
         with open(data_file, 'wb') as f:  # open a text file
@@ -307,9 +312,8 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
 
 def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio) -> dash_table.DataTable:
     if not df_forecast.empty:
-        backtest_survival_period = 0 if df_backtsest.empty else pf_object.dcf.survival_period
-        forecast_dates: pd.Series = ok.Frame.get_survival_date(df_forecast)
-        fsp = forecast_dates.apply(ok.Date.get_period_length, args=(pf_object.last_date,))
+        backtest_survival_period = 0 if df_backtsest.empty else pf_object.dcf.survival_period_hist()
+        fsp = pf_object.dcf.monte_carlo_survival_period(threshold=0)
         fsp += backtest_survival_period
         table_list = [
             {"1": "1st percentile", "2": fsp.quantile(1 / 100), "3": "Min", "4": fsp.min()},
@@ -333,7 +337,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             style_header={"display": "none"},
         )
     else:
-        backtest_survival_period = pf_object.dcf.survival_period
+        backtest_survival_period = pf_object.dcf.survival_period_hist()
         table_list = [{"1": "Backtest survival period", "2": backtest_survival_period}]
         columns = [
             dict(id="1", name="1"),
@@ -485,20 +489,22 @@ def get_pf_figure(
         condition_monte_carlo = plot_type == "wealth" and n_monte_carlo != 0
         df_backtest = pd.DataFrame()
         df_forecast = pd.DataFrame()
+        cash_flow = pf_object.dcf.cashflow_parameters.amount if hasattr(pf_object.dcf.cashflow_parameters, "amount") else 0
         if plot_type == "wealth":
             if n_monte_carlo == 0:
-                df = pf_object.wealth_index_with_assets if pf_object.cashflow == 0 else pf_object.dcf.wealth_index
+                df = pf_object.wealth_index_with_assets if cash_flow == 0 else pf_object.dcf.wealth_index
                 return_series = pf_object.get_cumulative_return(real=inflation_on)
             else:
                 df_backtest = pf_object.dcf.wealth_index[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
-                last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else pf_object.initial_amount
+                initial_investment = pf_object.dcf.cashflow_parameters.initial_investment if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment") else settings.INITIAL_INVESTMENT_DEFAULT
+                last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
                 if last_backtest_value > 0:
-                    df_forecast = pf_object.dcf.monte_carlo_wealth(
-                        first_value=last_backtest_value,
-                        distr=distribution_monte_carlo,
-                        years=years_monte_carlo,
-                        n=n_monte_carlo,
+                    pf_object.dcf.set_mc_parameters(
+                        distribution=distribution_monte_carlo,
+                        period=years_monte_carlo,
+                        number=n_monte_carlo
                     )
+                    df_forecast = pf_object.dcf.monte_carlo_wealth
                     df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", copy="false", ignore_index=False)
                 else:
                     df = df_backtest
@@ -514,7 +520,7 @@ def get_pf_figure(
         chart_first_date = ind[0]
         chart_last_date = ind[-1]
 
-        if not condition_monte_carlo and pf_object.cashflow == 0:
+        if not condition_monte_carlo and cash_flow == 0:
             annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
             annotation_series = (return_series * 100).map("{:,.2f}%".format)
             annotations_text = list(annotation_series)
@@ -582,7 +588,7 @@ def get_pf_figure(
         )
 
         # plot annotations
-        if not condition_monte_carlo and pf_object.cashflow == 0:
+        if not condition_monte_carlo and cash_flow == 0:
             for point in zip(annotations_xy, annotations_text):
                 fig.add_annotation(
                     x=point[0][0],
