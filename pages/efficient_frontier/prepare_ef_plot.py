@@ -80,7 +80,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
         cagr_option = "cagr" if ef_options["plot_type"] == "Geometric" else "mean_return"
         rf_rate = ef_options["rf_rate"]
         tg = ef_object.get_tangency_portfolio(rate_of_return=cagr_option, rf_return=rf_rate / 100)
-        weights_array = np.expand_dims(tg["Weights"], axis=0)
+        weights_array = np.expand_dims(tg["Weights"], axis=0) * 100
         x_cml, y_cml = [0, tg["Risk"] * 100], [rf_rate, tg["Rate_of_return"] * 100]
         fig.add_trace(
             go.Scatter(
