@@ -499,6 +499,7 @@ def get_pf_figure(
                 initial_investment = pf_object.dcf.cashflow_parameters.initial_investment if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment") else settings.INITIAL_INVESTMENT_DEFAULT
                 last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
                 if last_backtest_value > 0:
+                    pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
                     pf_object.dcf.set_mc_parameters(
                         distribution=distribution_monte_carlo,
                         period=years_monte_carlo,
