@@ -153,6 +153,7 @@ def get_al_statistics_table(al_object):
         data=statistics_dict,
         columns=columns,
         style_table={"overflowX": "auto"},
+        export_format="xlsx",
     )
 
 

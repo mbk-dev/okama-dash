@@ -250,7 +250,7 @@ def update_graf_portfolio(
         forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
             df_forecast, df_backtest, pf_object
         )
-        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(df_forecast)
+        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(pf_object)
     else:
         forecast_survival_statistics_datatable = dash_table.DataTable()
         forecast_wealth_statistics_datatable = dash_table.DataTable()
@@ -335,6 +335,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             columns=columns,
             style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
             style_header={"display": "none"},
+            export_format="xlsx",
         )
     else:
         backtest_survival_period = pf_object.dcf.survival_period_hist()
@@ -352,29 +353,41 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
     return forecast_survival_statistics_datatable
 
 
-def get_forecast_wealth_statistics_table(df_forecast) -> dash_table.DataTable:
-    if not df_forecast.empty:
-        wealth = df_forecast.iloc[-1, :]
+def get_forecast_wealth_statistics_table(pf_object) -> dash_table.DataTable:
+    if not pf_object.dcf.monte_carlo_wealth.empty:
+        wealth = pf_object.dcf.monte_carlo_wealth.iloc[-1, :]
+        # TODO: return after okama 1.4.5 release
+        # wealth_pv = pf_object.dcf.monte_carlo_wealth_pv.iloc[-1, :]
+        wealth_df_pv = pd.DataFrame()
+        wealth_df = pf_object.dcf.monte_carlo_wealth.copy()
+        for n, row in enumerate(wealth_df.iterrows()):
+            w = row[1]
+            w = w / (1.0 + pf_object.dcf.discount_rate / 12) ** n
+            wealth_df_pv = pd.concat([wealth_df_pv, w.to_frame().T], sort=False)
+        wealth_pv = wealth_df_pv.iloc[-1, :]
+
         table_list = [
-            {"1": "1st percentile", "2": wealth.quantile(1 / 100), "3": "Min", "4": wealth.min()},
-            {"1": "5th percentile", "2": wealth.quantile(5 / 100), "3": "Max", "4": wealth.max()},
-            {"1": "25th percentile", "2": wealth.quantile(25 / 100), "3": "Mean", "4": wealth.mean()},
-            {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": "Std", "4": wealth.std()},
-            {"1": "75th percentile", "2": wealth.quantile(75 / 100), "3": "-", "4": None},
-            {"1": "95th percentile", "2": wealth.quantile(95 / 100), "3": "-", "4": None},
-            {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": "-", "4": None},
+            {"1": "1st percentile", "2": wealth.quantile(1 / 100), "3": wealth_pv.quantile(1 / 100), "4": "Min", "5": wealth.min()},
+            {"1": "5th percentile", "2": wealth.quantile(5 / 100), "3": wealth_pv.quantile(5 / 100), "4": "Max", "5": wealth.max()},
+            {"1": "25th percentile", "2": wealth.quantile(25 / 100), "3": wealth_pv.quantile(25 / 100), "4": "Mean", "5": wealth.mean()},
+            {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": wealth_pv.quantile(50 / 100), "4": "Std", "5": wealth.std()},
+            {"1": "75th percentile", "2": wealth.quantile(75 / 100), "3": wealth_pv.quantile(75 / 100), "4": "-", "5": None},
+            {"1": "95th percentile", "2": wealth.quantile(95 / 100), "3": wealth_pv.quantile(95 / 100), "4": "-", "5": None},
+            {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": wealth_pv.quantile(99 / 100), "4": "-", "5": None},
         ]
         columns = [
-            dict(id="1", name="1"),
-            dict(id="2", name="2", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
-            dict(id="3", name="3"),
-            dict(id="4", name="4", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
+            dict(id="1", name="Percentiles"),
+            dict(id="2", name="FV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
+            dict(id="3", name="PV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
+            dict(id="4", name=" "),
+            dict(id="5", name=" ", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
         ]
         forecast_wealth_statistics_datatable = dash_table.DataTable(
             data=table_list,
             columns=columns,
             style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
-            style_header={"display": "none"},
+            export_format="xlsx",
+            # style_header={"display": "none"},
         )
     else:
         table_list = [{"1": "Wealth", "2": 0}]
@@ -405,6 +418,7 @@ def get_pf_statistics_table(al_object):
         data=statistics_dict,
         columns=columns,
         style_table={"overflowX": "auto"},
+        export_format="xlsx",
     )
 
 

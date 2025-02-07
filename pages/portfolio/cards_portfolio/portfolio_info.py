@@ -100,7 +100,7 @@ def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> dash_
     State(component_id="pf-plot-option", component_property="value"),
     State(component_id="pf-monte-carlo-number", component_property="value"),
 )
-def show_survival_periods_statistcs_table(
+def show_survival_periods_statistics_table(
     n_clicks,
     cashflow: float,
     plot_type: str,
