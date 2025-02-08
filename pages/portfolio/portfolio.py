@@ -366,28 +366,42 @@ def get_forecast_wealth_statistics_table(pf_object) -> dash_table.DataTable:
             wealth_df_pv = pd.concat([wealth_df_pv, w.to_frame().T], sort=False)
         wealth_pv = wealth_df_pv.iloc[-1, :]
 
+        rate = f"{pf_object.dcf.discount_rate * 100:.2f}%"
         table_list = [
-            {"1": "1st percentile", "2": wealth.quantile(1 / 100), "3": wealth_pv.quantile(1 / 100), "4": "Min", "5": wealth.min()},
-            {"1": "5th percentile", "2": wealth.quantile(5 / 100), "3": wealth_pv.quantile(5 / 100), "4": "Max", "5": wealth.max()},
-            {"1": "25th percentile", "2": wealth.quantile(25 / 100), "3": wealth_pv.quantile(25 / 100), "4": "Mean", "5": wealth.mean()},
-            {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": wealth_pv.quantile(50 / 100), "4": "Std", "5": wealth.std()},
-            {"1": "75th percentile", "2": wealth.quantile(75 / 100), "3": wealth_pv.quantile(75 / 100), "4": "-", "5": None},
-            {"1": "95th percentile", "2": wealth.quantile(95 / 100), "3": wealth_pv.quantile(95 / 100), "4": "-", "5": None},
-            {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": wealth_pv.quantile(99 / 100), "4": "-", "5": None},
+            {"1": "1st percentile", "2": wealth.quantile(1 / 100), "3": wealth_pv.quantile(1 / 100), "4": "Min", "5": wealth.min(), "6": wealth_pv.min()},
+            {"1": "5th percentile", "2": wealth.quantile(5 / 100), "3": wealth_pv.quantile(5 / 100), "4": "Max", "5": wealth.max(), "6": wealth_pv.max()},
+            {"1": "25th percentile", "2": wealth.quantile(25 / 100), "3": wealth_pv.quantile(25 / 100), "4": "Mean", "5": wealth.mean(), "6": wealth_pv.mean()},
+            {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": wealth_pv.quantile(50 / 100), "4": "Std", "5": wealth.std(),"6": wealth_pv.std()},
+            {"1": "75th percentile", "2": wealth.quantile(75 / 100), "3": wealth_pv.quantile(75 / 100), "4": "Discount rate", "5": None, "6": rate},
+            {"1": "95th percentile", "2": wealth.quantile(95 / 100), "3": wealth_pv.quantile(95 / 100), "4": "-", "5": None, "6": None},
+            {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": wealth_pv.quantile(99 / 100), "4": "-", "5": None, "6": None},
         ]
         columns = [
-            dict(id="1", name="Percentiles"),
+            dict(id="1", name=""),
             dict(id="2", name="FV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
             dict(id="3", name="PV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
-            dict(id="4", name=" "),
-            dict(id="5", name=" ", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
+            dict(id="4", name=""),
+            dict(id="5", name="FV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
+            dict(id="6", name="PV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
         ]
         forecast_wealth_statistics_datatable = dash_table.DataTable(
             data=table_list,
             columns=columns,
             style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
             export_format="xlsx",
-            # style_header={"display": "none"},
+            style_header={
+                # "display": "none",
+                'textAlign': 'center',
+                'fontWeight': 'bold'
+            },
+            tooltip_header={
+                1: None,
+                2: 'Future Value (not discounted)',
+                3: 'Present Value (discounted)',
+                4: None,
+                5: 'Future Value (not discounted)',
+                6: 'Present Value (discounted)',
+            },
         )
     else:
         table_list = [{"1": "Wealth", "2": 0}]
