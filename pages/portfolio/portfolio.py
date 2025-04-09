@@ -15,7 +15,6 @@ import plotly.graph_objects as go
 
 import pandas as pd
 import numpy as np
-import scipy
 from scipy.stats import t, norm, lognorm
 
 import okama as ok
@@ -521,7 +520,8 @@ def get_pf_figure(
         if plot_type == "wealth":
             if n_monte_carlo == 0:
                 df = pf_object.wealth_index_with_assets if cash_flow == 0 else pf_object.dcf.wealth_index
-                return_series = pf_object.get_cumulative_return(real=inflation_on)
+                # TODO: calculate return_series: portfolio + assets
+                return_series = pf_object.get_cumulative_return(real=False)
             else:
                 df_backtest = pf_object.dcf.wealth_index[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
                 initial_investment = pf_object.dcf.cashflow_parameters.initial_investment if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment") else settings.INITIAL_INVESTMENT_DEFAULT
