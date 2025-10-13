@@ -117,10 +117,16 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
     df *= 100
     df.columns = ["Return", "Risk"]
     df.reset_index(drop=False, inplace=True)
+
+    # Create an array of weights for individual assets (100% for each asset)
+    n_assets = len(df)
+    assets_weights = np.eye(n_assets) * 100
+
     fig.add_trace(
         go.Scatter(
             x=df["Risk"],
             y=df["Return"],
+            customdata=assets_weights,
             mode="markers+text",
             marker=dict(size=8, color="orange"),
             text=df.iloc[:, 0].to_list(),
