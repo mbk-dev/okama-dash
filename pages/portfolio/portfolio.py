@@ -109,6 +109,8 @@ def layout(
     Input(component_id="store", component_property="data"),
     # main Inputs
     Input(component_id="pf-submit-button", component_property="n_clicks"),
+    # logarithmic scale button
+    Input(component_id="pf-logarithmic-scale-switch", component_property="on"),
     State({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
     State({"type": "pf-dynamic-input", "index": ALL}, "value"),  # weights
     State(component_id="pf-base-currency", component_property="value"),
@@ -129,13 +131,12 @@ def layout(
     State(component_id="pf-monte-carlo-years", component_property="value"),
     State(component_id="pf-monte-carlo-distribution", component_property="value"),
     State(component_id="pf-monte-carlo-backtest", component_property="value"),
-    # logarithmic scale button
-    Input(component_id="pf-logarithmic-scale-switch", component_property="on"),
     prevent_initial_call=True,
 )
 def update_graf_portfolio(
     screen,
     n_clicks,
+    log_on: bool,
     assets: list,
     weights: list,
     ccy: str,
@@ -156,9 +157,20 @@ def update_graf_portfolio(
     years_monte_carlo: int,
     distribution_monte_carlo: str,
     show_backtest: str,
-    # Log scale
-    log_on: bool,
 ):
+    trigger = dash.ctx.triggered_id
+    if trigger == "pf-logarithmic-scale-switch":
+        patched_fig = dash.Patch()
+        patched_fig["layout"]["yaxis"]["type"] = "log" if log_on else "linear"
+        return (
+            patched_fig,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
     assets = [i for i in assets if i is not None]
     weights = [i / 100.0 for i in weights if i is not None]
     symbol = symbol.replace(" ", "_")

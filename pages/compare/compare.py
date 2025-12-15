@@ -68,6 +68,8 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     Input(component_id="store", component_property="data"),
     # main Inputs
     Input(component_id="al-submit-button", component_property="n_clicks"),
+    # Logarithmic scale button
+    Input(component_id="logarithmic-scale-switch", component_property="on"),
     State(component_id="al-symbols-list", component_property="value"),
     State(component_id="al-base-currency", component_property="value"),
     State(component_id="al-first-date", component_property="value"),
@@ -76,13 +78,12 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="al-plot-option", component_property="value"),
     State(component_id="al-inflation-switch", component_property="value"),
     State(component_id="al-rolling-window", component_property="value"),
-    # Logarithmic scale button
-    Input(component_id="logarithmic-scale-switch", component_property="on"),
     prevent_initial_call=True,
 )
 def update_graf_compare(
     screen,
     n_clicks,
+    log_on: bool,
     selected_symbols: list,
     ccy: str,
     fd_value: str,
@@ -91,9 +92,18 @@ def update_graf_compare(
     plot_type: str,
     inflation_on: bool,
     rolling_window: int,
-    # Log scale
-    log_on: bool,
 ):
+    trigger = dash.ctx.triggered_id
+    if trigger == "logarithmic-scale-switch":
+        patched_fig = dash.Patch()
+        patched_fig["layout"]["yaxis"]["type"] = "log" if log_on else "linear"
+        return (
+            patched_fig,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
+
     if not selected_symbols:
         raise dash.exceptions.PreventUpdate
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
