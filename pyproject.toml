@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "okama-dash"
-version = "2.1.0"
+version = "3.0.0"
 description = "Python financial widgets with okama and Dash (plotly)"
 authors = ["Sergey Kikevich <sergey@rostsber.ru>"]
 license = "MIT"
@@ -25,7 +25,7 @@ packages = [{include = "okama_dash"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11, <4.0.0"
-okama = "1.4.4"
+okama = "^2.0.0"
 dash = "*"
 dash-daq = "*"
 dash-bootstrap-components = "*"
