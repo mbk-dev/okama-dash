@@ -13,3 +13,5 @@ MC_PORTFOLIO_MAX = 1000  # Max wealth time series in Monte-Carlo simulation in P
 ALLOWED_NUMBER_OF_TICKERS = 12  # max number of tickers in portfolio, EF or AssetList
 RISK_FREE_RATE_DEFAULT = 0.05
 INITIAL_INVESTMENT_DEFAULT = 1000
+
+EF_POINTS = 80
