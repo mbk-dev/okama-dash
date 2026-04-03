@@ -7,7 +7,7 @@ from dash.dependencies import Input, Output, State
 import common.update_style
 
 
-find_weights_description = "Find optimized portfolio weights for a given return (annual value, arithmetic mean)."
+find_weights_description = "Find optimized portfolio weights for a given rate of return (CAGR)."
 
 
 card_ef_find_weights = dbc.Card(

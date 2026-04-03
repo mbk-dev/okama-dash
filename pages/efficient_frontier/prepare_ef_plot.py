@@ -6,9 +6,57 @@ from plotly import graph_objects as go
 import plotly.express as px
 
 
+def _resolve_return_column(df: pd.DataFrame, plot_type: str) -> str:
+    if plot_type == "Arithmetic":
+        candidates = ("Mean return", "Return", "CAGR")
+    else:
+        candidates = ("CAGR", "Return", "Mean return")
+    for column in candidates:
+        if column in df.columns:
+            return column
+    raise KeyError("No return column found in DataFrame.")
+
+
+def _get_asset_columns(df: pd.DataFrame, ef_object: okama.EfficientFrontier) -> list[str]:
+    asset_columns = [symbol for symbol in ef_object.symbols if symbol in df.columns]
+    if asset_columns:
+        return asset_columns
+    ignored_columns = {
+        "Risk",
+        "Mean return",
+        "Return",
+        "CAGR",
+        "Diversification ratio",
+        "Weights",
+        "iterations",
+        "Risk_monthly",
+    }
+    return [column for column in df.columns if column not in ignored_columns]
+
+
+def _get_portfolio_weights_percent(portfolio: dict, symbols: list[str]) -> np.ndarray | None:
+    if "Weights" in portfolio:
+        return np.asarray(portfolio["Weights"], dtype=float) * 100
+    if all(symbol in portfolio for symbol in symbols):
+        return np.asarray([portfolio[symbol] for symbol in symbols], dtype=float) * 100
+    return None
+
+
 def prepare_transition_map(ef: pd.DataFrame):
-    risk_return_columns = ("Risk", "Mean return", "CAGR")
-    y_columns = [column for column in ef.columns if column not in risk_return_columns]
+    ignored_columns = {
+        "Risk",
+        "Mean return",
+        "Return",
+        "CAGR",
+        "Diversification ratio",
+        "Weights",
+        "iterations",
+        "Risk_monthly",
+    }
+    y_columns = [
+        column for column in ef.columns
+        if column not in ignored_columns and pd.api.types.is_numeric_dtype(ef[column])
+    ]
     fig = px.line(
         ef,
         x=ef["Risk"],
@@ -28,8 +76,9 @@ def prepare_transition_map(ef: pd.DataFrame):
 
 
 def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options: dict):
-    y_column = "Mean return" if ef_options["plot_type"] == "Arithmetic" else "CAGR"
-    weights_array = np.stack([ef[n] for n in ef.columns[3:]], axis=-1)
+    y_column = _resolve_return_column(ef, ef_options["plot_type"])
+    ef_asset_columns = _get_asset_columns(ef, ef_object)
+    weights_array = ef[ef_asset_columns].to_numpy()
     hovertemplate = "<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b>" + "<extra></extra>"
     fig = go.Figure(
         data=go.Scatter(
@@ -44,13 +93,15 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
     # MDP frontier
     if ef_options["mdp"] == "On":
         mdp_frontier = ef_object.mdp_points * 100
+        mdp_y_column = _resolve_return_column(mdp_frontier, ef_options["plot_type"])
         # TODO: add Diversification Ratio to hovertemplate
         # hovertemplate = "<b>Risk: %{x:.2f}%<br>Return: %{y:.2f}%<br>Diversification Ratio:%{text:.2f}</b>" + "<extra></extra>"
-        weights_array = np.stack([mdp_frontier[n] for n in mdp_frontier.columns[3:]], axis=-1)
+        mdp_asset_columns = _get_asset_columns(mdp_frontier, ef_object)
+        weights_array = mdp_frontier[mdp_asset_columns].to_numpy()
         fig.add_trace(
             go.Scatter(
                 x=mdp_frontier["Risk"],
-                y=mdp_frontier[y_column],
+                y=mdp_frontier[mdp_y_column],
                 customdata=weights_array,
                 hovertemplate=hovertemplate,
                 # text=[],
@@ -60,16 +111,19 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
         )
         # MPD portfolio
         mdp_portfolio = ef_object.get_most_diversified_portfolio()
-        # TODO: add customdata with weights
-        # weights_array_mdp = np.expand_dims(mdp_portfolio["Weights"], axis=0)
+        mdp_return = mdp_portfolio.get(mdp_y_column, mdp_portfolio.get("CAGR", mdp_portfolio.get("Mean return")))
+        if mdp_return is None:
+            raise KeyError("No return value found for most diversified portfolio.")
+        mdp_weights = _get_portfolio_weights_percent(mdp_portfolio, ef_object.symbols)
+        weights_array_mdp = np.expand_dims(mdp_weights, axis=0) if mdp_weights is not None else None
         fig.add_trace(
             go.Scatter(
                 x=[mdp_portfolio['Risk'] * 100],
-                y=[mdp_portfolio[y_column] * 100],
-                # customdata=weights_array_mdp,
+                y=[mdp_return * 100],
+                customdata=weights_array_mdp,
                 hovertemplate=hovertemplate,
                 mode="markers+text",
-                text="MDP",
+                text=["MDP"],
                 textposition="top left",
                 name="Most diversified portfolio (MDP)",
                 marker=dict(size=8, color="grey"),
@@ -137,13 +191,18 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
     )
     # Monte-Carlo simulation
     if ef_options["n_monte_carlo"]:
-        kind = "mean" if ef_options["plot_type"] == "Arithmetic" else "cagr"
-        df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"], kind=kind) * 100
-        weights_array = np.stack([df[n] for n in df.columns[2:]], axis=-1)
+        try:
+            kind = "mean" if ef_options["plot_type"] == "Arithmetic" else "cagr"
+            df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"], kind=kind) * 100
+        except TypeError:
+            df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"]) * 100
+        mc_y_column = _resolve_return_column(df, ef_options["plot_type"])
+        mc_asset_columns = _get_asset_columns(df, ef_object)
+        weights_array = df[mc_asset_columns].to_numpy() if mc_asset_columns else None
         fig.add_trace(
             go.Scatter(
                 x=df["Risk"],
-                y=df["Return"] if ef_options["plot_type"] == "Arithmetic" else df["CAGR"],
+                y=df[mc_y_column],
                 customdata=weights_array,
                 hovertemplate=hovertemplate,
                 mode="markers",

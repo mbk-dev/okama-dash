@@ -12,8 +12,8 @@ import okama as ok
 import common
 import common.create_link
 import common.math
-import common.settings
 import common.update_style
+from common import settings
 from common.parse_query import make_list_from_string
 
 from pages.efficient_frontier.cards_efficient_frontier.ef_description import card_ef_description
@@ -161,7 +161,7 @@ def update_ef_cards(
             last_date=ld_value,
             ccy=ccy,
             inflation=False,
-            n_points=40,
+            n_points=settings.EF_POINTS,
             full_frontier=True,
         )
     ef_options = dict(
@@ -210,13 +210,12 @@ def display_click_data(clickData, n_click, symbols, file_name):
     ror = clickData["points"][0]["y"]
     ror_str = f"Return: {ror:.2f}%"
 
-    weights_str = None
-    try:
-        weights_list = clickData["points"][0]["customdata"]
-    except KeyError:
-        pass
-    else:
-        weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for w, t in zip(weights_list, symbols)])
+    point_data = clickData["points"][0]
+    weights_list = point_data.get("customdata")
+    if weights_list is None:
+        return risk_str, ror_str, "Weights: unavailable for this point.", None
+
+    weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for w, t in zip(weights_list, symbols)])
     weights_for_link = common.math.round_list(weights_list, 2)
     with open(data_folder / file_name, 'rb') as f:
         ef_object = pickle.load(f)
@@ -285,24 +284,37 @@ def find_portfolio(n_clicks, ror, file_name):
     with open(data_folder / file_name, 'rb') as f:
         ef_object = pickle.load(f)
     try:
-        optimized_portfolio: dict = ef_object.minimize_risk(target_return=ror / 100., monthly_return=False)
-        optimized_portfolio.update((x , y * 100) for x, y in optimized_portfolio.items())
-        mean_return = optimized_portfolio.pop('Mean return')
-        cagr = optimized_portfolio.pop('CAGR')
-        risk = optimized_portfolio.pop('Risk')
-        mean_return_str = f"Mean return: {mean_return:.2f}%"
-        cagr_str = f"CAGR: {cagr:.2f}%"
-        risk_str = f"Risk: {risk:.2f}%"
-        weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for t, w in optimized_portfolio.items()])
-        weights_for_link = common.math.round_list(list(optimized_portfolio.values()), 2)
-        link = common.create_link.create_link(
-            href='/portfolio/',
-            tickers_list=ef_object.symbols,
-            ccy=ef_object.currency,
-            first_date=ef_object.first_date.strftime('%Y-%m'),
-            last_date = ef_object.last_date.strftime('%Y-%m'),
-            weights_list=weights_for_link
-        )
+        target_value = ror / 100.
+        try:
+            optimized_portfolio: dict = ef_object.minimize_risk(target_value=target_value)
+        except TypeError:
+            optimized_portfolio = ef_object.minimize_risk(target_return=target_value, monthly_return=False)
+
+        mean_return = optimized_portfolio.get('Mean return')
+        cagr = optimized_portfolio.get('CAGR')
+        risk = optimized_portfolio.get('Risk')
+
+        asset_weights = {ticker: optimized_portfolio[ticker] for ticker in ef_object.symbols if ticker in optimized_portfolio}
+        if not asset_weights and "Weights" in optimized_portfolio:
+            asset_weights = dict(zip(ef_object.symbols, optimized_portfolio["Weights"]))
+
+        mean_return_str = f"Mean return: {mean_return * 100:.2f}%" if mean_return is not None else ''
+        cagr_str = f"CAGR: {cagr * 100:.2f}%" if cagr is not None else ''
+        risk_str = f"Risk: {risk * 100:.2f}%" if risk is not None else ''
+        if asset_weights:
+            weights_str = "Weights:" + ",".join([f" {t}={w * 100:.2f}% " for t, w in asset_weights.items()])
+            weights_for_link = common.math.round_list([w * 100 for w in asset_weights.values()], 2)
+            link = common.create_link.create_link(
+                href='/portfolio/',
+                tickers_list=ef_object.symbols,
+                ccy=ef_object.currency,
+                first_date=ef_object.first_date.strftime('%Y-%m'),
+                last_date = ef_object.last_date.strftime('%Y-%m'),
+                weights_list=weights_for_link
+            )
+        else:
+            weights_str = "No solution was found."
+            link = None
     except RecursionError:
         mean_return_str = ''
         cagr_str = ''
@@ -325,7 +337,9 @@ def show_max_min_return(n_clicks, file_name):
         raise dash.exceptions.PreventUpdate
     with open(data_folder / file_name, 'rb') as f:
         ef_object = pickle.load(f)
-    mean_return_range = ef_object.mean_return_range
-    min_ror = (mean_return_range[0] + 1.) ** common.settings.MONTHS_PER_YEAR - 1.
-    max_ror = (mean_return_range[-1] + 1.) ** common.settings.MONTHS_PER_YEAR - 1.
-    return f"Portfolios rate of return range: {min_ror * 100:.2f} - {max_ror * 100:.2f}%"
+    ef_points = ef_object.ef_points
+    if "CAGR" not in ef_points.columns:
+        raise dash.exceptions.PreventUpdate
+    min_ror = ef_points["CAGR"].min()
+    max_ror = ef_points["CAGR"].max()
+    return f"Portfolios CAGR range: {min_ror * 100:.2f} - {max_ror * 100:.2f}%"
