@@ -137,12 +137,17 @@ def _update_xaxis_range_for_labels(fig: go.Figure) -> go.Figure:
     if not x_values:
         return fig
 
+    x_min = min(x_values)
+    x_max = max(x_values)
+    x_span = max(x_max - x_min, max(abs(x_min), abs(x_max), 1.0) * 0.1)
+
     left_padding, right_padding = _estimate_horizontal_text_padding(fig)
-    if left_padding == 0.0 and right_padding == 0.0:
-        return fig
+    # Keep a small visual gap near chart edges even for traces without text labels.
+    left_padding = max(left_padding, x_span * 0.06)
+    right_padding = max(right_padding, x_span * 0.02)
 
     fig.update_xaxes(
-        range=[min(x_values) - left_padding, max(x_values) + right_padding],
+        range=[x_min - left_padding, x_max + right_padding],
         automargin=True,
     )
     return fig
