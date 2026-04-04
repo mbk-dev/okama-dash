@@ -122,6 +122,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
     # Options
     State(component_id="ef-rebalancing-frequency", component_property="value"),
     State(component_id="ef-plot-options", component_property="value"),
+    State(component_id="ef-mean-type-option", component_property="value"),
     State(component_id="mdp-line-option", component_property="value"),
     State(component_id="cml-option", component_property="value"),
     State(component_id="risk-free-rate-option", component_property="value"),
@@ -140,6 +141,7 @@ def update_ef_cards(
     # Options
     rebalancing_period: str,
     plot_option: str,
+    mean_type_option: str,
     mdp_option: str,
     cml_option: str,
     rf_rate: float,
@@ -173,7 +175,12 @@ def update_ef_cards(
             ef_kwargs["rebalancing_strategy"] = ok.Rebalance(period=rebalancing_period)
         ef_object = ok.EfficientFrontier(symbols, **ef_kwargs)
     ef_options = dict(
-        plot_type=plot_option, mdp=mdp_option, cml=cml_option, rf_rate=rf_rate, n_monte_carlo=n_monte_carlo
+        plot_type=plot_option,
+        return_type=mean_type_option,
+        mdp=mdp_option,
+        cml=cml_option,
+        rf_rate=rf_rate,
+        n_monte_carlo=n_monte_carlo,
     )
     ef = ef_object.ef_points * 100
     # Cache ef to pickle file

@@ -9,8 +9,20 @@ from plotly import graph_objects as go
 import plotly.express as px
 
 
-def _resolve_return_column(df: pd.DataFrame, plot_type: str) -> str:
-    if plot_type in {"Arithmetic", "Pairwise"}:
+def _normalize_plot_types(plot_type) -> list[str]:
+    if plot_type is None:
+        return []
+    if isinstance(plot_type, str):
+        return [plot_type]
+    normalized = []
+    for option in plot_type:
+        if option not in normalized:
+            normalized.append(option)
+    return normalized
+
+
+def _resolve_return_column(df: pd.DataFrame, return_type: str) -> str:
+    if return_type == "Arithmetic":
         candidates = ("Mean return", "Return", "CAGR")
     else:
         candidates = ("CAGR", "Return", "Mean return")
@@ -45,6 +57,48 @@ def _get_portfolio_weights_percent(portfolio: dict, symbols: list[str]) -> np.nd
     return None
 
 
+def _update_figure_layout(fig: go.Figure) -> go.Figure:
+    fig.update_layout(
+        height=800,
+        xaxis_title="Risk (standard deviation)",
+        yaxis_title="Rate of Return",
+    )
+    return fig
+
+
+def _add_assets_trace(
+    fig: go.Figure,
+    ef_object: okama.EfficientFrontier,
+    return_type: str,
+    trace_name: str = "Assets",
+):
+    ror_df = ef_object.mean_return if return_type == "Arithmetic" else ef_object.get_cagr()
+    df = pd.concat(
+        [ror_df, ef_object.risk_annual.iloc[-1]],
+        axis=1,
+        join="outer",
+        copy="false",
+        ignore_index=False,
+    )
+    df *= 100
+    df.columns = ["Return", "Risk"]
+    df.reset_index(drop=False, inplace=True)
+    assets_weights = np.eye(len(df)) * 100
+    fig.add_trace(
+        go.Scatter(
+            x=df["Risk"],
+            y=df["Return"],
+            customdata=assets_weights,
+            mode="markers+text",
+            marker=dict(size=8, color="orange"),
+            text=df.iloc[:, 0].to_list(),
+            hovertemplate="<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b><extra></extra>",
+            textposition="bottom right",
+            name=trace_name,
+        )
+    )
+
+
 def _expand_weights_to_full_universe(
     weights_array: np.ndarray,
     asset_columns: list[str],
@@ -76,7 +130,11 @@ def _make_pairwise_ef_object(
     return okama.EfficientFrontier(assets=pair_assets, **ef_kwargs)
 
 
-def prepare_pairwise_ef(ef_object: okama.EfficientFrontier):
+def prepare_pairwise_ef(
+    ef_object: okama.EfficientFrontier,
+    return_type: str,
+    include_assets: bool = True,
+):
     hovertemplate = "<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b>" + "<extra></extra>"
     fig = go.Figure()
     for pair_assets in itertools.combinations(ef_object.asset_obj_dict.values(), 2):
@@ -86,7 +144,7 @@ def prepare_pairwise_ef(ef_object: okama.EfficientFrontier):
             pair_assets=list(pair_assets),
         )
         pair_ef = pair_ef_object.ef_points * 100
-        pair_y_column = _resolve_return_column(pair_ef, "Pairwise")
+        pair_y_column = _resolve_return_column(pair_ef, return_type)
         pair_asset_columns = _get_asset_columns(pair_ef, pair_ef_object)
         pair_weights = pair_ef[pair_asset_columns].to_numpy()
         weights_array = _expand_weights_to_full_universe(pair_weights, pair_asset_columns, ef_object.symbols)
@@ -101,36 +159,9 @@ def prepare_pairwise_ef(ef_object: okama.EfficientFrontier):
             )
         )
 
-    df = pd.concat(
-        [ef_object.mean_return, ef_object.risk_annual.iloc[-1]],
-        axis=1,
-        join="outer",
-        copy="false",
-        ignore_index=False,
-    )
-    df *= 100
-    df.columns = ["Return", "Risk"]
-    df.reset_index(drop=False, inplace=True)
-    assets_weights = np.eye(len(df)) * 100
-    fig.add_trace(
-        go.Scatter(
-            x=df["Risk"],
-            y=df["Return"],
-            customdata=assets_weights,
-            mode="markers+text",
-            marker=dict(size=8, color="orange"),
-            text=df.iloc[:, 0].to_list(),
-            hovertemplate=hovertemplate,
-            textposition="bottom right",
-            name="Assets",
-        )
-    )
-    fig.update_layout(
-        height=800,
-        xaxis_title="Risk (standard deviation)",
-        yaxis_title="Rate of Return",
-    )
-    return fig
+    if include_assets:
+        _add_assets_trace(fig, ef_object, return_type, trace_name="Assets")
+    return _update_figure_layout(fig)
 
 
 def prepare_transition_map(ef: pd.DataFrame):
@@ -166,27 +197,35 @@ def prepare_transition_map(ef: pd.DataFrame):
     return fig
 
 
-def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options: dict):
-    if ef_options["plot_type"] == "Pairwise":
-        return prepare_pairwise_ef(ef_object)
-    y_column = _resolve_return_column(ef, ef_options["plot_type"])
+def _prepare_single_ef(
+    ef: pd.DataFrame,
+    ef_object: okama.EfficientFrontier,
+    ef_options: dict,
+    fig: go.Figure | None = None,
+    include_assets: bool = True,
+    line_width: float = 2.0,
+):
+    return_type = ef_options["return_type"]
+    y_column = _resolve_return_column(ef, return_type)
     ef_asset_columns = _get_asset_columns(ef, ef_object)
     weights_array = ef[ef_asset_columns].to_numpy()
     hovertemplate = "<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b>" + "<extra></extra>"
-    fig = go.Figure(
-        data=go.Scatter(
+    fig = fig or go.Figure()
+    fig.add_trace(
+        go.Scatter(
             x=ef["Risk"],
             y=ef[y_column],
             customdata=weights_array,
             hovertemplate=hovertemplate,
             mode="lines",
-            name=f"Efficient Frontier - {ef_options['plot_type']} mean",
+            name=f"Efficient Frontier - {return_type} mean",
+            line=dict(width=line_width),
         )
     )
     # MDP frontier
     if ef_options["mdp"] == "On":
         mdp_frontier = ef_object.mdp_points * 100
-        mdp_y_column = _resolve_return_column(mdp_frontier, ef_options["plot_type"])
+        mdp_y_column = _resolve_return_column(mdp_frontier, return_type)
         # TODO: add Diversification Ratio to hovertemplate
         # hovertemplate = "<b>Risk: %{x:.2f}%<br>Return: %{y:.2f}%<br>Diversification Ratio:%{text:.2f}</b>" + "<extra></extra>"
         mdp_asset_columns = _get_asset_columns(mdp_frontier, ef_object)
@@ -211,7 +250,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
         weights_array_mdp = np.expand_dims(mdp_weights, axis=0) if mdp_weights is not None else None
         fig.add_trace(
             go.Scatter(
-                x=[mdp_portfolio['Risk'] * 100],
+                x=[mdp_portfolio["Risk"] * 100],
                 y=[mdp_return * 100],
                 customdata=weights_array_mdp,
                 hovertemplate=hovertemplate,
@@ -224,7 +263,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
         )
     # CML line
     if ef_options["cml"] == "On":
-        cagr_option = "cagr" if ef_options["plot_type"] == "Geometric" else "mean_return"
+        cagr_option = "cagr" if return_type == "Geometric" else "mean_return"
         rf_rate = ef_options["rf_rate"]
         tg = ef_object.get_tangency_portfolio(rate_of_return=cagr_option, rf_return=rf_rate / 100)
         weights_array = np.expand_dims(tg["Weights"], axis=0) * 100
@@ -252,44 +291,16 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
                 marker=dict(size=8, color="grey"),
             )
         )
-    # Assets Risk-Return points
-    ror_df = ef_object.mean_return if ef_options["plot_type"] in {"Arithmetic", "Pairwise"} else ef_object.get_cagr()
-    df = pd.concat(
-        [ror_df, ef_object.risk_annual.iloc[-1]],
-        axis=1,
-        join="outer",
-        copy="false",
-        ignore_index=False,
-    )
-    df *= 100
-    df.columns = ["Return", "Risk"]
-    df.reset_index(drop=False, inplace=True)
-
-    # Create an array of weights for individual assets (100% for each asset)
-    n_assets = len(df)
-    assets_weights = np.eye(n_assets) * 100
-
-    fig.add_trace(
-        go.Scatter(
-            x=df["Risk"],
-            y=df["Return"],
-            customdata=assets_weights,
-            mode="markers+text",
-            marker=dict(size=8, color="orange"),
-            text=df.iloc[:, 0].to_list(),
-            hovertemplate=hovertemplate,
-            textposition="bottom right",
-            name="Assets",
-        )
-    )
+    if include_assets:
+        _add_assets_trace(fig, ef_object, return_type, trace_name="Assets")
     # Monte-Carlo simulation
     if ef_options["n_monte_carlo"]:
         try:
-            kind = "mean" if ef_options["plot_type"] == "Arithmetic" else "cagr"
+            kind = "mean" if return_type == "Arithmetic" else "cagr"
             df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"], kind=kind) * 100
         except TypeError:
             df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"]) * 100
-        mc_y_column = _resolve_return_column(df, ef_options["plot_type"])
+        mc_y_column = _resolve_return_column(df, return_type)
         mc_asset_columns = _get_asset_columns(df, ef_object)
         weights_array = df[mc_asset_columns].to_numpy() if mc_asset_columns else None
         fig.add_trace(
@@ -302,10 +313,34 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
                 name=f"Monte-Carlo Simulation",
             )
         )
-    # X and Y titles
-    fig.update_layout(
-        height=800,
-        xaxis_title="Risk (standard deviation)",
-        yaxis_title="Rate of Return",
-    )
-    return fig
+    return _update_figure_layout(fig)
+
+
+def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options: dict):
+    plot_types = _normalize_plot_types(ef_options.get("plot_type")) or ["Frontier"]
+    return_type = ef_options.get("return_type", "Geometric")
+    fig = go.Figure()
+
+    if "Frontier" in plot_types:
+        fig = _prepare_single_ef(
+            ef,
+            ef_object,
+            {**ef_options, "return_type": return_type},
+            fig=fig,
+            include_assets="Pairwise" not in plot_types,
+            line_width=4.0 if "Pairwise" in plot_types else 2.0,
+        )
+
+    if "Pairwise" in plot_types:
+        pairwise_fig = prepare_pairwise_ef(
+            ef_object,
+            return_type=return_type,
+            include_assets="Frontier" not in plot_types,
+        )
+        for trace in pairwise_fig.data:
+            fig.add_trace(trace)
+
+    if not any(getattr(trace, "name", None) == "Assets" for trace in fig.data):
+        _add_assets_trace(fig, ef_object, return_type, trace_name="Assets")
+
+    return _update_figure_layout(fig)

@@ -2,12 +2,20 @@ from dash import dcc
 
 ef_options_tooltip_ror = dcc.Markdown(
     """
-    **Geometric mean** or Compound annual growth rate (CAGR) is the rate of return 
+    Select one or both plot types.
+
+    **Efficient frontier** shows portfolios with the minimum risk for each selected level of return.
+
+    **Pairwise efficiency frontiers** show efficient frontiers built separately for every pair of selected assets.
+    """
+)
+ef_options_tooltip_mean_type = dcc.Markdown(
+    """
+    **Geometric mean** or Compound annual growth rate (CAGR) is the rate of return
     that would be required for an investment to grow from its initial to its
-    final value, assuming all incomes were reinvested.  
-    &NewLine;  
-    **Pairwise efficiency frontiers** - plots efficient frontiers for every
-    pair of selected assets using arithmetic mean return.
+    final value, assuming all incomes were reinvested.
+
+    **Arithmetic mean** is the annualized average return.
     """
 )
 ef_options_tooltip_cml = dcc.Markdown(
@@ -15,7 +23,7 @@ ef_options_tooltip_cml = dcc.Markdown(
     **Capital Market Line** (CML) is the tangent line drawn from the point of
     the risk-free asset (volatility is zero) to the point of tangency portfolio
     or Maximum Sharpe Ratio (MSR) point.  
-    &NewLine;  
+
     The slope of the CML is the Sharpe ratio of the tangency portfolio."
     """
 )
@@ -41,6 +49,6 @@ ef_options_monte_carlo = dcc.Markdown(
 
 ef_options_transition_map = dcc.Markdown(
     """
-    Transition Map shows the relation between asset weights and optimized portfolios risk (standard deviation).
+    **Transition Map** shows the relation between asset weights and optimized portfolios risk (standard deviation).
     """
 )

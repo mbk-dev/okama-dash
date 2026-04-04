@@ -21,6 +21,49 @@ options = get_symbols()
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
+PLOT_OPTIONS = [
+    {
+        "label": "Efficient frontier",
+        "value": "Frontier",
+    },
+    {
+        "label": "Pairwise efficiency frontiers",
+        "value": "Pairwise",
+    },
+]
+
+RETURN_TYPE_OPTIONS = [
+    {"label": "Geometric mean", "value": "Geometric"},
+    {"label": "Arithmetic mean", "value": "Arithmetic"},
+]
+
+TOGGLE_OPTIONS = [
+    {"label": "On", "value": "On"},
+    {"label": "Off", "value": "Off"},
+]
+
+
+def _normalize_plot_types(plot_type) -> list[str]:
+    if plot_type is None:
+        return []
+    if isinstance(plot_type, str):
+        return [plot_type]
+    return list(dict.fromkeys(plot_type))
+
+
+def _get_plot_options(pairwise_disabled: bool) -> list[dict]:
+    result = []
+    for option in PLOT_OPTIONS:
+        current_option = option.copy()
+        if current_option["value"] == "Pairwise":
+            current_option["disabled"] = pairwise_disabled
+        result.append(current_option)
+    return result
+
+
+def _get_toggle_options(disabled: bool) -> list[dict]:
+    return [dict(option, disabled=disabled) for option in TOGGLE_OPTIONS]
+
 
 def card_controls(
     tickers: Optional[list],
@@ -128,18 +171,9 @@ def card_controls(
                                                 ),
                                             ]
                                         ),
-                                        dbc.RadioItems(
-                                            options=[
-                                                {
-                                                    "label": "Geometric mean vs Risk",
-                                                    "value": "Geometric",
-                                                },
-                                                {
-                                                    "label": "Pairwise efficiency frontiers",
-                                                    "value": "Pairwise",
-                                                },
-                                            ],
-                                            value="Geometric",
+                                        dbc.Checklist(
+                                            options=PLOT_OPTIONS,
+                                            value=["Frontier"],
                                             id="ef-plot-options",
                                         ),
                                         dbc.Tooltip(
@@ -156,24 +190,21 @@ def card_controls(
                                     [
                                         dbc.Label(
                                             [
-                                                "Most diversified portfolios line",
+                                                "Y-axis",
                                                 html.I(
                                                     className="bi bi-info-square ms-2",
-                                                    id="info-mdp-line",
+                                                    id="info-mean-type",
                                                 ),
                                             ]
                                         ),
                                         dbc.RadioItems(
-                                            options=[
-                                                {"label": "On", "value": "On"},
-                                                {"label": "Off", "value": "Off"},
-                                            ],
-                                            value="Off",
-                                            id="mdp-line-option",
+                                            options=RETURN_TYPE_OPTIONS,
+                                            value="Geometric",
+                                            id="ef-mean-type-option",
                                         ),
                                         dbc.Tooltip(
-                                            tl.ef_options_tooltip_mdp,
-                                            target="info-mdp-line",
+                                            tl.ef_options_tooltip_mean_type,
+                                            target="info-mean-type",
                                         ),
                                     ],
                                     lg=6,
@@ -190,6 +221,32 @@ def card_controls(
                                     [
                                         dbc.Label(
                                             [
+                                                "Most diversified portfolios line",
+                                                html.I(
+                                                    className="bi bi-info-square ms-2",
+                                                    id="info-mdp-line",
+                                                ),
+                                            ]
+                                        ),
+                                        dbc.RadioItems(
+                                            options=TOGGLE_OPTIONS,
+                                            value="Off",
+                                            id="mdp-line-option",
+                                        ),
+                                        dbc.Tooltip(
+                                            tl.ef_options_tooltip_mdp,
+                                            target="info-mdp-line",
+                                        ),
+                                    ],
+                                    lg=6,
+                                    md=6,
+                                    sm=12,
+                                    class_name="pt-4 pt-sm-4 pt-md-1",
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Label(
+                                            [
                                                 "Capital Market Line (CML)",
                                                 html.I(
                                                     className="bi bi-info-square ms-2",
@@ -198,10 +255,7 @@ def card_controls(
                                             ]
                                         ),
                                         dbc.RadioItems(
-                                            options=[
-                                                {"label": "On", "value": "On"},
-                                                {"label": "Off", "value": "Off"},
-                                            ],
+                                            options=TOGGLE_OPTIONS,
                                             value="Off",
                                             id="cml-option",
                                         ),
@@ -215,6 +269,11 @@ def card_controls(
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
+                            ],
+                            className="p-1",
+                        ),
+                        dbc.Row(
+                            [
                                 dbc.Col(
                                     [
                                         dbc.Label(
@@ -244,6 +303,7 @@ def card_controls(
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
+                                dbc.Col(lg=6, md=6, sm=12),
                             ],
                             className="p-1",
                         ),
@@ -333,10 +393,74 @@ def card_controls(
 @callback(
     Output(component_id="risk-free-rate-option", component_property="disabled"),
     Input(component_id="cml-option", component_property="value"),
-    Input(component_id="ef-plot-options", component_property="value"),
 )
-def update_risk_free_rate(cml: str, plot_type: str):
-    return cml == "Off" or plot_type == "Pairwise"
+def update_risk_free_rate(cml: str):
+    return cml == "Off"
+
+
+@callback(
+    Output("ef-plot-options", "options"),
+    Output("ef-plot-options", "value"),
+    Output("mdp-line-option", "options"),
+    Output("mdp-line-option", "value"),
+    Output("cml-option", "options"),
+    Output("cml-option", "value"),
+    Output("monte-carlo-option", "disabled"),
+    Output("monte-carlo-option", "value"),
+    Input("ef-plot-options", "value"),
+    Input("ef-mean-type-option", "value"),
+    Input("mdp-line-option", "value"),
+    Input("cml-option", "value"),
+    Input("monte-carlo-option", "value"),
+)
+def sync_incompatible_options(plot_type, mean_type_value, mdp_value, cml_value, monte_carlo_value):
+    plot_types = _normalize_plot_types(plot_type)
+    mean_type_value = mean_type_value or "Geometric"
+    mdp_value = mdp_value or "Off"
+    cml_value = cml_value or "Off"
+    monte_carlo_value = 0 if monte_carlo_value is None else monte_carlo_value
+    triggered_id = dash.ctx.triggered_id
+
+    incompatible_selected = mdp_value == "On" or cml_value == "On" or monte_carlo_value > 0
+    pairwise_selected = "Pairwise" in plot_types
+
+    if triggered_id in {"mdp-line-option", "cml-option", "monte-carlo-option"} and incompatible_selected:
+        plot_types = [option for option in plot_types if option != "Pairwise"]
+        pairwise_selected = False
+
+    if triggered_id == "ef-plot-options" and pairwise_selected:
+        mdp_value = "Off"
+        cml_value = "Off"
+        monte_carlo_value = 0
+        incompatible_selected = False
+
+    if not plot_types:
+        plot_types = ["Frontier"]
+
+    pairwise_selected = "Pairwise" in plot_types
+    # TODO: remove Arithmetic-based MDP/CML disabling after EfficientFrontier in okama
+    # supports correct Mean return vs CAGR handling for MDP and CML.
+    mdp_cml_disabled = pairwise_selected or mean_type_value == "Arithmetic"
+
+    if mdp_cml_disabled:
+        mdp_value = "Off"
+        cml_value = "Off"
+
+    if pairwise_selected:
+        monte_carlo_value = 0
+
+    pairwise_disabled = mdp_value == "On" or cml_value == "On" or monte_carlo_value > 0
+
+    return (
+        _get_plot_options(pairwise_disabled=pairwise_disabled),
+        plot_types,
+        _get_toggle_options(disabled=mdp_cml_disabled),
+        mdp_value,
+        _get_toggle_options(disabled=mdp_cml_disabled),
+        cml_value,
+        pairwise_selected,
+        monte_carlo_value,
+    )
 
 
 @callback(
