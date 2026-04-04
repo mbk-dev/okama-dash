@@ -57,7 +57,99 @@ def _get_portfolio_weights_percent(portfolio: dict, symbols: list[str]) -> np.nd
     return None
 
 
+def _to_string_list(text) -> list[str]:
+    if text is None:
+        return []
+    if isinstance(text, str):
+        return [text]
+    if isinstance(text, np.ndarray):
+        return [str(value) for value in text.tolist()]
+    if isinstance(text, (list, tuple, pd.Series)):
+        return [str(value) for value in text]
+    return [str(text)]
+
+
+def _to_position_list(textposition, size: int) -> list[str]:
+    if size == 0:
+        return []
+    if isinstance(textposition, str):
+        return [textposition] * size
+    if isinstance(textposition, np.ndarray):
+        positions = textposition.tolist()
+    elif isinstance(textposition, (list, tuple, pd.Series)):
+        positions = list(textposition)
+    else:
+        positions = []
+    if not positions:
+        return ["middle center"] * size
+    if len(positions) < size:
+        positions.extend([positions[-1]] * (size - len(positions)))
+    return [str(position) for position in positions[:size]]
+
+
+def _estimate_horizontal_text_padding(fig: go.Figure) -> tuple[float, float]:
+    x_values = []
+    for trace in fig.data:
+        trace_x = getattr(trace, "x", None)
+        if trace_x is None:
+            continue
+        for value in np.asarray(trace_x, dtype=object).ravel():
+            if pd.notna(value):
+                x_values.append(float(value))
+
+    if not x_values:
+        return 0.0, 0.0
+
+    x_min = min(x_values)
+    x_max = max(x_values)
+    x_span = max(x_max - x_min, max(abs(x_min), abs(x_max), 1.0) * 0.1)
+
+    left_padding = 0.0
+    right_padding = 0.0
+    base_padding = x_span * 0.02
+    char_padding = x_span * 0.009
+
+    for trace in fig.data:
+        texts = _to_string_list(getattr(trace, "text", None))
+        if not texts:
+            continue
+        positions = _to_position_list(getattr(trace, "textposition", None), len(texts))
+        for label, position in zip(texts, positions):
+            label_padding = base_padding + char_padding * len(label)
+            if "left" in position:
+                left_padding = max(left_padding, label_padding)
+            if "right" in position:
+                right_padding = max(right_padding, label_padding)
+
+    return left_padding, right_padding
+
+
+def _update_xaxis_range_for_labels(fig: go.Figure) -> go.Figure:
+    x_values = []
+    for trace in fig.data:
+        trace_x = getattr(trace, "x", None)
+        if trace_x is None:
+            continue
+        for value in np.asarray(trace_x, dtype=object).ravel():
+            if pd.notna(value):
+                x_values.append(float(value))
+
+    if not x_values:
+        return fig
+
+    left_padding, right_padding = _estimate_horizontal_text_padding(fig)
+    if left_padding == 0.0 and right_padding == 0.0:
+        return fig
+
+    fig.update_xaxes(
+        range=[min(x_values) - left_padding, max(x_values) + right_padding],
+        automargin=True,
+    )
+    return fig
+
+
 def _update_figure_layout(fig: go.Figure) -> go.Figure:
+    _update_xaxis_range_for_labels(fig)
     fig.update_layout(
         height=800,
         xaxis_title="Risk (standard deviation)",
@@ -90,6 +182,7 @@ def _add_assets_trace(
             y=df["Return"],
             customdata=assets_weights,
             mode="markers+text",
+            cliponaxis=False,
             marker=dict(size=8, color="orange"),
             text=df.iloc[:, 0].to_list(),
             hovertemplate="<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b><extra></extra>",
@@ -255,6 +348,7 @@ def _prepare_single_ef(
                 customdata=weights_array_mdp,
                 hovertemplate=hovertemplate,
                 mode="markers+text",
+                cliponaxis=False,
                 text=["MDP"],
                 textposition="top left",
                 name="Most diversified portfolio (MDP)",
@@ -285,6 +379,7 @@ def _prepare_single_ef(
                 customdata=weights_array,
                 hovertemplate=hovertemplate,
                 mode="markers+text",
+                cliponaxis=False,
                 text="MSR",
                 textposition="top left",
                 name="Tangency portfolio (MSR)",
