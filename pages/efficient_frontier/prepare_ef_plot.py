@@ -8,6 +8,11 @@ import pandas as pd
 from plotly import graph_objects as go
 import plotly.express as px
 
+from common import cache
+from pages.efficient_frontier.ef_cache import CACHE_TIMEOUT, load_ef_object
+
+DERIVED_CACHE_VERSION = "ef-derived-v1"
+
 
 def _normalize_plot_types(plot_type) -> list[str]:
     if plot_type is None:
@@ -55,6 +60,142 @@ def _get_portfolio_weights_percent(portfolio: dict, symbols: list[str]) -> np.nd
     if all(symbol in portfolio for symbol in symbols):
         return np.asarray([portfolio[symbol] for symbol in symbols], dtype=float) * 100
     return None
+
+
+def _get_column_values(df: pd.DataFrame, candidates: tuple[str, ...]) -> list[float]:
+    for column in candidates:
+        if column in df.columns:
+            return df[column].tolist()
+    raise KeyError("No matching return column found in DataFrame.")
+
+
+def _get_cached_return_values(payload: dict, return_type: str) -> list[float]:
+    if return_type == "Arithmetic":
+        return payload["mean_return"]
+    return payload["cagr"]
+
+
+@cache.memoize(timeout=CACHE_TIMEOUT)
+def _get_pairwise_frontier_data_cached(cache_version: str, ef_cache_key: str) -> list[dict]:
+    del cache_version
+    ef_object = load_ef_object(ef_cache_key)
+    pairwise_frontiers = []
+    for pair_assets in itertools.combinations(ef_object.asset_obj_dict.values(), 2):
+        pair_symbols = [asset.symbol for asset in pair_assets]
+        pair_ef_object = _make_pairwise_ef_object(
+            ef_object=ef_object,
+            pair_assets=list(pair_assets),
+        )
+        pair_ef = pair_ef_object.ef_points * 100
+        pair_asset_columns = _get_asset_columns(pair_ef, pair_ef_object)
+        pair_weights = pair_ef[pair_asset_columns].to_numpy()
+        weights_array = _expand_weights_to_full_universe(pair_weights, pair_asset_columns, ef_object.symbols)
+        pairwise_frontiers.append(
+            {
+                "name": " / ".join(pair_symbols),
+                "risk": pair_ef["Risk"].tolist(),
+                "mean_return": _get_column_values(pair_ef, ("Mean return", "Return", "CAGR")),
+                "cagr": _get_column_values(pair_ef, ("CAGR", "Return", "Mean return")),
+                "weights": weights_array.tolist(),
+            }
+        )
+    return pairwise_frontiers
+
+
+def _get_pairwise_frontier_data(ef_cache_key: str) -> list[dict]:
+    return _get_pairwise_frontier_data_cached(DERIVED_CACHE_VERSION, ef_cache_key)
+
+
+@cache.memoize(timeout=CACHE_TIMEOUT)
+def _get_mdp_frontier_data_cached(cache_version: str, ef_cache_key: str) -> dict:
+    del cache_version
+    ef_object = load_ef_object(ef_cache_key)
+    mdp_frontier = ef_object.mdp_points * 100
+    mdp_asset_columns = _get_asset_columns(mdp_frontier, ef_object)
+    weights_array = mdp_frontier[mdp_asset_columns].to_numpy() if mdp_asset_columns else None
+    return {
+        "risk": mdp_frontier["Risk"].tolist(),
+        "mean_return": _get_column_values(mdp_frontier, ("Mean return", "Return", "CAGR")),
+        "cagr": _get_column_values(mdp_frontier, ("CAGR", "Return", "Mean return")),
+        "weights": weights_array.tolist() if weights_array is not None else None,
+    }
+
+
+def _get_mdp_frontier_data(ef_cache_key: str) -> dict:
+    return _get_mdp_frontier_data_cached(DERIVED_CACHE_VERSION, ef_cache_key)
+
+
+@cache.memoize(timeout=CACHE_TIMEOUT)
+def _get_mdp_portfolio_data_cached(cache_version: str, ef_cache_key: str) -> dict:
+    del cache_version
+    ef_object = load_ef_object(ef_cache_key)
+    mdp_portfolio = ef_object.get_most_diversified_portfolio()
+    mdp_weights = _get_portfolio_weights_percent(mdp_portfolio, ef_object.symbols)
+    return {
+        "risk": mdp_portfolio["Risk"] * 100,
+        "mean_return": mdp_portfolio.get("Mean return", mdp_portfolio.get("Return")),
+        "cagr": mdp_portfolio.get("CAGR", mdp_portfolio.get("Mean return")),
+        "weights": mdp_weights.tolist() if mdp_weights is not None else None,
+    }
+
+
+def _get_mdp_portfolio_data(ef_cache_key: str) -> dict:
+    return _get_mdp_portfolio_data_cached(DERIVED_CACHE_VERSION, ef_cache_key)
+
+
+@cache.memoize(timeout=CACHE_TIMEOUT)
+def _get_tangency_portfolio_data_cached(
+    cache_version: str,
+    ef_cache_key: str,
+    return_type: str,
+    rf_rate: float,
+) -> dict:
+    del cache_version
+    ef_object = load_ef_object(ef_cache_key)
+    cagr_option = "cagr" if return_type == "Geometric" else "mean_return"
+    tg = ef_object.get_tangency_portfolio(rate_of_return=cagr_option, rf_return=rf_rate / 100)
+    return {
+        "risk": tg["Risk"] * 100,
+        "rate_of_return": tg["Rate_of_return"] * 100,
+        "weights": (np.asarray(tg["Weights"], dtype=float) * 100).tolist(),
+    }
+
+
+def _get_tangency_portfolio_data(ef_cache_key: str, return_type: str, rf_rate: float) -> dict:
+    return _get_tangency_portfolio_data_cached(DERIVED_CACHE_VERSION, ef_cache_key, return_type, rf_rate)
+
+
+@cache.memoize(timeout=CACHE_TIMEOUT)
+def _get_monte_carlo_data_cached(
+    cache_version: str,
+    ef_cache_key: str,
+    n_monte_carlo: int,
+    return_type: str,
+) -> dict:
+    del cache_version
+    ef_object = load_ef_object(ef_cache_key)
+    try:
+        kind = "mean" if return_type == "Arithmetic" else "cagr"
+        df = ef_object.get_monte_carlo(n=n_monte_carlo, kind=kind) * 100
+    except TypeError:
+        df = ef_object.get_monte_carlo(n=n_monte_carlo) * 100
+    mc_asset_columns = _get_asset_columns(df, ef_object)
+    weights_array = df[mc_asset_columns].to_numpy() if mc_asset_columns else None
+    return {
+        "risk": df["Risk"].tolist(),
+        "mean_return": _get_column_values(df, ("Mean return", "Return", "CAGR")),
+        "cagr": _get_column_values(df, ("CAGR", "Return", "Mean return")),
+        "weights": weights_array.tolist() if weights_array is not None else None,
+    }
+
+
+def _get_monte_carlo_data(ef_cache_key: str, n_monte_carlo: int, return_type: str) -> dict:
+    return _get_monte_carlo_data_cached(
+        DERIVED_CACHE_VERSION,
+        ef_cache_key,
+        n_monte_carlo,
+        return_type,
+    )
 
 
 def _to_string_list(text) -> list[str]:
@@ -240,28 +381,42 @@ def prepare_pairwise_ef(
     ef_object: okama.EfficientFrontier,
     return_type: str,
     include_assets: bool = True,
+    ef_cache_key: str | None = None,
 ):
     hovertemplate = "<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b>" + "<extra></extra>"
     fig = go.Figure()
-    for pair_assets in itertools.combinations(ef_object.asset_obj_dict.values(), 2):
-        pair_symbols = [asset.symbol for asset in pair_assets]
-        pair_ef_object = _make_pairwise_ef_object(
-            ef_object=ef_object,
-            pair_assets=list(pair_assets),
-        )
-        pair_ef = pair_ef_object.ef_points * 100
-        pair_y_column = _resolve_return_column(pair_ef, return_type)
-        pair_asset_columns = _get_asset_columns(pair_ef, pair_ef_object)
-        pair_weights = pair_ef[pair_asset_columns].to_numpy()
-        weights_array = _expand_weights_to_full_universe(pair_weights, pair_asset_columns, ef_object.symbols)
+    if ef_cache_key:
+        pairwise_frontiers = _get_pairwise_frontier_data(ef_cache_key)
+    else:
+        pairwise_frontiers = []
+        for pair_assets in itertools.combinations(ef_object.asset_obj_dict.values(), 2):
+            pair_symbols = [asset.symbol for asset in pair_assets]
+            pair_ef_object = _make_pairwise_ef_object(
+                ef_object=ef_object,
+                pair_assets=list(pair_assets),
+            )
+            pair_ef = pair_ef_object.ef_points * 100
+            pair_asset_columns = _get_asset_columns(pair_ef, pair_ef_object)
+            pair_weights = pair_ef[pair_asset_columns].to_numpy()
+            weights_array = _expand_weights_to_full_universe(pair_weights, pair_asset_columns, ef_object.symbols)
+            pairwise_frontiers.append(
+                {
+                    "name": " / ".join(pair_symbols),
+                    "risk": pair_ef["Risk"].tolist(),
+                    "mean_return": _get_column_values(pair_ef, ("Mean return", "Return", "CAGR")),
+                    "cagr": _get_column_values(pair_ef, ("CAGR", "Return", "Mean return")),
+                    "weights": weights_array.tolist(),
+                }
+            )
+    for pair_data in pairwise_frontiers:
         fig.add_trace(
             go.Scatter(
-                x=pair_ef["Risk"],
-                y=pair_ef[pair_y_column],
-                customdata=weights_array,
+                x=pair_data["risk"],
+                y=_get_cached_return_values(pair_data, return_type),
+                customdata=pair_data["weights"],
                 hovertemplate=hovertemplate,
                 mode="lines",
-                name=" / ".join(pair_symbols),
+                name=pair_data["name"],
             )
         )
 
@@ -310,6 +465,7 @@ def _prepare_single_ef(
     fig: go.Figure | None = None,
     include_assets: bool = True,
     line_width: float = 2.0,
+    ef_cache_key: str | None = None,
 ):
     return_type = ef_options["return_type"]
     y_column = _resolve_return_column(ef, return_type)
@@ -330,17 +486,26 @@ def _prepare_single_ef(
     )
     # MDP frontier
     if ef_options["mdp"] == "On":
-        mdp_frontier = ef_object.mdp_points * 100
-        mdp_y_column = _resolve_return_column(mdp_frontier, return_type)
+        if ef_cache_key:
+            mdp_frontier_data = _get_mdp_frontier_data(ef_cache_key)
+            mdp_weights_array = mdp_frontier_data["weights"]
+        else:
+            mdp_frontier = ef_object.mdp_points * 100
+            mdp_frontier_data = {
+                "risk": mdp_frontier["Risk"].tolist(),
+                "mean_return": _get_column_values(mdp_frontier, ("Mean return", "Return", "CAGR")),
+                "cagr": _get_column_values(mdp_frontier, ("CAGR", "Return", "Mean return")),
+            }
+            mdp_asset_columns = _get_asset_columns(mdp_frontier, ef_object)
+            mdp_weights = mdp_frontier[mdp_asset_columns].to_numpy()
+            mdp_weights_array = mdp_weights.tolist()
         # TODO: add Diversification Ratio to hovertemplate
         # hovertemplate = "<b>Risk: %{x:.2f}%<br>Return: %{y:.2f}%<br>Diversification Ratio:%{text:.2f}</b>" + "<extra></extra>"
-        mdp_asset_columns = _get_asset_columns(mdp_frontier, ef_object)
-        weights_array = mdp_frontier[mdp_asset_columns].to_numpy()
         fig.add_trace(
             go.Scatter(
-                x=mdp_frontier["Risk"],
-                y=mdp_frontier[mdp_y_column],
-                customdata=weights_array,
+                x=mdp_frontier_data["risk"],
+                y=_get_cached_return_values(mdp_frontier_data, return_type),
+                customdata=mdp_weights_array,
                 hovertemplate=hovertemplate,
                 # text=[],
                 mode="lines",
@@ -348,15 +513,24 @@ def _prepare_single_ef(
             )
         )
         # MPD portfolio
-        mdp_portfolio = ef_object.get_most_diversified_portfolio()
-        mdp_return = mdp_portfolio.get(mdp_y_column, mdp_portfolio.get("CAGR", mdp_portfolio.get("Mean return")))
+        mdp_portfolio = _get_mdp_portfolio_data(ef_cache_key) if ef_cache_key else None
+        if mdp_portfolio is None:
+            raw_mdp_portfolio = ef_object.get_most_diversified_portfolio()
+            raw_mdp_weights = _get_portfolio_weights_percent(raw_mdp_portfolio, ef_object.symbols)
+            mdp_portfolio = {
+                "risk": raw_mdp_portfolio["Risk"] * 100,
+                "mean_return": raw_mdp_portfolio.get("Mean return", raw_mdp_portfolio.get("Return")),
+                "cagr": raw_mdp_portfolio.get("CAGR", raw_mdp_portfolio.get("Mean return")),
+                "weights": raw_mdp_weights.tolist() if raw_mdp_weights is not None else None,
+            }
+        mdp_return = mdp_portfolio["mean_return"] if return_type == "Arithmetic" else mdp_portfolio["cagr"]
         if mdp_return is None:
             raise KeyError("No return value found for most diversified portfolio.")
-        mdp_weights = _get_portfolio_weights_percent(mdp_portfolio, ef_object.symbols)
-        weights_array_mdp = np.expand_dims(mdp_weights, axis=0) if mdp_weights is not None else None
+        mdp_weights = mdp_portfolio["weights"]
+        weights_array_mdp = [mdp_weights] if mdp_weights is not None else None
         fig.add_trace(
             go.Scatter(
-                x=[mdp_portfolio["Risk"] * 100],
+                x=[mdp_portfolio["risk"]],
                 y=[mdp_return * 100],
                 customdata=weights_array_mdp,
                 hovertemplate=hovertemplate,
@@ -370,11 +544,16 @@ def _prepare_single_ef(
         )
     # CML line
     if ef_options["cml"] == "On":
-        cagr_option = "cagr" if return_type == "Geometric" else "mean_return"
         rf_rate = ef_options["rf_rate"]
-        tg = ef_object.get_tangency_portfolio(rate_of_return=cagr_option, rf_return=rf_rate / 100)
-        weights_array = np.expand_dims(tg["Weights"], axis=0) * 100
-        x_cml, y_cml = [0, tg["Risk"] * 100], [rf_rate, tg["Rate_of_return"] * 100]
+        if ef_cache_key:
+            tg = _get_tangency_portfolio_data(ef_cache_key, return_type, rf_rate)
+            weights_array = [tg["weights"]]
+            x_cml, y_cml = [0, tg["risk"]], [rf_rate, tg["rate_of_return"]]
+        else:
+            cagr_option = "cagr" if return_type == "Geometric" else "mean_return"
+            tg = ef_object.get_tangency_portfolio(rate_of_return=cagr_option, rf_return=rf_rate / 100)
+            weights_array = (np.expand_dims(tg["Weights"], axis=0) * 100).tolist()
+            x_cml, y_cml = [0, tg["Risk"] * 100], [rf_rate, tg["Rate_of_return"] * 100]
         fig.add_trace(
             go.Scatter(
                 x=x_cml,
@@ -403,18 +582,26 @@ def _prepare_single_ef(
         _add_assets_trace(fig, ef_object, return_type, trace_name="Assets")
     # Monte-Carlo simulation
     if ef_options["n_monte_carlo"]:
-        try:
-            kind = "mean" if return_type == "Arithmetic" else "cagr"
-            df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"], kind=kind) * 100
-        except TypeError:
-            df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"]) * 100
-        mc_y_column = _resolve_return_column(df, return_type)
-        mc_asset_columns = _get_asset_columns(df, ef_object)
-        weights_array = df[mc_asset_columns].to_numpy() if mc_asset_columns else None
+        if ef_cache_key:
+            mc_data = _get_monte_carlo_data(ef_cache_key, ef_options["n_monte_carlo"], return_type)
+            mc_x = mc_data["risk"]
+            mc_y = _get_cached_return_values(mc_data, return_type)
+            weights_array = mc_data["weights"]
+        else:
+            try:
+                kind = "mean" if return_type == "Arithmetic" else "cagr"
+                df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"], kind=kind) * 100
+            except TypeError:
+                df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"]) * 100
+            mc_y_column = _resolve_return_column(df, return_type)
+            mc_asset_columns = _get_asset_columns(df, ef_object)
+            weights_array = df[mc_asset_columns].to_numpy().tolist() if mc_asset_columns else None
+            mc_x = df["Risk"].tolist()
+            mc_y = df[mc_y_column].tolist()
         fig.add_trace(
             go.Scatter(
-                x=df["Risk"],
-                y=df[mc_y_column],
+                x=mc_x,
+                y=mc_y,
                 customdata=weights_array,
                 hovertemplate=hovertemplate,
                 mode="markers",
@@ -424,7 +611,12 @@ def _prepare_single_ef(
     return _update_figure_layout(fig)
 
 
-def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options: dict):
+def prepare_ef(
+    ef: pd.DataFrame,
+    ef_object: okama.EfficientFrontier,
+    ef_options: dict,
+    ef_cache_key: str | None = None,
+):
     plot_types = _normalize_plot_types(ef_options.get("plot_type")) or ["Frontier"]
     return_type = ef_options.get("return_type", "Geometric")
     fig = go.Figure()
@@ -437,6 +629,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
             fig=fig,
             include_assets="Pairwise" not in plot_types,
             line_width=4.0 if "Pairwise" in plot_types else 2.0,
+            ef_cache_key=ef_cache_key,
         )
 
     if "Pairwise" in plot_types:
@@ -444,6 +637,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
             ef_object,
             return_type=return_type,
             include_assets="Frontier" not in plot_types,
+            ef_cache_key=ef_cache_key,
         )
         for trace in pairwise_fig.data:
             fig.add_trace(trace)

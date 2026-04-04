@@ -1,20 +1,13 @@
-import inspect
-import pickle
-from pathlib import Path
-
 import dash
 import dash.exceptions
 from dash import callback, html, dcc
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
-import okama as ok
-
 import common
 import common.create_link
 import common.math
 import common.update_style
-from common import settings
 from common.parse_query import make_list_from_string
 
 from pages.efficient_frontier.cards_efficient_frontier.ef_description import card_ef_description
@@ -26,6 +19,7 @@ from pages.efficient_frontier.cards_efficient_frontier.ef_find_weights import ca
 
 from common.mobile_screens import adopt_small_screens
 from pages.efficient_frontier.prepare_ef_plot import prepare_transition_map, prepare_ef, compact_ef_for_small_screens
+from pages.efficient_frontier.ef_cache import get_minimized_risk_portfolio, get_or_create_ef_object, load_ef_object
 
 dash.register_page(
     __name__,
@@ -34,8 +28,6 @@ dash.register_page(
     name="Efficient Frontier",
     description="Efficient Frontier for the investment portfolios",
 )
-
-data_folder = Path(__file__).parent.parent.parent / common.cache_directory
 
 
 def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, **kwargs):
@@ -150,30 +142,13 @@ def update_ef_cards(
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     if not symbols:
         raise dash.exceptions.PreventUpdate
-    new_ef_file_name_str = common.create_link.create_filename(tickers_list=symbols,
-                                                          ccy=ccy,
-                                                          first_date=fd_value,
-                                                          last_date=ld_value,
-                                                          rebal=rebalancing_period,
-                                                          )
-    new_ef_file = data_folder / new_ef_file_name_str
-    if new_ef_file.is_file():
-        with open(new_ef_file, 'rb') as f:
-            print("found cached EF file...")
-            ef_object = pickle.load(f)
-    else:
-        ef_kwargs = dict(
-            first_date=fd_value,
-            last_date=ld_value,
-            ccy=ccy,
-            inflation=False,
-            n_points=settings.EF_POINTS,
-            full_frontier=True,
-        )
-        ef_signature = inspect.signature(ok.EfficientFrontier)
-        if "rebalancing_strategy" in ef_signature.parameters:
-            ef_kwargs["rebalancing_strategy"] = ok.Rebalance(period=rebalancing_period)
-        ef_object = ok.EfficientFrontier(symbols, **ef_kwargs)
+    ef_object, ef_file_name = get_or_create_ef_object(
+        symbols=symbols,
+        ccy=ccy,
+        first_date=fd_value,
+        last_date=ld_value,
+        rebalancing_period=rebalancing_period,
+    )
     ef_options = dict(
         plot_type=plot_option,
         return_type=mean_type_option,
@@ -183,18 +158,8 @@ def update_ef_cards(
         n_monte_carlo=n_monte_carlo,
     )
     ef = ef_object.ef_points * 100
-    # Cache ef to pickle file
-    ef_file_name = common.create_link.create_filename(tickers_list=ef_object.symbols,
-                                                      ccy=ef_object.currency,
-                                                      first_date=ef_object.first_date.strftime('%Y-%m'),
-                                                      last_date=ef_object.last_date.strftime('%Y-%m'),
-                                                      rebal=rebalancing_period,
-                                                      )
-    data_file = data_folder / ef_file_name
-    with open(data_file, 'wb') as f:  # open a text file
-        pickle.dump(ef_object, f, protocol=pickle.HIGHEST_PROTOCOL)  # serialize the EF
 
-    fig1 = prepare_ef(ef, ef_object, ef_options)
+    fig1 = prepare_ef(ef, ef_object, ef_options, ef_cache_key=ef_file_name)
     fig2 = prepare_transition_map(ef)
 
     # Change layout for mobile screens
@@ -235,8 +200,7 @@ def display_click_data(clickData, n_click, symbols, file_name):
 
     weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for w, t in zip(weights_list, symbols)])
     weights_for_link = common.math.round_list(weights_list, 2)
-    with open(data_folder / file_name, 'rb') as f:
-        ef_object = pickle.load(f)
+    ef_object = load_ef_object(file_name)
     link = common.create_link.create_link(
         href='/portfolio/',
         tickers_list=ef_object.symbols,
@@ -299,14 +263,10 @@ def find_portfolio(n_clicks, ror, file_name):
     """
     if n_clicks ==0 or file_name is None:
         raise dash.exceptions.PreventUpdate
-    with open(data_folder / file_name, 'rb') as f:
-        ef_object = pickle.load(f)
+    ef_object = load_ef_object(file_name)
     try:
         target_value = ror / 100.
-        try:
-            optimized_portfolio: dict = ef_object.minimize_risk(target_value=target_value)
-        except TypeError:
-            optimized_portfolio = ef_object.minimize_risk(target_return=target_value, monthly_return=False)
+        optimized_portfolio = get_minimized_risk_portfolio(file_name, target_value)
 
         mean_return = optimized_portfolio.get('Mean return')
         cagr = optimized_portfolio.get('CAGR')
@@ -353,8 +313,7 @@ def show_max_min_return(n_clicks, file_name):
     """
     if n_clicks ==0 or file_name is None:
         raise dash.exceptions.PreventUpdate
-    with open(data_folder / file_name, 'rb') as f:
-        ef_object = pickle.load(f)
+    ef_object = load_ef_object(file_name)
     ef_points = ef_object.ef_points
     if "CAGR" not in ef_points.columns:
         raise dash.exceptions.PreventUpdate
