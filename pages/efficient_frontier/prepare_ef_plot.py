@@ -87,7 +87,7 @@ def _to_position_list(textposition, size: int) -> list[str]:
     return [str(position) for position in positions[:size]]
 
 
-def _estimate_horizontal_text_padding(fig: go.Figure) -> tuple[float, float]:
+def _estimate_horizontal_text_padding(fig: go.Figure, compact: bool = False) -> tuple[float, float]:
     x_values = []
     for trace in fig.data:
         trace_x = getattr(trace, "x", None)
@@ -106,8 +106,8 @@ def _estimate_horizontal_text_padding(fig: go.Figure) -> tuple[float, float]:
 
     left_padding = 0.0
     right_padding = 0.0
-    base_padding = x_span * 0.02
-    char_padding = x_span * 0.009
+    base_padding = x_span * (0.01 if compact else 0.02)
+    char_padding = x_span * (0.004 if compact else 0.009)
 
     for trace in fig.data:
         texts = _to_string_list(getattr(trace, "text", None))
@@ -124,7 +124,7 @@ def _estimate_horizontal_text_padding(fig: go.Figure) -> tuple[float, float]:
     return left_padding, right_padding
 
 
-def _update_xaxis_range_for_labels(fig: go.Figure) -> go.Figure:
+def _update_xaxis_range_for_labels(fig: go.Figure, compact: bool = False) -> go.Figure:
     x_values = []
     for trace in fig.data:
         trace_x = getattr(trace, "x", None)
@@ -141,10 +141,10 @@ def _update_xaxis_range_for_labels(fig: go.Figure) -> go.Figure:
     x_max = max(x_values)
     x_span = max(x_max - x_min, max(abs(x_min), abs(x_max), 1.0) * 0.1)
 
-    left_padding, right_padding = _estimate_horizontal_text_padding(fig)
+    left_padding, right_padding = _estimate_horizontal_text_padding(fig, compact=compact)
     # Keep a small visual gap near chart edges even for traces without text labels.
-    left_padding = max(left_padding, x_span * 0.06)
-    right_padding = max(right_padding, x_span * 0.02)
+    left_padding = max(left_padding, x_span * (0.02 if compact else 0.06))
+    right_padding = max(right_padding, x_span * (0.01 if compact else 0.02))
 
     fig.update_xaxes(
         range=[x_min - left_padding, x_max + right_padding],
@@ -153,14 +153,22 @@ def _update_xaxis_range_for_labels(fig: go.Figure) -> go.Figure:
     return fig
 
 
-def _update_figure_layout(fig: go.Figure) -> go.Figure:
-    _update_xaxis_range_for_labels(fig)
+def _update_figure_layout(fig: go.Figure, compact: bool = False) -> go.Figure:
+    _update_xaxis_range_for_labels(fig, compact=compact)
     fig.update_layout(
         height=800,
         xaxis_title="Risk (standard deviation)",
         yaxis_title="Rate of Return",
     )
     return fig
+
+
+def compact_ef_for_small_screens(fig: go.Figure) -> go.Figure:
+    for trace in fig.data:
+        mode = getattr(trace, "mode", "") or ""
+        if "text" in mode:
+            trace.update(textposition="top center")
+    return _update_figure_layout(fig, compact=True)
 
 
 def _add_assets_trace(

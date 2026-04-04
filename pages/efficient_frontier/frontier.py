@@ -25,7 +25,7 @@ from pages.efficient_frontier.cards_efficient_frontier.ef_chart_transition_map i
 from pages.efficient_frontier.cards_efficient_frontier.ef_find_weights import card_ef_find_weights
 
 from common.mobile_screens import adopt_small_screens
-from pages.efficient_frontier.prepare_ef_plot import prepare_transition_map, prepare_ef
+from pages.efficient_frontier.prepare_ef_plot import prepare_transition_map, prepare_ef, compact_ef_for_small_screens
 
 dash.register_page(
     __name__,
@@ -198,6 +198,8 @@ def update_ef_cards(
     fig2 = prepare_transition_map(ef)
 
     # Change layout for mobile screens
+    if screen and screen["in_width"] < 800:
+        fig1 = compact_ef_for_small_screens(fig1)
     fig1, config1 = adopt_small_screens(fig1, screen)
     fig2, config2 = adopt_small_screens(fig2, screen)
     return fig1, fig2, config1, config2, ef_file_name
