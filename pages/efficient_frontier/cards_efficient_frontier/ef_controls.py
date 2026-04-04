@@ -27,7 +27,12 @@ def card_controls(
     first_date: Optional[str],
     last_date: Optional[str],
     ccy: Optional[str],
+    rebal: Optional[str],
 ):
+    rebal_options = {"year", "half-year", "quarter", "month", "none"}
+    rebal_from_url = rebal.lower() if isinstance(rebal, str) else None
+    rebal_value = rebal_from_url if rebal_from_url in rebal_options else "month"
+
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -54,6 +59,21 @@ def card_controls(
                             clearable=False,
                             placeholder="Select a base currency",
                             id="ef-base-currency",
+                        ),
+                        html.Label("Rebalancing Frequency"),
+                        dcc.Dropdown(
+                            options=[
+                                {"label": "year", "value": "year"},
+                                {"label": "half-year", "value": "half-year"},
+                                {"label": "quarter", "value": "quarter"},
+                                {"label": "month", "value": "month"},
+                                {"label": "none", "value": "none"},
+                            ],
+                            value=rebal_value,
+                            multi=False,
+                            clearable=False,
+                            placeholder="Select rebalancing frequency",
+                            id="ef-rebalancing-frequency",
                         ),
                     ],
                 ),
@@ -115,8 +135,8 @@ def card_controls(
                                                     "value": "Geometric",
                                                 },
                                                 {
-                                                    "label": "Arithmetic mean vs Risk",
-                                                    "value": "Arithmetic",
+                                                    "label": "Pairwise efficiency frontiers",
+                                                    "value": "Pairwise",
                                                 },
                                             ],
                                             value="Geometric",
@@ -313,9 +333,10 @@ def card_controls(
 @callback(
     Output(component_id="risk-free-rate-option", component_property="disabled"),
     Input(component_id="cml-option", component_property="value"),
+    Input(component_id="ef-plot-options", component_property="value"),
 )
-def update_risk_free_rate(cml: str):
-    return cml == "Off"
+def update_risk_free_rate(cml: str, plot_type: str):
+    return cml == "Off" or plot_type == "Pairwise"
 
 
 @callback(
@@ -325,9 +346,17 @@ def update_risk_free_rate(cml: str):
     Input("ef-base-currency", "value"),
     Input("ef-first-date", "value"),
     Input("ef-last-date", "value"),
+    Input("ef-rebalancing-frequency", "value"),
 )
-def update_link_ef(href: str, tickers_list: list, ccy: str, first_date: str, last_date: str):
-    return create_link(ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list)
+def update_link_ef(href: str, tickers_list: list, ccy: str, first_date: str, last_date: str, rebal: str):
+    return create_link(
+        ccy=ccy,
+        first_date=first_date,
+        href=href,
+        last_date=last_date,
+        tickers_list=tickers_list,
+        rebal=rebal,
+    )
 
 
 @app.callback(

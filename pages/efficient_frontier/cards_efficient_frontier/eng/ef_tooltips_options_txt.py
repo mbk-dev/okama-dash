@@ -6,8 +6,8 @@ ef_options_tooltip_ror = dcc.Markdown(
     that would be required for an investment to grow from its initial to its
     final value, assuming all incomes were reinvested.  
     &NewLine;  
-    **Arithmetic mean** - annualized mean return (arithmetic mean) for
-    the rate of return monthly time series.
+    **Pairwise efficiency frontiers** - plots efficient frontiers for every
+    pair of selected assets using arithmetic mean return.
     """
 )
 ef_options_tooltip_cml = dcc.Markdown(

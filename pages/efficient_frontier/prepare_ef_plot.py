@@ -1,3 +1,6 @@
+import inspect
+import itertools
+
 import numpy as np
 import okama
 import pandas as pd
@@ -7,7 +10,7 @@ import plotly.express as px
 
 
 def _resolve_return_column(df: pd.DataFrame, plot_type: str) -> str:
-    if plot_type == "Arithmetic":
+    if plot_type in {"Arithmetic", "Pairwise"}:
         candidates = ("Mean return", "Return", "CAGR")
     else:
         candidates = ("CAGR", "Return", "Mean return")
@@ -40,6 +43,94 @@ def _get_portfolio_weights_percent(portfolio: dict, symbols: list[str]) -> np.nd
     if all(symbol in portfolio for symbol in symbols):
         return np.asarray([portfolio[symbol] for symbol in symbols], dtype=float) * 100
     return None
+
+
+def _expand_weights_to_full_universe(
+    weights_array: np.ndarray,
+    asset_columns: list[str],
+    all_symbols: list[str],
+) -> np.ndarray:
+    expanded_weights = np.zeros((len(weights_array), len(all_symbols)))
+    symbol_to_index = {symbol: index for index, symbol in enumerate(all_symbols)}
+    for column_index, symbol in enumerate(asset_columns):
+        if symbol in symbol_to_index:
+            expanded_weights[:, symbol_to_index[symbol]] = weights_array[:, column_index]
+    return expanded_weights
+
+
+def _make_pairwise_ef_object(
+    ef_object: okama.EfficientFrontier,
+    pair_assets: list,
+) -> okama.EfficientFrontier:
+    ef_kwargs = dict(
+        ccy=ef_object.currency,
+        first_date=ef_object.first_date,
+        last_date=ef_object.last_date,
+        inflation=hasattr(ef_object, "inflation"),
+        full_frontier=True,
+        n_points=ef_object.n_points,
+    )
+    ef_signature = inspect.signature(okama.EfficientFrontier)
+    if "rebalancing_strategy" in ef_signature.parameters and hasattr(ef_object, "rebalancing_strategy"):
+        ef_kwargs["rebalancing_strategy"] = ef_object.rebalancing_strategy
+    return okama.EfficientFrontier(assets=pair_assets, **ef_kwargs)
+
+
+def prepare_pairwise_ef(ef_object: okama.EfficientFrontier):
+    hovertemplate = "<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b>" + "<extra></extra>"
+    fig = go.Figure()
+    for pair_assets in itertools.combinations(ef_object.asset_obj_dict.values(), 2):
+        pair_symbols = [asset.symbol for asset in pair_assets]
+        pair_ef_object = _make_pairwise_ef_object(
+            ef_object=ef_object,
+            pair_assets=list(pair_assets),
+        )
+        pair_ef = pair_ef_object.ef_points * 100
+        pair_y_column = _resolve_return_column(pair_ef, "Pairwise")
+        pair_asset_columns = _get_asset_columns(pair_ef, pair_ef_object)
+        pair_weights = pair_ef[pair_asset_columns].to_numpy()
+        weights_array = _expand_weights_to_full_universe(pair_weights, pair_asset_columns, ef_object.symbols)
+        fig.add_trace(
+            go.Scatter(
+                x=pair_ef["Risk"],
+                y=pair_ef[pair_y_column],
+                customdata=weights_array,
+                hovertemplate=hovertemplate,
+                mode="lines",
+                name=" / ".join(pair_symbols),
+            )
+        )
+
+    df = pd.concat(
+        [ef_object.mean_return, ef_object.risk_annual.iloc[-1]],
+        axis=1,
+        join="outer",
+        copy="false",
+        ignore_index=False,
+    )
+    df *= 100
+    df.columns = ["Return", "Risk"]
+    df.reset_index(drop=False, inplace=True)
+    assets_weights = np.eye(len(df)) * 100
+    fig.add_trace(
+        go.Scatter(
+            x=df["Risk"],
+            y=df["Return"],
+            customdata=assets_weights,
+            mode="markers+text",
+            marker=dict(size=8, color="orange"),
+            text=df.iloc[:, 0].to_list(),
+            hovertemplate=hovertemplate,
+            textposition="bottom right",
+            name="Assets",
+        )
+    )
+    fig.update_layout(
+        height=800,
+        xaxis_title="Risk (standard deviation)",
+        yaxis_title="Rate of Return",
+    )
+    return fig
 
 
 def prepare_transition_map(ef: pd.DataFrame):
@@ -76,6 +167,8 @@ def prepare_transition_map(ef: pd.DataFrame):
 
 
 def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options: dict):
+    if ef_options["plot_type"] == "Pairwise":
+        return prepare_pairwise_ef(ef_object)
     y_column = _resolve_return_column(ef, ef_options["plot_type"])
     ef_asset_columns = _get_asset_columns(ef, ef_object)
     weights_array = ef[ef_asset_columns].to_numpy()
@@ -160,7 +253,7 @@ def prepare_ef(ef: pd.DataFrame, ef_object: okama.EfficientFrontier, ef_options:
             )
         )
     # Assets Risk-Return points
-    ror_df = ef_object.mean_return if ef_options["plot_type"] == "Arithmetic" else ef_object.get_cagr()
+    ror_df = ef_object.mean_return if ef_options["plot_type"] in {"Arithmetic", "Pairwise"} else ef_object.get_cagr()
     df = pd.concat(
         [ror_df, ef_object.risk_annual.iloc[-1]],
         axis=1,

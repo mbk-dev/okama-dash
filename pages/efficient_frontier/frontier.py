@@ -1,3 +1,4 @@
+import inspect
 import pickle
 from pathlib import Path
 
@@ -36,13 +37,14 @@ dash.register_page(
 
 data_folder = Path(__file__).parent.parent.parent / common.cache_directory
 
-def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
+
+def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, **kwargs):
     tickers_list = make_list_from_string(tickers)
     page = dbc.Container(
         [
             dbc.Row(
                 [
-                    dbc.Col(card_controls(tickers_list, first_date, last_date, ccy), lg=7),
+                    dbc.Col(card_controls(tickers_list, first_date, last_date, ccy, rebal), lg=7),
                     dbc.Col(card_ef_info, lg=5),
                 ]
             ),
@@ -118,6 +120,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="ef-first-date", component_property="value"),
     State(component_id="ef-last-date", component_property="value"),
     # Options
+    State(component_id="ef-rebalancing-frequency", component_property="value"),
     State(component_id="ef-plot-options", component_property="value"),
     State(component_id="mdp-line-option", component_property="value"),
     State(component_id="cml-option", component_property="value"),
@@ -135,6 +138,7 @@ def update_ef_cards(
     fd_value: str,
     ld_value: str,
     # Options
+    rebalancing_period: str,
     plot_option: str,
     mdp_option: str,
     cml_option: str,
@@ -147,7 +151,8 @@ def update_ef_cards(
     new_ef_file_name_str = common.create_link.create_filename(tickers_list=symbols,
                                                           ccy=ccy,
                                                           first_date=fd_value,
-                                                          last_date=ld_value
+                                                          last_date=ld_value,
+                                                          rebal=rebalancing_period,
                                                           )
     new_ef_file = data_folder / new_ef_file_name_str
     if new_ef_file.is_file():
@@ -155,8 +160,7 @@ def update_ef_cards(
             print("found cached EF file...")
             ef_object = pickle.load(f)
     else:
-        ef_object = ok.EfficientFrontier(
-            symbols,
+        ef_kwargs = dict(
             first_date=fd_value,
             last_date=ld_value,
             ccy=ccy,
@@ -164,6 +168,10 @@ def update_ef_cards(
             n_points=settings.EF_POINTS,
             full_frontier=True,
         )
+        ef_signature = inspect.signature(ok.EfficientFrontier)
+        if "rebalancing_strategy" in ef_signature.parameters:
+            ef_kwargs["rebalancing_strategy"] = ok.Rebalance(period=rebalancing_period)
+        ef_object = ok.EfficientFrontier(symbols, **ef_kwargs)
     ef_options = dict(
         plot_type=plot_option, mdp=mdp_option, cml=cml_option, rf_rate=rf_rate, n_monte_carlo=n_monte_carlo
     )
@@ -172,7 +180,8 @@ def update_ef_cards(
     ef_file_name = common.create_link.create_filename(tickers_list=ef_object.symbols,
                                                       ccy=ef_object.currency,
                                                       first_date=ef_object.first_date.strftime('%Y-%m'),
-                                                      last_date=ef_object.last_date.strftime('%Y-%m')
+                                                      last_date=ef_object.last_date.strftime('%Y-%m'),
+                                                      rebal=rebalancing_period,
                                                       )
     data_file = data_folder / ef_file_name
     with open(data_file, 'wb') as f:  # open a text file
