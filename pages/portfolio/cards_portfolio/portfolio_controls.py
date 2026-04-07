@@ -3,11 +3,11 @@ test URL:
 http://127.0.0.1:8050/portfolio?tickers=SPY.US,BND.US,GLD.US&weights=30,20,50&first_date=2015-01&last_date=2020-12&ccy=RUB&rebal=year
 """
 
-import re
 from typing import Optional, Tuple
 
 import dash
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 import numpy as np
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback, ALL, MATCH
@@ -16,17 +16,17 @@ import pandas as pd
 from dash.exceptions import PreventUpdate
 
 from common import settings as settings, inflation as inflation
+from common.mantine import search_provider
 from common.create_link import create_link
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
-from common.symbols import get_symbols
+from common.symbols import get_selected_symbol_options, search_symbol_options
 from common import cache
 import common.validators as validators
 import pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt as tl
 
 app = dash.get_app()
 cache.init_app(app.server)
-options = get_symbols()
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -710,12 +710,17 @@ def append_row(children, symbol, weight, n_clicks):
     new_row = dbc.Row(
         [
             dbc.Col(
-                dcc.Dropdown(
-                    multi=False,
-                    id={"type": "pf-dynamic-dropdown", "index": n_clicks},
-                    options=[symbol] if symbol else [],
-                    value=symbol,
-                    placeholder="Type a ticker",
+                search_provider(
+                    dmc.Select(
+                        id={"type": "pf-dynamic-dropdown", "index": n_clicks},
+                        data=get_selected_symbol_options([symbol] if symbol else None),
+                        value=symbol,
+                        placeholder="Type a ticker",
+                        searchable=True,
+                        clearable=True,
+                        nothingFoundMessage="No matching tickers",
+                        comboboxProps={"shadow": "md"},
+                    )
                 ),
             ),
             dbc.Col(
@@ -735,13 +740,14 @@ def append_row(children, symbol, weight, n_clicks):
 
 
 @app.callback(
-    Output({"type": "pf-dynamic-dropdown", "index": MATCH}, "options"),
-    Input({"type": "pf-dynamic-dropdown", "index": MATCH}, "search_value"),
+    Output({"type": "pf-dynamic-dropdown", "index": MATCH}, "data"),
+    Input({"type": "pf-dynamic-dropdown", "index": MATCH}, "searchValue"),
+    Input({"type": "pf-dynamic-dropdown", "index": MATCH}, "value"),
 )
-def optimize_search_al(search_value) -> list:
+def optimize_search_al(search_value, selected_value) -> list:
     if not search_value:
         raise PreventUpdate
-    return [o for o in options if re.match(search_value, o, re.IGNORECASE)]
+    return search_symbol_options(search_value, [selected_value] if selected_value else None)
 
 
 @app.callback(

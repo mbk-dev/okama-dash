@@ -1,18 +1,19 @@
-import re
 from typing import Optional
 
 import dash
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback
 
 import pandas as pd
 
 from common import settings as settings, inflation as inflation
+from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
-from common.symbols import get_symbols
+from common.symbols import get_selected_symbol_options, search_symbol_options
 from common import cache
 import common.validators as validators
 from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
@@ -23,7 +24,6 @@ from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
 
 app = dash.get_app()
 cache.init_app(app.server)
-options = get_symbols()
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -42,12 +42,17 @@ def card_controls(
                 html.Div(
                     [
                         html.Label("Tickers to compare"),
-                        dcc.Dropdown(
-                            options=tickers_list if tickers_list else [],
-                            value=tickers_list if tickers_list else settings.default_symbols,
-                            multi=True,
-                            placeholder="Select assets",
-                            id="al-symbols-list",
+                        search_provider(
+                            dmc.MultiSelect(
+                                data=get_selected_symbol_options(tickers_list if tickers_list else settings.default_symbols),
+                                value=tickers_list if tickers_list else settings.default_symbols,
+                                placeholder="Select assets",
+                                id="al-symbols-list",
+                                searchable=True,
+                                clearable=False,
+                                nothingFoundMessage="No matching tickers",
+                                comboboxProps={"shadow": "md"},
+                            )
                         ),
                     ],
                 ),
@@ -287,16 +292,12 @@ def update_link_to_ef(tickers_list: Optional[list], ccy: str, first_date: str, l
 
 
 @app.callback(
-    Output("al-symbols-list", "options"),
-    Input("al-symbols-list", "search_value"),
+    Output("al-symbols-list", "data"),
+    Input("al-symbols-list", "searchValue"),
     Input("al-symbols-list", "value"),
 )
 def optimize_search_al(search_value, selected_values):
-    return (
-        [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])]
-        if search_value
-        else selected_values
-    )
+    return search_symbol_options(search_value, selected_values)
 
 
 @app.callback(

@@ -29,6 +29,7 @@ okama = "^2.0.0"
 dash = "*"
 dash-daq = "*"
 dash-bootstrap-components = "*"
+dash-mantine-components = "*"
 plotly = "5.24.1"  # bug with clickData["points"][0]["customdata"]
 #plotly = "*"
 Flask-Caching = "*"

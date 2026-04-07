@@ -1,23 +1,23 @@
-import re
 from typing import Optional
 
 import dash
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash import html, dcc, callback
 from dash.dependencies import Input, Output
 
 import pandas as pd
 
 from common import settings as settings, inflation as inflation
+from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
-from common.symbols import get_symbols
+from common.symbols import get_selected_symbol_options, search_symbol_options
 from common import cache
 import pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt as tl
 
 app = dash.get_app()
 cache.init_app(app.server)
-options = get_symbols()
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -83,12 +83,17 @@ def card_controls(
                 html.Div(
                     [
                         html.Label("Tickers in the Efficient Frontier"),
-                        dcc.Dropdown(
-                            options=tickers if tickers else [],
-                            value=tickers if tickers else settings.default_symbols,
-                            multi=True,
-                            placeholder="Select assets",
-                            id="ef-symbols-list",
+                        search_provider(
+                            dmc.MultiSelect(
+                                data=get_selected_symbol_options(tickers if tickers else settings.default_symbols),
+                                value=tickers if tickers else settings.default_symbols,
+                                placeholder="Select assets",
+                                id="ef-symbols-list",
+                                searchable=True,
+                                clearable=False,
+                                nothingFoundMessage="No matching tickers",
+                                comboboxProps={"shadow": "md"},
+                            )
                         ),
                     ],
                 ),
@@ -484,16 +489,12 @@ def update_link_ef(href: str, tickers_list: list, ccy: str, first_date: str, las
 
 
 @app.callback(
-    Output("ef-symbols-list", "options"),
-    Input("ef-symbols-list", "search_value"),
+    Output("ef-symbols-list", "data"),
+    Input("ef-symbols-list", "searchValue"),
     Input("ef-symbols-list", "value"),
 )
 def optimize_search_ef(search_value, selected_values):
-    return (
-        [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])]
-        if search_value
-        else selected_values
-    )
+    return search_symbol_options(search_value, selected_values)
 
 
 @app.callback(

@@ -1,19 +1,20 @@
-import re
 from typing import Optional
 
 import dash
 import dash.exceptions
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback
 
 import pandas as pd
 
 from common import settings as settings, inflation as inflation
+from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
-from common.symbols import get_symbols
+from common.symbols import get_selected_symbol_options, search_symbol_options
 from common import cache
 import common.validators as validators
 from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
@@ -24,7 +25,6 @@ from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
 
 app = dash.get_app()
 cache.init_app(app.server)
-options = get_symbols()
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -48,12 +48,19 @@ def benchmark_card_controls(
                                 dbc.Col(
                                     [
                                         html.Label("Benchmark"),
-                                        dcc.Dropdown(
-                                            options=[benchmark] if benchmark else [],
-                                            multi=False,
-                                            placeholder="Select a benchmark",
-                                            id="select-benchmark",
-                                            value=benchmark if benchmark else settings.default_benchmark,
+                                        search_provider(
+                                            dmc.Select(
+                                                data=get_selected_symbol_options(
+                                                    [benchmark] if benchmark else [settings.default_benchmark]
+                                                ),
+                                                placeholder="Select a benchmark",
+                                                id="select-benchmark",
+                                                value=benchmark if benchmark else settings.default_benchmark,
+                                                searchable=True,
+                                                clearable=False,
+                                                nothingFoundMessage="No matching tickers",
+                                                comboboxProps={"shadow": "md"},
+                                            )
                                         ),
                                     ],
                                     lg=6,
@@ -67,12 +74,19 @@ def benchmark_card_controls(
                 html.Div(
                     [
                         html.Label("Tickers to compare with benchmark"),
-                        dcc.Dropdown(
-                            # options=options,
-                            value=tickers_list if tickers_list else settings.default_symbols_benchmark,
-                            multi=True,
-                            placeholder="Select tickers",
-                            id="benchmark-assets-list",
+                        search_provider(
+                            dmc.MultiSelect(
+                                data=get_selected_symbol_options(
+                                    tickers_list if tickers_list else settings.default_symbols_benchmark
+                                ),
+                                value=tickers_list if tickers_list else settings.default_symbols_benchmark,
+                                placeholder="Select tickers",
+                                id="benchmark-assets-list",
+                                searchable=True,
+                                clearable=False,
+                                nothingFoundMessage="No matching tickers",
+                                comboboxProps={"shadow": "md"},
+                            )
                         ),
                     ],
                 ),
@@ -284,27 +298,23 @@ def update_link_benchmark(
 
 
 @app.callback(
-    Output("select-benchmark", "options"),
-    Input("select-benchmark", "search_value"),
+    Output("select-benchmark", "data"),
+    Input("select-benchmark", "searchValue"),
     Input("select-benchmark", "value"),
 )
 def optimize_search_benchmark(search_value, selected_value):
     if not search_value:
         raise dash.exceptions.PreventUpdate
-    return [o for o in options if re.match(search_value, o, re.IGNORECASE)] if search_value else selected_value
+    return search_symbol_options(search_value, [selected_value] if selected_value else None)
 
 
 @app.callback(
-    Output("benchmark-assets-list", "options"),
-    Input("benchmark-assets-list", "search_value"),
+    Output("benchmark-assets-list", "data"),
+    Input("benchmark-assets-list", "searchValue"),
     Input("benchmark-assets-list", "value"),
 )
 def optimize_search_assets_benchmark(search_value, selected_values):
-    return (
-        [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])]
-        if search_value
-        else selected_values
-    )
+    return search_symbol_options(search_value, selected_values)
 
 
 @app.callback(
