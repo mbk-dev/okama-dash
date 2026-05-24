@@ -23,6 +23,9 @@ classifiers = [
 ]
 packages = [{include = "okama_dash"}]
 
+[tool.poetry]
+package-mode = false
+
 [tool.poetry.dependencies]
 python = ">=3.11, <4.0.0"
 okama = "^2.0.0"
