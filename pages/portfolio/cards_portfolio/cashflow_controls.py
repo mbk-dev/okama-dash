@@ -72,7 +72,6 @@ def cashflow_accordion_item(
     cf_freq=None,
     cf_amount=None,
     cf_indexation=None,
-    cf_indexation_type=None,
     cf_pct=None,
     vds_pct=None,
     vds_min=None,
@@ -82,10 +81,8 @@ def cashflow_accordion_item(
     vds_ceil=None,
     vds_adj_fc=None,
     vds_indexation=None,
-    vds_indexation_type=None,
     cwd_amount=None,
     cwd_indexation=None,
-    cwd_indexation_type=None,
     cwd_tr=None,
     cf_ts=None,
 ):
@@ -257,25 +254,7 @@ def cashflow_accordion_item(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label("Indexation type"),
-                                    dcc.Dropdown(
-                                        options=[
-                                            {"label": "Custom rate", "value": "custom"},
-                                            {"label": "Inflation", "value": "inflation"},
-                                        ],
-                                        value=cf_indexation_type if cf_indexation_type else "custom",
-                                        multi=False,
-                                        clearable=False,
-                                        id="pf-cf-indexation-type",
-                                    ),
-                                ],
-                                lg=3,
-                                md=3,
-                                sm=6,
-                            ),
-                            dbc.Col(
-                                [
-                                    html.Label("Rate"),
+                                    html.Label("Indexation rate"),
                                     dbc.Input(
                                         id="pf-cf-indexation",
                                         type="number",
@@ -283,14 +262,13 @@ def cashflow_accordion_item(
                                         max=1,
                                         step=0.01,
                                         value=cf_indexation,
-                                        placeholder="0.05",
+                                        placeholder="inflation",
                                     ),
-                                    dbc.FormText("0 - 1"),
+                                    dbc.FormText("0 - 1 (empty = inflation)"),
                                 ],
-                                lg=3,
-                                md=3,
+                                lg=6,
+                                md=6,
                                 sm=6,
-                                id="pf-cf-indexation-rate-col",
                             ),
                         ],
                         class_name="mt-2",
@@ -525,25 +503,7 @@ def cashflow_accordion_item(
                         [
                             dbc.Col(
                                 [
-                                    html.Label("Indexation type"),
-                                    dcc.Dropdown(
-                                        options=[
-                                            {"label": "Custom rate", "value": "custom"},
-                                            {"label": "Inflation", "value": "inflation"},
-                                        ],
-                                        value=vds_indexation_type if vds_indexation_type else "custom",
-                                        multi=False,
-                                        clearable=False,
-                                        id="pf-cf-vds-indexation-type",
-                                    ),
-                                ],
-                                lg=6,
-                                md=6,
-                                sm=12,
-                            ),
-                            dbc.Col(
-                                [
-                                    html.Label("Rate"),
+                                    html.Label("Indexation rate"),
                                     dbc.Input(
                                         id="pf-cf-vds-indexation",
                                         type="number",
@@ -551,14 +511,13 @@ def cashflow_accordion_item(
                                         max=1,
                                         step=0.01,
                                         value=vds_indexation,
-                                        placeholder="0.05",
+                                        placeholder="inflation",
                                     ),
-                                    dbc.FormText("0 - 1"),
+                                    dbc.FormText("0 - 1 (empty = inflation)"),
                                 ],
                                 lg=6,
                                 md=6,
                                 sm=12,
-                                id="pf-cf-vds-indexation-rate-col",
                             ),
                         ],
                         class_name="mt-2",
@@ -607,25 +566,7 @@ def cashflow_accordion_item(
                         [
                             dbc.Col(
                                 [
-                                    html.Label("Indexation type"),
-                                    dcc.Dropdown(
-                                        options=[
-                                            {"label": "Custom rate", "value": "custom"},
-                                            {"label": "Inflation", "value": "inflation"},
-                                        ],
-                                        value=cwd_indexation_type if cwd_indexation_type else "custom",
-                                        multi=False,
-                                        clearable=False,
-                                        id="pf-cf-cwd-indexation-type",
-                                    ),
-                                ],
-                                lg=6,
-                                md=6,
-                                sm=12,
-                            ),
-                            dbc.Col(
-                                [
-                                    html.Label("Rate"),
+                                    html.Label("Indexation rate"),
                                     dbc.Input(
                                         id="pf-cf-cwd-indexation",
                                         type="number",
@@ -633,14 +574,13 @@ def cashflow_accordion_item(
                                         max=1,
                                         step=0.01,
                                         value=cwd_indexation,
-                                        placeholder="0.05",
+                                        placeholder="inflation",
                                     ),
-                                    dbc.FormText("0 - 1"),
+                                    dbc.FormText("0 - 1 (empty = inflation)"),
                                 ],
                                 lg=6,
                                 md=6,
                                 sm=12,
-                                id="pf-cf-cwd-indexation-rate-col",
                             ),
                         ],
                         class_name="mt-2",
@@ -748,34 +688,6 @@ def lock_frequency_for_strategy(strategy, current_freq):
     return current_freq, False, None
 
 
-@callback(
-    Output("pf-cf-indexation-rate-col", "style"),
-    Input("pf-cf-indexation-type", "value"),
-)
-def toggle_indexation_rate(indexation_type):
-    if indexation_type == "inflation":
-        return {"display": "none"}
-    return None
-
-
-@callback(
-    Output("pf-cf-vds-indexation-rate-col", "style"),
-    Input("pf-cf-vds-indexation-type", "value"),
-)
-def toggle_vds_indexation_rate(indexation_type):
-    if indexation_type == "inflation":
-        return {"display": "none"}
-    return None
-
-
-@callback(
-    Output("pf-cf-cwd-indexation-rate-col", "style"),
-    Input("pf-cf-cwd-indexation-type", "value"),
-)
-def toggle_cwd_indexation_rate(indexation_type):
-    if indexation_type == "inflation":
-        return {"display": "none"}
-    return None
 
 
 @callback(

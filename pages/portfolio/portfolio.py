@@ -76,7 +76,6 @@ def layout(
     cf_freq=None,
     cf_amount=None,
     cf_indexation=None,
-    cf_indexation_type=None,
     cf_pct=None,
     vds_pct=None,
     vds_min=None,
@@ -86,10 +85,8 @@ def layout(
     vds_ceil=None,
     vds_adj_fc=None,
     vds_indexation=None,
-    vds_indexation_type=None,
     cwd_amount=None,
     cwd_tr=None,
-    cwd_indexation_type=None,
     cf_ts=None,
     **kwargs,
 ):
@@ -115,7 +112,6 @@ def layout(
                             cf_freq=cf_freq,
                             cf_amount=float(cf_amount) if cf_amount else None,
                             cf_indexation=float(cf_indexation) if cf_indexation else None,
-                            cf_indexation_type=cf_indexation_type,
                             cf_pct=float(cf_pct) if cf_pct else None,
                             vds_pct=float(vds_pct) if vds_pct else None,
                             vds_min=float(vds_min) if vds_min else None,
@@ -125,9 +121,7 @@ def layout(
                             vds_ceil=float(vds_ceil) if vds_ceil else None,
                             vds_adj_fc=vds_adj_fc == "1" if vds_adj_fc is not None else None,
                             vds_indexation=float(vds_indexation) if vds_indexation else None,
-                            vds_indexation_type=vds_indexation_type,
                             cwd_amount=float(cwd_amount) if cwd_amount else None,
-                            cwd_indexation_type=cwd_indexation_type,
                             cwd_tr=_parse_pair_csv(cwd_tr),
                             cf_ts=_parse_pair_csv(cf_ts),
                         ),
@@ -181,7 +175,6 @@ def layout(
     State(component_id="pf-cf-strategy-type", component_property="value"),
     State(component_id="pf-cf-frequency", component_property="value"),
     State(component_id="pf-cf-amount", component_property="value"),
-    State(component_id="pf-cf-indexation-type", component_property="value"),
     State(component_id="pf-cf-indexation", component_property="value"),
     State(component_id="pf-cf-percentage", component_property="value"),
     # VDS
@@ -192,11 +185,9 @@ def layout(
     State(component_id="pf-cf-vds-floor", component_property="value"),
     State(component_id="pf-cf-vds-ceiling", component_property="value"),
     State(component_id="pf-cf-vds-adjust-fc", component_property="value"),
-    State(component_id="pf-cf-vds-indexation-type", component_property="value"),
     State(component_id="pf-cf-vds-indexation", component_property="value"),
     # CWD
     State(component_id="pf-cf-cwd-amount", component_property="value"),
-    State(component_id="pf-cf-cwd-indexation-type", component_property="value"),
     State(component_id="pf-cf-cwd-indexation", component_property="value"),
     State({"type": "pf-cf-cwd-threshold", "index": ALL}, "value"),
     State({"type": "pf-cf-cwd-reduction", "index": ALL}, "value"),
@@ -233,7 +224,6 @@ def update_graf_portfolio(
     cf_strategy: str,
     cf_frequency: str,
     cf_amount: float,
-    cf_indexation_type: str,
     cf_indexation: float,
     cf_percentage: float,
     # VDS
@@ -244,11 +234,9 @@ def update_graf_portfolio(
     vds_floor: float,
     vds_ceiling: float,
     vds_adjust_fc: bool,
-    vds_indexation_type: str,
     vds_indexation: float,
     # CWD
     cwd_amount: float,
-    cwd_indexation_type: str,
     cwd_indexation: float,
     cwd_thresholds: list,
     cwd_reductions: list,
@@ -327,9 +315,7 @@ def update_graf_portfolio(
             strategy_type=cf_strategy,
             frequency=cf_frequency,
             initial_amount=float(initial_amount),
-            discount_rate=discount_rate,
             cf_amount=cf_amount,
-            cf_indexation_type=cf_indexation_type,
             cf_indexation=cf_indexation,
             cf_percentage=cf_percentage,
             vds_percentage=vds_percentage,
@@ -339,10 +325,8 @@ def update_graf_portfolio(
             vds_floor=vds_floor,
             vds_ceiling=vds_ceiling,
             vds_adjust_fc=vds_adjust_fc,
-            vds_indexation_type=vds_indexation_type,
             vds_indexation=vds_indexation,
             cwd_amount=cwd_amount,
-            cwd_indexation_type=cwd_indexation_type,
             cwd_indexation=cwd_indexation,
             cwd_thresholds=cwd_thresholds,
             cwd_reductions=cwd_reductions,
@@ -410,14 +394,10 @@ def update_graf_portfolio(
     return fig, config, statistics_dash_table, forecast_survival_statistics_datatable, forecast_wealth_statistics_datatable, json_data
 
 
-def _resolve_indexation(indexation_type, indexation_value, discount_rate):
-    if indexation_type == "inflation":
-        return "inflation"
+def _resolve_indexation(indexation_value):
     if indexation_value is not None:
         return float(indexation_value)
-    if discount_rate is not None:
-        return float(discount_rate)
-    return None
+    return "inflation"
 
 
 def _build_cashflow_strategy(
@@ -425,9 +405,7 @@ def _build_cashflow_strategy(
     strategy_type,
     frequency,
     initial_amount,
-    discount_rate,
     cf_amount,
-    cf_indexation_type,
     cf_indexation,
     cf_percentage,
     vds_percentage,
@@ -437,10 +415,8 @@ def _build_cashflow_strategy(
     vds_floor,
     vds_ceiling,
     vds_adjust_fc,
-    vds_indexation_type,
     vds_indexation,
     cwd_amount,
-    cwd_indexation_type,
     cwd_indexation,
     cwd_thresholds,
     cwd_reductions,
@@ -471,7 +447,7 @@ def _build_cashflow_strategy(
         return s
 
     if strategy_type == "vds":
-        indexation = _resolve_indexation(vds_indexation_type, vds_indexation, discount_rate)
+        indexation = _resolve_indexation(vds_indexation)
         min_max = None
         if vds_min_withdrawal is not None and vds_max_withdrawal is not None:
             min_max = (float(vds_min_withdrawal), float(vds_max_withdrawal))
@@ -491,7 +467,7 @@ def _build_cashflow_strategy(
         return s
 
     if strategy_type == "cwd":
-        indexation = _resolve_indexation(cwd_indexation_type, cwd_indexation, discount_rate)
+        indexation = _resolve_indexation(cwd_indexation)
         thresholds = []
         if cwd_thresholds and cwd_reductions:
             for t, r in zip(cwd_thresholds, cwd_reductions):
@@ -510,7 +486,7 @@ def _build_cashflow_strategy(
         return s
 
     # Default: IndexationStrategy
-    indexation = _resolve_indexation(cf_indexation_type, cf_indexation, discount_rate)
+    indexation = _resolve_indexation(cf_indexation)
     s = ok.IndexationStrategy(pf_object)
     s.initial_investment = initial_amount
     s.amount = float(cf_amount) if cf_amount else 0.0

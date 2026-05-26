@@ -27,7 +27,6 @@ def create_link(
     cf_freq=None,
     cf_amount=None,
     cf_indexation=None,
-    cf_indexation_type=None,
     cf_pct=None,
     vds_pct=None,
     vds_min=None,
@@ -37,10 +36,8 @@ def create_link(
     vds_ceil=None,
     vds_adj_fc=None,
     vds_indexation=None,
-    vds_indexation_type=None,
     cwd_amount=None,
     cwd_tr=None,
-    cwd_indexation_type=None,
     cf_ts=None,
 ) -> str:
     tickers_str = "tickers=" + ",".join(str(symbol) for symbol in tickers_list)
@@ -78,8 +75,6 @@ def create_link(
         new_url += f"&cf_amount={cf_amount}"
     if cf_indexation is not None:
         new_url += f"&cf_indexation={cf_indexation}"
-    if cf_indexation_type and cf_indexation_type != "custom":
-        new_url += f"&cf_indexation_type={cf_indexation_type}"
     if cf_pct:
         new_url += f"&cf_pct={cf_pct}"
     if vds_pct:
@@ -98,14 +93,10 @@ def create_link(
         new_url += f"&vds_adj_fc=1"
     if vds_indexation is not None:
         new_url += f"&vds_indexation={vds_indexation}"
-    if vds_indexation_type and vds_indexation_type != "custom":
-        new_url += f"&vds_indexation_type={vds_indexation_type}"
     if cwd_amount:
         new_url += f"&cwd_amount={cwd_amount}"
     if cwd_tr:
         new_url += f"&cwd_tr={cwd_tr}"
-    if cwd_indexation_type and cwd_indexation_type != "custom":
-        new_url += f"&cwd_indexation_type={cwd_indexation_type}"
     if cf_ts:
         new_url += f"&cf_ts={cf_ts}"
     return new_url
