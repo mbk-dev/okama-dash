@@ -332,6 +332,7 @@ def update_graf_portfolio(
             cwd_reductions=cwd_reductions,
             ts_dates=ts_dates,
             ts_amounts=ts_amounts,
+            has_inflation=inflation_on,
         )
         pf_object.dcf.cashflow_parameters = strategy
 
@@ -394,10 +395,10 @@ def update_graf_portfolio(
     return fig, config, statistics_dash_table, forecast_survival_statistics_datatable, forecast_wealth_statistics_datatable, json_data
 
 
-def _resolve_indexation(indexation_value):
+def _resolve_indexation(indexation_value, has_inflation=True):
     if indexation_value is not None:
         return float(indexation_value)
-    return "inflation"
+    return "inflation" if has_inflation else 0
 
 
 def _build_cashflow_strategy(
@@ -422,6 +423,7 @@ def _build_cashflow_strategy(
     cwd_reductions,
     ts_dates,
     ts_amounts,
+    has_inflation=True,
 ):
     if strategy_type == "percentage":
         s = ok.PercentageStrategy(pf_object)
@@ -447,7 +449,7 @@ def _build_cashflow_strategy(
         return s
 
     if strategy_type == "vds":
-        indexation = _resolve_indexation(vds_indexation)
+        indexation = _resolve_indexation(vds_indexation, has_inflation)
         min_max = None
         if vds_min_withdrawal is not None and vds_max_withdrawal is not None:
             min_max = (float(vds_min_withdrawal), float(vds_max_withdrawal))
@@ -467,7 +469,7 @@ def _build_cashflow_strategy(
         return s
 
     if strategy_type == "cwd":
-        indexation = _resolve_indexation(cwd_indexation)
+        indexation = _resolve_indexation(cwd_indexation, has_inflation)
         thresholds = []
         if cwd_thresholds and cwd_reductions:
             for t, r in zip(cwd_thresholds, cwd_reductions):
@@ -486,7 +488,7 @@ def _build_cashflow_strategy(
         return s
 
     # Default: IndexationStrategy
-    indexation = _resolve_indexation(cf_indexation)
+    indexation = _resolve_indexation(cf_indexation, has_inflation)
     s = ok.IndexationStrategy(pf_object)
     s.initial_investment = initial_amount
     s.amount = float(cf_amount) if cf_amount else 0.0
@@ -762,10 +764,22 @@ def get_pf_figure(
         if plot_type == "wealth":
             if n_monte_carlo == 0:
                 df = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False) if has_cashflow else pf_object.wealth_index_with_assets
+                if has_cashflow:
+                    s = df[pf_object.symbol]
+                    zero_mask = s == 0
+                    if zero_mask.any():
+                        first_zero = zero_mask.idxmax()
+                        df.loc[s.index > first_zero, pf_object.symbol] = np.nan
                 # TODO: calculate return_series: portfolio + assets
                 return_series = pf_object.get_cumulative_return(real=False)
             else:
                 df_backtest = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
+                if not df_backtest.empty:
+                    s = df_backtest[pf_object.symbol]
+                    zero_mask = s == 0
+                    if zero_mask.any():
+                        first_zero = zero_mask.idxmax()
+                        df_backtest.loc[s.index > first_zero, pf_object.symbol] = np.nan
                 initial_investment = pf_object.dcf.cashflow_parameters.initial_investment if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment") else settings.INITIAL_INVESTMENT_DEFAULT
                 last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
                 if last_backtest_value > 0:
