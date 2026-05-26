@@ -44,6 +44,7 @@ xlsxwriter = "*"
 pytest = "*"
 black = { version = "*", optional = true }
 gunicorn = "*"
+ruff = "^0.15.14"
 
 [build-system]
 requires = ["poetry-core"]
@@ -51,3 +52,12 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["C", "E", "F", "W", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
