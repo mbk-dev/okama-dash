@@ -790,11 +790,14 @@ def print_weights_sum(values) -> Tuple[str, bool]:
     Input("pf-cf-amount", "value"),
     Input("pf-cf-cwd-amount", "value"),
     Input("pf-cf-strategy-type", "value"),
+    Input("pf-cf-frequency", "value"),
 )
-def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy) -> str:
+def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy, frequency) -> str:
+    freq_multiplier = {"month": 12, "quarter": 4, "half-year": 2, "year": 1}
     amount = cwd_amount if strategy == "cwd" else cf_amount
     if initial_amount and amount:
-        withdrawal_rate = abs(float(amount)) * settings.MONTHS_PER_YEAR / float(initial_amount) * 100
+        periods_per_year = freq_multiplier.get(frequency, 12)
+        withdrawal_rate = abs(float(amount)) * periods_per_year / float(initial_amount) * 100
     else:
         withdrawal_rate = 0
     return f"{withdrawal_rate:.0f}%"

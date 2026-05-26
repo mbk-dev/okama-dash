@@ -173,8 +173,9 @@ def cashflow_accordion_item(
                                 min=0,
                                 max=1,
                                 value=discount_rate if discount_rate else None,
+                                placeholder="inflation",
                             ),
-                            dbc.FormText("0 - 1 (0.05 = 5%)"),
+                            dbc.FormText("0 - 1 (empty = inflation)"),
                             dbc.Tooltip(
                                 tl.pf_options_tooltip_discount_rate,
                                 target="pf-info-discount-rate",
