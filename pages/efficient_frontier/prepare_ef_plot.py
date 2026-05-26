@@ -174,11 +174,7 @@ def _get_monte_carlo_data_cached(
 ) -> dict:
     del cache_version
     ef_object = load_ef_object(ef_cache_key)
-    try:
-        kind = "mean" if return_type == "Arithmetic" else "cagr"
-        df = ef_object.get_monte_carlo(n=n_monte_carlo, kind=kind) * 100
-    except TypeError:
-        df = ef_object.get_monte_carlo(n=n_monte_carlo) * 100
+    df = ef_object.get_monte_carlo(n=n_monte_carlo) * 100
     mc_asset_columns = _get_asset_columns(df, ef_object)
     weights_array = df[mc_asset_columns].to_numpy() if mc_asset_columns else None
     return {
@@ -589,11 +585,7 @@ def _prepare_single_ef(
             mc_y = _get_cached_return_values(mc_data, return_type)
             weights_array = mc_data["weights"]
         else:
-            try:
-                kind = "mean" if return_type == "Arithmetic" else "cagr"
-                df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"], kind=kind) * 100
-            except TypeError:
-                df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"]) * 100
+            df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"]) * 100
             mc_y_column = _resolve_return_column(df, return_type)
             mc_asset_columns = _get_asset_columns(df, ef_object)
             weights_array = df[mc_asset_columns].to_numpy().tolist() if mc_asset_columns else None

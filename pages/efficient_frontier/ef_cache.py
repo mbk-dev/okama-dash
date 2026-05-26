@@ -124,10 +124,7 @@ def _load_ef_object_from_file(file_name: str, mtime_ns: int) -> ok.EfficientFron
 def _get_minimized_risk_portfolio_cached(cache_version: str, file_name: str, target_value: float) -> dict:
     del cache_version
     ef_object = load_ef_object(file_name)
-    try:
-        optimized_portfolio = ef_object.minimize_risk(target_value=target_value)
-    except TypeError:
-        optimized_portfolio = ef_object.minimize_risk(target_return=target_value, monthly_return=False)
+    optimized_portfolio = ef_object.minimize_risk(target_value=target_value)
 
     normalized_portfolio = {}
     for key, value in optimized_portfolio.items():
