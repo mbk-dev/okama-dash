@@ -113,6 +113,7 @@ def rebalancing_accordion_item(rebal=None, abs_dev=None, rel_dev=None):
             ),
         ],
         title="Rebalancing Strategy",
+        item_id="rebalancing",
     )
 
 

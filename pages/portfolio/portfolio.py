@@ -45,6 +45,17 @@ dash.register_page(
 )
 
 
+def _parse_pair_csv(csv_str):
+    if not csv_str:
+        return None
+    pairs = []
+    for item in str(csv_str).split(","):
+        parts = item.split(":", 1)
+        if len(parts) == 2:
+            pairs.append((parts[0].strip(), parts[1].strip()))
+    return pairs or None
+
+
 def layout(
     tickers=None,
     weights=None,
@@ -79,6 +90,7 @@ def layout(
     cwd_amount=None,
     cwd_tr=None,
     cwd_indexation_type=None,
+    cf_ts=None,
     **kwargs,
 ):
     page = dbc.Container(
@@ -116,6 +128,8 @@ def layout(
                             vds_indexation_type=vds_indexation_type,
                             cwd_amount=float(cwd_amount) if cwd_amount else None,
                             cwd_indexation_type=cwd_indexation_type,
+                            cwd_tr=_parse_pair_csv(cwd_tr),
+                            cf_ts=_parse_pair_csv(cf_ts),
                         ),
                         lg=5,
                     ),

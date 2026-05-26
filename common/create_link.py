@@ -41,6 +41,7 @@ def create_link(
     cwd_amount=None,
     cwd_tr=None,
     cwd_indexation_type=None,
+    cf_ts=None,
 ) -> str:
     tickers_str = "tickers=" + ",".join(str(symbol) for symbol in tickers_list)
     reset_href = href.split("?")[0]
@@ -105,6 +106,8 @@ def create_link(
         new_url += f"&cwd_tr={cwd_tr}"
     if cwd_indexation_type and cwd_indexation_type != "custom":
         new_url += f"&cwd_indexation_type={cwd_indexation_type}"
+    if cf_ts:
+        new_url += f"&cf_ts={cf_ts}"
     return new_url
 
 

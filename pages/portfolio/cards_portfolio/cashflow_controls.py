@@ -33,6 +33,35 @@ STRATEGY_DESCRIPTIONS = {
     "cwd": "Reduce withdrawals when portfolio drawdown exceeds thresholds.",
 }
 
+MAX_TIMESERIES_ENTRIES = 50
+
+
+def _build_initial_ts_rows(cf_ts):
+    if not cf_ts:
+        return []
+    rows = []
+    for i, (date, amount) in enumerate(cf_ts[:MAX_TIMESERIES_ENTRIES]):
+        try:
+            amount_val = float(amount)
+        except (ValueError, TypeError):
+            amount_val = None
+        rows.append({"index": i, "date": date, "amount": amount_val})
+    return rows
+
+
+def _build_initial_cwd_rows(cwd_tr):
+    if not cwd_tr:
+        return None
+    rows = []
+    for i, (threshold, reduction) in enumerate(cwd_tr):
+        try:
+            t_val = float(threshold)
+            r_val = float(reduction)
+        except (ValueError, TypeError):
+            continue
+        rows.append({"index": i, "threshold": t_val, "reduction": r_val})
+    return rows or None
+
 
 def cashflow_accordion_item(
     initial_amount=None,
@@ -57,7 +86,11 @@ def cashflow_accordion_item(
     cwd_amount=None,
     cwd_indexation=None,
     cwd_indexation_type=None,
+    cwd_tr=None,
+    cf_ts=None,
 ):
+    ts_initial_rows = _build_initial_ts_rows(cf_ts)
+    cwd_initial_rows = _build_initial_cwd_rows(cwd_tr)
     return dbc.AccordionItem(
         [
             # Strategy type selector
@@ -317,14 +350,17 @@ def cashflow_accordion_item(
                         ],
                         class_name="mt-2",
                     ),
-                    html.Div(id="pf-cf-ts-container", children=[]),
+                    html.Div(
+                        id="pf-cf-ts-container",
+                        children=[_ts_row(r["index"], r["date"], r["amount"]) for r in ts_initial_rows],
+                    ),
                     dbc.Row(
                         dbc.Col(
                             dbc.Button("Add Entry", id="pf-cf-ts-add", n_clicks=0, size="sm", color="secondary"),
                         ),
                         class_name="mt-1",
                     ),
-                    dbc.FormText("Negative amounts = withdrawals, positive = contributions"),
+                    dbc.FormText(f"Negative amounts = withdrawals, positive = contributions (max {MAX_TIMESERIES_ENTRIES} entries)"),
                 ],
                 id="pf-cf-timeseries-panel",
                 style={"display": "none"},
@@ -617,7 +653,11 @@ def cashflow_accordion_item(
                         ],
                         class_name="mt-2",
                     ),
-                    html.Div(id="pf-cf-cwd-container", children=[]),
+                    html.Div(
+                        id="pf-cf-cwd-container",
+                        children=[_cwd_row(r["index"], r["threshold"], r["reduction"]) for r in cwd_initial_rows]
+                        if cwd_initial_rows else [],
+                    ),
                     dbc.Row(
                         dbc.Col(
                             dbc.Button("Add Threshold", id="pf-cf-cwd-add", n_clicks=0, size="sm", color="secondary"),
@@ -663,6 +703,7 @@ def cashflow_accordion_item(
             ),
         ],
         title="Cash Flow Strategy",
+        item_id="cashflow",
     )
 
 
@@ -806,11 +847,19 @@ def manage_ts_rows(add_clicks, remove_clicks, ids, dates, amounts):
 
     if isinstance(trigger, dict) and trigger.get("type") == "pf-cf-ts-remove":
         rows = [r for r in rows if r["index"] != trigger["index"]]
-    elif trigger == "pf-cf-ts-add" or not rows:
+    elif (trigger == "pf-cf-ts-add" or not rows) and len(rows) < MAX_TIMESERIES_ENTRIES:
         next_idx = max((r["index"] for r in rows), default=-1) + 1
         rows.append({"index": next_idx, "date": None, "amount": None})
 
     return [_ts_row(r["index"], r["date"], r["amount"]) for r in rows]
+
+
+@callback(
+    Output("pf-cf-ts-add", "disabled"),
+    Input({"type": "pf-cf-ts-date", "index": ALL}, "id"),
+)
+def limit_ts_entries(ids):
+    return len(ids) >= MAX_TIMESERIES_ENTRIES
 
 
 register_date_validation({"type": "pf-cf-ts-date", "index": MATCH})

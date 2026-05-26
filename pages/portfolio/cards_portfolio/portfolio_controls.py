@@ -34,6 +34,23 @@ cache.init_app(app.server)
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
+def _accordion_active_items(abs_dev, rel_dev, cf_strategy, cf_amount, cf_pct, vds_pct, cwd_amount, cf_ts):
+    active = []
+    if abs_dev is not None or rel_dev is not None:
+        active.append("rebalancing")
+    has_cf = (
+        (cf_strategy is not None and cf_strategy != "indexation")
+        or (cf_amount is not None and cf_amount != 0)
+        or (cf_pct is not None and cf_pct != 0)
+        or vds_pct is not None
+        or (cwd_amount is not None and cwd_amount != 0)
+        or cf_ts is not None
+    )
+    if has_cf:
+        active.append("cashflow")
+    return active or []
+
+
 def card_controls(
     tickers: Optional[list],
     weights: Optional[list],
@@ -68,6 +85,9 @@ def card_controls(
     cwd_amount: Optional[float] = None,
     cwd_indexation: Optional[float] = None,
     cwd_indexation_type: Optional[str] = None,
+    # parsed CSV pairs: list of (str, str) tuples or None
+    cwd_tr: Optional[list] = None,
+    cf_ts: Optional[list] = None,
 ):
     tickers_list = make_list_from_string(tickers, char_type="str")
     weights_list = make_list_from_string(weights, char_type="float")
@@ -157,9 +177,15 @@ def card_controls(
                                             cwd_amount=cwd_amount,
                                             cwd_indexation=cwd_indexation,
                                             cwd_indexation_type=cwd_indexation_type,
+                                            cwd_tr=cwd_tr,
+                                            cf_ts=cf_ts,
                                         ),
                                     ],
-                                    start_collapsed=True,
+                                    active_item=_accordion_active_items(
+                                        abs_dev=abs_dev, rel_dev=rel_dev,
+                                        cf_strategy=cf_strategy, cf_amount=cf_amount, cf_pct=cf_pct,
+                                        vds_pct=vds_pct, cwd_amount=cwd_amount, cf_ts=cf_ts,
+                                    ),
                                     flush=True,
                                     class_name="p-0",
                                     always_open=True,
@@ -557,6 +583,8 @@ def show_log_scale_switch(n_clicks, plot_type: str):
     State({"type": "pf-cf-cwd-threshold", "index": ALL}, "value"),
     State({"type": "pf-cf-cwd-reduction", "index": ALL}, "value"),
     State("pf-cf-cwd-indexation-type", "value"),
+    State({"type": "pf-cf-ts-date", "index": ALL}, "value"),
+    State({"type": "pf-cf-ts-amount", "index": ALL}, "value"),
     prevent_initial_call=True,
 )
 def update_link_pf(
@@ -594,12 +622,20 @@ def update_link_pf(
     cwd_thresholds: list,
     cwd_reductions: list,
     cwd_indexation_type: str,
+    ts_dates: list,
+    ts_amounts: list,
 ):
     cwd_tr = None
     if cwd_thresholds and cwd_reductions:
         pairs = [f"{t}:{r}" for t, r in zip(cwd_thresholds, cwd_reductions) if t is not None and r is not None]
         if pairs:
             cwd_tr = ",".join(pairs)
+
+    cf_ts = None
+    if ts_dates and ts_amounts:
+        pairs = [f"{d}:{a}" for d, a in zip(ts_dates, ts_amounts) if d and a is not None]
+        if pairs:
+            cf_ts = ",".join(pairs)
 
     return create_link(
         ccy=ccy,
@@ -632,6 +668,7 @@ def update_link_pf(
         cwd_amount=cwd_amount,
         cwd_tr=cwd_tr,
         cwd_indexation_type=cwd_indexation_type,
+        cf_ts=cf_ts,
     )
 
 
