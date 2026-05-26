@@ -23,7 +23,10 @@ from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
 from common import cache
 import common.validators as validators
+from common.date_input import date_input, register_date_validation
 import pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt as tl
+from pages.portfolio.cards_portfolio.rebalancing_controls import rebalancing_accordion_item
+from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
 
 app = dash.get_app()
 cache.init_app(app.server)
@@ -43,6 +46,28 @@ def card_controls(
     cashflow: Optional[float],
     discount_rate: Optional[float],
     symbol: Optional[str],
+    # rebalancing deviation
+    abs_dev: Optional[float] = None,
+    rel_dev: Optional[float] = None,
+    # cashflow strategy
+    cf_strategy: Optional[str] = None,
+    cf_freq: Optional[str] = None,
+    cf_amount: Optional[float] = None,
+    cf_indexation: Optional[float] = None,
+    cf_indexation_type: Optional[str] = None,
+    cf_pct: Optional[float] = None,
+    vds_pct: Optional[float] = None,
+    vds_min: Optional[float] = None,
+    vds_max: Optional[float] = None,
+    vds_adj_mm: Optional[bool] = None,
+    vds_floor: Optional[float] = None,
+    vds_ceil: Optional[float] = None,
+    vds_adj_fc: Optional[bool] = None,
+    vds_indexation: Optional[float] = None,
+    vds_indexation_type: Optional[str] = None,
+    cwd_amount: Optional[float] = None,
+    cwd_indexation: Optional[float] = None,
+    cwd_indexation_type: Optional[str] = None,
 ):
     tickers_list = make_list_from_string(tickers, char_type="str")
     weights_list = make_list_from_string(weights, char_type="float")
@@ -82,39 +107,6 @@ def card_controls(
                                 ),
                             ],
                         ),
-                        dbc.Col(
-                            [
-                                html.Label(
-                                    [
-                                        "Rebalancing period",
-                                        html.I(
-                                            className="bi bi-info-square ms-2",
-                                            id="pf-info-rebalancing",
-                                        ),
-                                    ]
-                                ),
-                                dcc.Dropdown(
-                                    options=[
-                                        {"label": "Monthly", "value": "month"},
-                                        {"label": "Quarter", "value": "quarter"},
-                                        {"label": "Half-year", "value": "half-year"},
-                                        {"label": "Every year", "value": "year"},
-                                        {"label": "Not rebalanced", "value": "none"},
-                                    ],
-                                    value=rebal if rebal else "month",
-                                    multi=False,
-                                    placeholder="Select a rebalancing period",
-                                    id="pf-rebalancing-period",
-                                ),
-                                dbc.Tooltip(
-                                    tl.pf_rebalancing_period,
-                                    target="pf-info-rebalancing",
-                                ),
-                            ],
-                            lg=6,
-                            md=6,
-                            sm=12,
-                        ),
                     ]
                 ),
                 html.Div(
@@ -123,171 +115,54 @@ def card_controls(
                         dbc.Row(
                             [
                                 dbc.Col(
-                                    [
-                                        html.Label("First Date"),
-                                        dbc.Input(
-                                            id="pf-first-date",
-                                            value=first_date if first_date else "2000-01",
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ]
+                                    [html.Label("First Date")]
+                                    + date_input("pf-first-date", first_date if first_date else "2000-01")
                                 ),
                                 dbc.Col(
-                                    [
-                                        html.Label("Last Date"),
-                                        dbc.Input(
-                                            id="pf-last-date",
-                                            value=last_date if last_date else today_str,
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ]
+                                    [html.Label("Last Date")]
+                                    + date_input("pf-last-date", last_date if last_date else today_str)
                                 ),
                             ]
                         ),
-                        # Advanced attributes
+                        # Rebalancing & Cash Flow Strategy
                         dbc.Row(
                             [
                                 dbc.Accordion(
                                     [
-                                        dbc.AccordionItem(
-                                            [
-                                                dbc.Row(
-                                                    [
-                                                        dbc.Col(
-                                                            [
-                                                                html.Label(
-                                                                    [
-                                                                        "Initial amount",
-                                                                        html.I(
-                                                                            className="bi bi-info-square ms-2",
-                                                                            id="pf-info-initial-amount",
-                                                                        ),
-                                                                    ]
-                                                                ),
-                                                                dbc.Input(
-                                                                    id="pf-initial-amount",
-                                                                    value=initial_amount if initial_amount else settings.INITIAL_INVESTMENT_DEFAULT,
-                                                                    type="number",
-                                                                    min=1,
-                                                                ),
-                                                                dbc.FormText("Positive number"),
-                                                                dbc.Tooltip(
-                                                                    tl.pf_options_tooltip_initial_amount,
-                                                                    target="pf-info-initial-amount",
-                                                                ),
-                                                            ]
-                                                        ),
-                                                        dbc.Col(
-                                                            [
-                                                                html.Label(
-                                                                    [
-                                                                        "Monthly cash flow",
-                                                                        html.I(
-                                                                            className="bi bi-info-square ms-2",
-                                                                            id="pf-info-cash-flow",
-                                                                        ),
-                                                                    ]
-                                                                ),
-                                                                dbc.Input(
-                                                                    id="pf-cashflow",
-                                                                    value=cashflow if cashflow else 0,
-                                                                    type="number",
-                                                                ),
-                                                                dbc.FormText("Number"),
-                                                                dbc.Tooltip(
-                                                                    tl.pf_options_tooltip_cash_flow,
-                                                                    target="pf-info-cash-flow",
-                                                                ),
-                                                            ],
-                                                            lg=5,
-                                                            md=5,
-                                                            sm=12,
-                                                        ),
-                                                        dbc.Col(
-                                                            [
-                                                                html.Label("Rate"),
-                                                                dbc.Input(
-                                                                    id="pf-withdrawal-rate",
-                                                                    disabled=True
-                                                                ),
-                                                                dbc.Tooltip(
-                                                                    tl.pf_options_tooltip_cash_flow,
-                                                                    target="pf-info-withdrawal-rate",
-                                                                ),
-                                                            ],
-                                                            lg=2,
-                                                            md=2,
-                                                            sm=12,
-                                                        ),
-                                                    ]
-                                                ),
-                                                dbc.Row(
-                                                    [
-                                                        dbc.Col(
-                                                            [
-                                                                html.Label(
-                                                                    [
-                                                                        "Discount rate",
-                                                                        html.I(
-                                                                            className="bi bi-info-square ms-2",
-                                                                            id="pf-info-discount-rate",
-                                                                        ),
-                                                                    ]
-                                                                ),
-                                                                dbc.Input(
-                                                                    id="pf-discount-rate",
-                                                                    type="number",
-                                                                    min=0,
-                                                                    max=1,
-                                                                    value=discount_rate if discount_rate else None,
-                                                                ),
-                                                                dbc.FormText("0 - 1 (0.05 is equivalent to 5%)"),
-                                                                dbc.Tooltip(
-                                                                    tl.pf_options_tooltip_discount_rate,
-                                                                    target="pf-info-discount-rate",
-                                                                ),
-                                                            ],
-                                                            lg=5,
-                                                            md=5,
-                                                            sm=12,
-                                                        ),
-                                                        dbc.Col(
-                                                            [
-                                                                html.Label(
-                                                                    [
-                                                                        "Portfolio ticker",
-                                                                        html.I(
-                                                                            className="bi bi-info-square ms-2",
-                                                                            id="pf-info-ticker",
-                                                                        ),
-                                                                    ]
-                                                                ),
-                                                                dbc.Input(
-                                                                    id="pf-ticker",
-                                                                    type="text",
-                                                                    value=symbol if symbol else "PORTFOLIO",
-                                                                ),
-                                                                dbc.FormText("Symbols without spaces"),
-                                                                dbc.Tooltip(
-                                                                    tl.pf_options_tooltip_ticker,
-                                                                    target="pf-info-ticker",
-                                                                ),
-                                                            ],
-                                                            lg=5,
-                                                            md=5,
-                                                            sm=12,
-                                                        ),
-                                                    ]
-                                                ),
-                                            ],
-                                            title="Advanced parameters",
+                                        rebalancing_accordion_item(
+                                            rebal=rebal,
+                                            abs_dev=abs_dev,
+                                            rel_dev=rel_dev,
+                                        ),
+                                        cashflow_accordion_item(
+                                            initial_amount=initial_amount,
+                                            cashflow=cashflow,
+                                            discount_rate=discount_rate,
+                                            symbol=symbol,
+                                            cf_strategy=cf_strategy,
+                                            cf_freq=cf_freq,
+                                            cf_amount=cf_amount,
+                                            cf_indexation=cf_indexation,
+                                            cf_indexation_type=cf_indexation_type,
+                                            cf_pct=cf_pct,
+                                            vds_pct=vds_pct,
+                                            vds_min=vds_min,
+                                            vds_max=vds_max,
+                                            vds_adj_mm=vds_adj_mm,
+                                            vds_floor=vds_floor,
+                                            vds_ceil=vds_ceil,
+                                            vds_adj_fc=vds_adj_fc,
+                                            vds_indexation=vds_indexation,
+                                            vds_indexation_type=vds_indexation_type,
+                                            cwd_amount=cwd_amount,
+                                            cwd_indexation=cwd_indexation,
+                                            cwd_indexation_type=cwd_indexation_type,
                                         ),
                                     ],
                                     start_collapsed=True,
                                     flush=True,
                                     class_name="p-0",
+                                    always_open=True,
                                 )
                             ],
                         ),
@@ -656,11 +531,32 @@ def show_log_scale_switch(n_clicks, plot_type: str):
     State("pf-first-date", "value"),
     State("pf-last-date", "value"),
     State("pf-rebalancing-period", "value"),
-    # Advanced
+    # Rebalancing deviation
+    State("pf-rebal-abs-deviation", "value"),
+    State("pf-rebal-rel-deviation", "value"),
+    # Cash flow strategy
     State("pf-initial-amount", "value"),
-    State("pf-cashflow", "value"),
     State("pf-discount-rate", "value"),
     State("pf-ticker", "value"),
+    State("pf-cf-strategy-type", "value"),
+    State("pf-cf-frequency", "value"),
+    State("pf-cf-amount", "value"),
+    State("pf-cf-indexation-type", "value"),
+    State("pf-cf-indexation", "value"),
+    State("pf-cf-percentage", "value"),
+    State("pf-cf-vds-percentage", "value"),
+    State("pf-cf-vds-min-withdrawal", "value"),
+    State("pf-cf-vds-max-withdrawal", "value"),
+    State("pf-cf-vds-adjust-minmax", "value"),
+    State("pf-cf-vds-floor", "value"),
+    State("pf-cf-vds-ceiling", "value"),
+    State("pf-cf-vds-adjust-fc", "value"),
+    State("pf-cf-vds-indexation-type", "value"),
+    State("pf-cf-vds-indexation", "value"),
+    State("pf-cf-cwd-amount", "value"),
+    State({"type": "pf-cf-cwd-threshold", "index": ALL}, "value"),
+    State({"type": "pf-cf-cwd-reduction", "index": ALL}, "value"),
+    State("pf-cf-cwd-indexation-type", "value"),
     prevent_initial_call=True,
 )
 def update_link_pf(
@@ -672,12 +568,39 @@ def update_link_pf(
     first_date: str,
     last_date: str,
     rebal: str,
-    # Advanced
+    # Rebalancing deviation
+    abs_dev: Optional[float],
+    rel_dev: Optional[float],
+    # Cash flow strategy
     initial_amount: Optional[float],
-    cashflow: Optional[float],
     discount_rate: Optional[float],
     symbol: Optional[str],
+    cf_strategy: str,
+    cf_freq: str,
+    cf_amount: Optional[float],
+    cf_indexation_type: str,
+    cf_indexation: Optional[float],
+    cf_pct: Optional[float],
+    vds_pct: Optional[float],
+    vds_min: Optional[float],
+    vds_max: Optional[float],
+    vds_adj_mm: bool,
+    vds_floor: Optional[float],
+    vds_ceil: Optional[float],
+    vds_adj_fc: bool,
+    vds_indexation_type: str,
+    vds_indexation: Optional[float],
+    cwd_amount: Optional[float],
+    cwd_thresholds: list,
+    cwd_reductions: list,
+    cwd_indexation_type: str,
 ):
+    cwd_tr = None
+    if cwd_thresholds and cwd_reductions:
+        pairs = [f"{t}:{r}" for t, r in zip(cwd_thresholds, cwd_reductions) if t is not None and r is not None]
+        if pairs:
+            cwd_tr = ",".join(pairs)
+
     return create_link(
         ccy=ccy,
         first_date=first_date,
@@ -686,11 +609,29 @@ def update_link_pf(
         tickers_list=tickers_list,
         weights_list=weights_list,
         rebal=rebal,
-        # Advanced
         initial_amount=initial_amount,
-        cashflow=cashflow,
         discount_rate=discount_rate,
         symbol=symbol,
+        abs_dev=abs_dev,
+        rel_dev=rel_dev,
+        cf_strategy=cf_strategy,
+        cf_freq=cf_freq,
+        cf_amount=cf_amount,
+        cf_indexation_type=cf_indexation_type,
+        cf_indexation=cf_indexation,
+        cf_pct=cf_pct,
+        vds_pct=vds_pct,
+        vds_min=vds_min,
+        vds_max=vds_max,
+        vds_adj_mm=vds_adj_mm,
+        vds_floor=vds_floor,
+        vds_ceil=vds_ceil,
+        vds_adj_fc=vds_adj_fc,
+        vds_indexation_type=vds_indexation_type,
+        vds_indexation=vds_indexation,
+        cwd_amount=cwd_amount,
+        cwd_tr=cwd_tr,
+        cwd_indexation_type=cwd_indexation_type,
     )
 
 
@@ -823,12 +764,15 @@ def print_weights_sum(values) -> Tuple[str, bool]:
 
 @app.callback(
     Output("pf-withdrawal-rate", "value"),
-    Input("pf-initial-amount", "value"),  #
-    Input("pf-cashflow", "value")
+    Input("pf-initial-amount", "value"),
+    Input("pf-cf-amount", "value"),
+    Input("pf-cf-cwd-amount", "value"),
+    Input("pf-cf-strategy-type", "value"),
 )
-def print_withdrawal_rate(initial_amount, cashflow) -> str:
-    if initial_amount and cashflow:
-        withdrawal_rate = abs(int(cashflow)) * settings.MONTHS_PER_YEAR / int(initial_amount) * 100
+def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy) -> str:
+    amount = cwd_amount if strategy == "cwd" else cf_amount
+    if initial_amount and amount:
+        withdrawal_rate = abs(float(amount)) * settings.MONTHS_PER_YEAR / float(initial_amount) * 100
     else:
         withdrawal_rate = 0
     return f"{withdrawal_rate:.0f}%"
@@ -903,3 +847,7 @@ def check_validity_monte_carlo(number: int):
         is_correct_number = number in range(0, settings.MC_PORTFOLIO_MAX + 1) and isinstance(number, int)
         return is_correct_number, not is_correct_number
     return False, False
+
+
+register_date_validation("pf-first-date")
+register_date_validation("pf-last-date")

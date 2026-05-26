@@ -3,14 +3,34 @@ from dash import dcc
 
 pf_rebalancing_period = dcc.Markdown(
     """
-    Rebalancing period (rebalancing frequency)  
-    is predetermined time intervals when  
-    the investor rebalances the portfolio  
-    adjusting the assets weightings to  
-    the initial allocation.  
+    Rebalancing period (rebalancing frequency)
+    is predetermined time intervals when
+    the investor rebalances the portfolio
+    adjusting the assets weightings to
+    the initial allocation.
 
-    "Not rebalanced" means the weights change  
+    "No rebalancing (buy & hold)" means the weights change
      with assets price without any limit.
+    """
+)
+
+pf_rebal_abs_deviation = dcc.Markdown(
+    """
+    Absolute deviation threshold for asset weights.
+    Rebalancing is triggered when any asset's weight
+    deviates from target by more than this value.
+    Example: 5 means rebalance if |actual - target| > 5%.
+    Leave empty to ignore.
+    """
+)
+
+pf_rebal_rel_deviation = dcc.Markdown(
+    """
+    Relative deviation threshold for asset weights.
+    Rebalancing is triggered when any asset's weight
+    deviates from target by more than this relative value.
+    Example: 10 means rebalance if |actual/target - 1| > 10%.
+    Leave empty to ignore.
     """
 )
 
@@ -83,5 +103,45 @@ pf_mc_tooltip_distribution = dcc.Markdown(
 pf_mc_tooltip_backtest = dcc.Markdown(
     """
     Show historical wealth index in the chart or plot only Monte Carlo wealth indexes.
+    """
+)
+
+# Cash flow strategy tooltips
+pf_cf_strategy_type = dcc.Markdown(
+    """
+    Cash flow strategy determines how withdrawals
+    or contributions are calculated over time.
+    """
+)
+
+pf_cf_percentage = dcc.Markdown(
+    """
+    Fixed percentage of portfolio balance withdrawn or contributed per year.
+    Negative = withdrawal, positive = contribution.
+    Example: -12 means withdraw 12% of balance annually.
+    """
+)
+
+pf_cf_vds_percentage = dcc.Markdown(
+    """
+    Base withdrawal percentage of portfolio balance per year.
+    Must be negative or zero (withdrawals only).
+    """
+)
+
+pf_cf_vds_floor_ceiling = dcc.Markdown(
+    """
+    Year-to-year withdrawal change limits relative to previous year.
+    Floor: maximum allowed decrease (negative %).
+    Ceiling: maximum allowed increase (positive %).
+    Example: Floor=-2.5, Ceiling=5 means the next withdrawal
+    cannot drop more than 2.5% or rise more than 5% vs last year.
+    """
+)
+
+pf_cf_cwd_amount = dcc.Markdown(
+    """
+    Regular withdrawal amount before any drawdown-based reduction.
+    Must be negative or zero (withdrawals only).
     """
 )

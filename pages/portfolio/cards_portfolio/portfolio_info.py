@@ -96,13 +96,11 @@ def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> dash_
 @callback(
     Output(component_id="pf-monte-carlo-statistics-frame", component_property="hidden"),
     Input(component_id="pf-submit-button", component_property="n_clicks"),
-    State(component_id="pf-cashflow", component_property="value"),
     State(component_id="pf-plot-option", component_property="value"),
     State(component_id="pf-monte-carlo-number", component_property="value"),
 )
 def show_survival_periods_statistics_table(
     n_clicks,
-    cashflow: float,
     plot_type: str,
     n_monte_carlo: int,
 ):

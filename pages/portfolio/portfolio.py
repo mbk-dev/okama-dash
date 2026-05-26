@@ -57,6 +57,28 @@ def layout(
     cashflow=None,
     discount_rate=None,
     symbol=None,
+    # rebalancing deviation
+    abs_dev=None,
+    rel_dev=None,
+    # cashflow strategy
+    cf_strategy=None,
+    cf_freq=None,
+    cf_amount=None,
+    cf_indexation=None,
+    cf_indexation_type=None,
+    cf_pct=None,
+    vds_pct=None,
+    vds_min=None,
+    vds_max=None,
+    vds_adj_mm=None,
+    vds_floor=None,
+    vds_ceil=None,
+    vds_adj_fc=None,
+    vds_indexation=None,
+    vds_indexation_type=None,
+    cwd_amount=None,
+    cwd_tr=None,
+    cwd_indexation_type=None,
     **kwargs,
 ):
     page = dbc.Container(
@@ -75,6 +97,25 @@ def layout(
                             cashflow=cashflow,
                             discount_rate=discount_rate,
                             symbol=symbol,
+                            abs_dev=float(abs_dev) if abs_dev else None,
+                            rel_dev=float(rel_dev) if rel_dev else None,
+                            cf_strategy=cf_strategy,
+                            cf_freq=cf_freq,
+                            cf_amount=float(cf_amount) if cf_amount else None,
+                            cf_indexation=float(cf_indexation) if cf_indexation else None,
+                            cf_indexation_type=cf_indexation_type,
+                            cf_pct=float(cf_pct) if cf_pct else None,
+                            vds_pct=float(vds_pct) if vds_pct else None,
+                            vds_min=float(vds_min) if vds_min else None,
+                            vds_max=float(vds_max) if vds_max else None,
+                            vds_adj_mm=vds_adj_mm != "0" if vds_adj_mm is not None else None,
+                            vds_floor=float(vds_floor) if vds_floor else None,
+                            vds_ceil=float(vds_ceil) if vds_ceil else None,
+                            vds_adj_fc=vds_adj_fc == "1" if vds_adj_fc is not None else None,
+                            vds_indexation=float(vds_indexation) if vds_indexation else None,
+                            vds_indexation_type=vds_indexation_type,
+                            cwd_amount=float(cwd_amount) if cwd_amount else None,
+                            cwd_indexation_type=cwd_indexation_type,
                         ),
                         lg=5,
                     ),
@@ -115,13 +156,39 @@ def layout(
     State({"type": "pf-dynamic-input", "index": ALL}, "value"),  # weights
     State(component_id="pf-base-currency", component_property="value"),
     State(component_id="pf-rebalancing-period", component_property="value"),
+    State(component_id="pf-rebal-abs-deviation", component_property="value"),
+    State(component_id="pf-rebal-rel-deviation", component_property="value"),
     State(component_id="pf-first-date", component_property="value"),
     State(component_id="pf-last-date", component_property="value"),
-    # advanced parameters
+    # cash flow strategy parameters
     State(component_id="pf-initial-amount", component_property="value"),
-    State(component_id="pf-cashflow", component_property="value"),
     State(component_id="pf-discount-rate", component_property="value"),
     State(component_id="pf-ticker", component_property="value"),
+    State(component_id="pf-cf-strategy-type", component_property="value"),
+    State(component_id="pf-cf-frequency", component_property="value"),
+    State(component_id="pf-cf-amount", component_property="value"),
+    State(component_id="pf-cf-indexation-type", component_property="value"),
+    State(component_id="pf-cf-indexation", component_property="value"),
+    State(component_id="pf-cf-percentage", component_property="value"),
+    # VDS
+    State(component_id="pf-cf-vds-percentage", component_property="value"),
+    State(component_id="pf-cf-vds-min-withdrawal", component_property="value"),
+    State(component_id="pf-cf-vds-max-withdrawal", component_property="value"),
+    State(component_id="pf-cf-vds-adjust-minmax", component_property="value"),
+    State(component_id="pf-cf-vds-floor", component_property="value"),
+    State(component_id="pf-cf-vds-ceiling", component_property="value"),
+    State(component_id="pf-cf-vds-adjust-fc", component_property="value"),
+    State(component_id="pf-cf-vds-indexation-type", component_property="value"),
+    State(component_id="pf-cf-vds-indexation", component_property="value"),
+    # CWD
+    State(component_id="pf-cf-cwd-amount", component_property="value"),
+    State(component_id="pf-cf-cwd-indexation-type", component_property="value"),
+    State(component_id="pf-cf-cwd-indexation", component_property="value"),
+    State({"type": "pf-cf-cwd-threshold", "index": ALL}, "value"),
+    State({"type": "pf-cf-cwd-reduction", "index": ALL}, "value"),
+    # TimeSeries
+    State({"type": "pf-cf-ts-date", "index": ALL}, "value"),
+    State({"type": "pf-cf-ts-amount", "index": ALL}, "value"),
     # options
     State(component_id="pf-plot-option", component_property="value"),
     State(component_id="pf-inflation-switch", component_property="value"),
@@ -141,13 +208,39 @@ def update_graf_portfolio(
     weights: list,
     ccy: str,
     rebalancing_period: str,
+    rebal_abs_deviation,
+    rebal_rel_deviation,
     fd_value: str,
     ld_value: str,
-    # Advanced parameters
+    # Cash flow strategy parameters
     initial_amount: float,
-    cashflow: float,
     discount_rate: float,
     symbol: str,
+    cf_strategy: str,
+    cf_frequency: str,
+    cf_amount: float,
+    cf_indexation_type: str,
+    cf_indexation: float,
+    cf_percentage: float,
+    # VDS
+    vds_percentage: float,
+    vds_min_withdrawal: float,
+    vds_max_withdrawal: float,
+    vds_adjust_minmax: bool,
+    vds_floor: float,
+    vds_ceiling: float,
+    vds_adjust_fc: bool,
+    vds_indexation_type: str,
+    vds_indexation: float,
+    # CWD
+    cwd_amount: float,
+    cwd_indexation_type: str,
+    cwd_indexation: float,
+    cwd_thresholds: list,
+    cwd_reductions: list,
+    # TimeSeries
+    ts_dates: list,
+    ts_amounts: list,
     # Options
     plot_type: str,
     inflation_on: bool,
@@ -175,6 +268,10 @@ def update_graf_portfolio(
     weights = [i / 100.0 for i in weights if i is not None]
     symbol = symbol.replace(" ", "_")
     symbol = symbol + ".PF" if not symbol.lower().endswith(".pf") else symbol
+
+    abs_dev_val = float(rebal_abs_deviation) / 100 if rebal_abs_deviation else None
+    rel_dev_val = float(rebal_rel_deviation) / 100 if rebal_rel_deviation else None
+
     new_pf_file_name = common.create_link.create_filename(
         tickers_list=assets,
         ccy=ccy,
@@ -183,9 +280,11 @@ def update_graf_portfolio(
         weights_list=weights,
         inflation=inflation_on,
         rebal=rebalancing_period,
+        abs_dev=rebal_abs_deviation,
+        rel_dev=rebal_rel_deviation,
         initial_amount=initial_amount,
-        cashflow=cashflow,
-        # discount_rate=discount_rate if discount_rate else settings.RISK_FREE_RATE_DEFAULT
+        cf_strategy=cf_strategy,
+        cf_freq=cf_frequency,
     )
     new_pf_file = data_folder / new_pf_file_name
     if new_pf_file.is_file():
@@ -193,26 +292,52 @@ def update_graf_portfolio(
             print("found cached Portfolio file...")
             pf_object = pickle.load(f)
     else:
+        rebal_strategy = ok.Rebalance(
+            period=rebalancing_period,
+            abs_deviation=abs_dev_val,
+            rel_deviation=rel_dev_val,
+        )
         pf_object = ok.Portfolio(
             assets=assets,
             weights=weights,
             first_date=fd_value,
             last_date=ld_value,
             ccy=ccy,
-            rebalancing_period=rebalancing_period,
+            rebalancing_strategy=rebal_strategy,
             inflation=inflation_on,
             symbol=symbol,
         )
-        pf_object.dcf.use_discounted_values = True  # TODO: add a switch
-        ind = ok.IndexationStrategy(pf_object)
-        ind.initial_investment = float(initial_amount)  # the initial investments size
-        ind.amount = float(cashflow)  # set withdrawal/contribution size
-        ind.frequency = "month"  # set cash flow frequency TODO: add parameter
-        indexation = float(discount_rate) if discount_rate is not None else None
-        ind.indexation = indexation  # set indexation size
-        pf_object.dcf.cashflow_parameters = ind
+        pf_object.dcf.use_discounted_values = True
+        strategy = _build_cashflow_strategy(
+            pf_object=pf_object,
+            strategy_type=cf_strategy,
+            frequency=cf_frequency,
+            initial_amount=float(initial_amount),
+            discount_rate=discount_rate,
+            cf_amount=cf_amount,
+            cf_indexation_type=cf_indexation_type,
+            cf_indexation=cf_indexation,
+            cf_percentage=cf_percentage,
+            vds_percentage=vds_percentage,
+            vds_min_withdrawal=vds_min_withdrawal,
+            vds_max_withdrawal=vds_max_withdrawal,
+            vds_adjust_minmax=vds_adjust_minmax,
+            vds_floor=vds_floor,
+            vds_ceiling=vds_ceiling,
+            vds_adjust_fc=vds_adjust_fc,
+            vds_indexation_type=vds_indexation_type,
+            vds_indexation=vds_indexation,
+            cwd_amount=cwd_amount,
+            cwd_indexation_type=cwd_indexation_type,
+            cwd_indexation=cwd_indexation,
+            cwd_thresholds=cwd_thresholds,
+            cwd_reductions=cwd_reductions,
+            ts_dates=ts_dates,
+            ts_amounts=ts_amounts,
+        )
+        pf_object.dcf.cashflow_parameters = strategy
 
-        # Cache ef to pickle file
+        # Cache to pickle file
         pf_file_name = common.create_link.create_filename(
             tickers_list=pf_object.symbols,
             ccy=pf_object.currency,
@@ -220,14 +345,16 @@ def update_graf_portfolio(
             last_date=pf_object.last_date.strftime('%Y-%m'),
             weights_list=pf_object.weights,
             inflation=inflation_on,
-            rebal=pf_object.rebalancing_period,
+            rebal=pf_object.rebalancing_strategy.period,
+            abs_dev=rebal_abs_deviation,
+            rel_dev=rebal_rel_deviation,
             initial_amount=float(initial_amount),
-            cashflow=float(cashflow),
-            discount_rate=indexation
+            cf_strategy=cf_strategy,
+            cf_freq=cf_frequency,
         )
         data_file = data_folder / pf_file_name
-        with open(data_file, 'wb') as f:  # open a text file
-            pickle.dump(pf_object, f, protocol=pickle.HIGHEST_PROTOCOL)  # serialize the Portfolio
+        with open(data_file, 'wb') as f:
+            pickle.dump(pf_object, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     fig, df_backtest, df_forecast, df_data = get_pf_figure(
         pf_object,
@@ -239,6 +366,7 @@ def update_graf_portfolio(
         distribution_monte_carlo,
         show_backtest,
         log_on,
+        cf_strategy,
     )
     json_data = df_data.to_json(orient="split", default_handler=str)
     if plot_type == "wealth":
@@ -266,6 +394,115 @@ def update_graf_portfolio(
         forecast_survival_statistics_datatable = dash_table.DataTable()
         forecast_wealth_statistics_datatable = dash_table.DataTable()
     return fig, config, statistics_dash_table, forecast_survival_statistics_datatable, forecast_wealth_statistics_datatable, json_data
+
+
+def _resolve_indexation(indexation_type, indexation_value, discount_rate):
+    if indexation_type == "inflation":
+        return "inflation"
+    if indexation_value is not None:
+        return float(indexation_value)
+    if discount_rate is not None:
+        return float(discount_rate)
+    return None
+
+
+def _build_cashflow_strategy(
+    pf_object,
+    strategy_type,
+    frequency,
+    initial_amount,
+    discount_rate,
+    cf_amount,
+    cf_indexation_type,
+    cf_indexation,
+    cf_percentage,
+    vds_percentage,
+    vds_min_withdrawal,
+    vds_max_withdrawal,
+    vds_adjust_minmax,
+    vds_floor,
+    vds_ceiling,
+    vds_adjust_fc,
+    vds_indexation_type,
+    vds_indexation,
+    cwd_amount,
+    cwd_indexation_type,
+    cwd_indexation,
+    cwd_thresholds,
+    cwd_reductions,
+    ts_dates,
+    ts_amounts,
+):
+    if strategy_type == "percentage":
+        s = ok.PercentageStrategy(pf_object)
+        s.initial_investment = initial_amount
+        s.frequency = frequency
+        s.percentage = float(cf_percentage) / 100 if cf_percentage else 0.0
+        return s
+
+    if strategy_type == "time_series":
+        ts_dict = {}
+        if ts_dates and ts_amounts:
+            for d, a in zip(ts_dates, ts_amounts):
+                if d and a is not None:
+                    try:
+                        pd.to_datetime(str(d), format="%Y-%m")
+                        ts_dict[str(d)] = float(a)
+                    except (ValueError, TypeError):
+                        pass
+        s = ok.TimeSeriesStrategy(pf_object)
+        s.initial_investment = initial_amount
+        if ts_dict:
+            s.time_series_dic = ts_dict
+        return s
+
+    if strategy_type == "vds":
+        indexation = _resolve_indexation(vds_indexation_type, vds_indexation, discount_rate)
+        min_max = None
+        if vds_min_withdrawal is not None and vds_max_withdrawal is not None:
+            min_max = (float(vds_min_withdrawal), float(vds_max_withdrawal))
+        fc = None
+        if vds_floor is not None and vds_ceiling is not None:
+            fc = (float(vds_floor) / 100, float(vds_ceiling) / 100)
+        s = ok.VanguardDynamicSpending(
+            parent=pf_object,
+            initial_investment=initial_amount,
+            percentage=float(vds_percentage) / 100 if vds_percentage else 0.0,
+            min_max_annual_withdrawals=min_max,
+            adjust_min_max=bool(vds_adjust_minmax),
+            floor_ceiling=fc,
+            adjust_floor_ceiling=bool(vds_adjust_fc),
+            indexation=indexation,
+        )
+        return s
+
+    if strategy_type == "cwd":
+        indexation = _resolve_indexation(cwd_indexation_type, cwd_indexation, discount_rate)
+        thresholds = []
+        if cwd_thresholds and cwd_reductions:
+            for t, r in zip(cwd_thresholds, cwd_reductions):
+                if t is not None and r is not None:
+                    thresholds.append((float(t) / 100, float(r) / 100))
+        if not thresholds:
+            thresholds = [(0.20, 0.40), (0.50, 1.0)]
+        s = ok.CutWithdrawalsIfDrawdown(
+            parent=pf_object,
+            initial_investment=initial_amount,
+            frequency=frequency,
+            amount=float(cwd_amount) if cwd_amount else 0.0,
+            indexation=indexation,
+            crash_threshold_reduction=thresholds,
+        )
+        return s
+
+    # Default: IndexationStrategy
+    indexation = _resolve_indexation(cf_indexation_type, cf_indexation, discount_rate)
+    s = ok.IndexationStrategy(pf_object)
+    s.initial_investment = initial_amount
+    s.amount = float(cf_amount) if cf_amount else 0.0
+    s.frequency = frequency
+    s.indexation = indexation
+    return s
 
 
 def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
@@ -472,6 +709,7 @@ def get_pf_figure(
     distribution_monte_carlo: str,
     show_backtest: str,
     log_scale: bool,
+    cf_strategy: str = "indexation",
 ) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if plot_type == "distribution":
         data = pf_object.ror
@@ -518,7 +756,6 @@ def get_pf_figure(
         fig.update_yaxes(title_text="Probability")
     else:
         titles = {
-            "wealth": "Portfolio Wealth index",
             "cagr": f"Rolling CAGR (window={rolling_window} years)",
             "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
             "drawdowns": "Portfolio Drawdowns",
@@ -528,14 +765,17 @@ def get_pf_figure(
         condition_monte_carlo = plot_type == "wealth" and n_monte_carlo != 0
         df_backtest = pd.DataFrame()
         df_forecast = pd.DataFrame()
-        cash_flow = pf_object.dcf.cashflow_parameters.amount if hasattr(pf_object.dcf.cashflow_parameters, "amount") else 0
+        has_cashflow = cf_strategy != "indexation" or (
+            hasattr(pf_object.dcf.cashflow_parameters, "amount") and pf_object.dcf.cashflow_parameters.amount != 0
+        )
+        titles["wealth"] = "Portfolio Wealth Index (with Cash Flow)" if has_cashflow else "Portfolio Wealth Index"
         if plot_type == "wealth":
             if n_monte_carlo == 0:
-                df = pf_object.wealth_index_with_assets if cash_flow == 0 else pf_object.dcf.wealth_index
+                df = pf_object.dcf.wealth_index_fv_with_assets if has_cashflow else pf_object.wealth_index_with_assets
                 # TODO: calculate return_series: portfolio + assets
                 return_series = pf_object.get_cumulative_return(real=False)
             else:
-                df_backtest = pf_object.dcf.wealth_index[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
+                df_backtest = pf_object.dcf.wealth_index_fv_with_assets[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
                 initial_investment = pf_object.dcf.cashflow_parameters.initial_investment if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment") else settings.INITIAL_INVESTMENT_DEFAULT
                 last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
                 if last_backtest_value > 0:
@@ -561,7 +801,7 @@ def get_pf_figure(
         chart_first_date = ind[0]
         chart_last_date = ind[-1]
 
-        if not condition_monte_carlo and cash_flow == 0:
+        if not condition_monte_carlo and not has_cashflow:
             annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
             annotation_series = (return_series * 100).map("{:,.2f}%".format)
             annotations_text = list(annotation_series)
@@ -629,7 +869,7 @@ def get_pf_figure(
         )
 
         # plot annotations
-        if not condition_monte_carlo and cash_flow == 0:
+        if not condition_monte_carlo and not has_cashflow:
             for point in zip(annotations_xy, annotations_text):
                 fig.add_annotation(
                     x=point[0][0],

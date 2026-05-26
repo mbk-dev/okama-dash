@@ -19,6 +19,28 @@ def create_link(
     symbol=None,
     # benchmark
     benchmark=None,
+    # rebalancing deviation
+    abs_dev=None,
+    rel_dev=None,
+    # cashflow strategy
+    cf_strategy=None,
+    cf_freq=None,
+    cf_amount=None,
+    cf_indexation=None,
+    cf_indexation_type=None,
+    cf_pct=None,
+    vds_pct=None,
+    vds_min=None,
+    vds_max=None,
+    vds_adj_mm=None,
+    vds_floor=None,
+    vds_ceil=None,
+    vds_adj_fc=None,
+    vds_indexation=None,
+    vds_indexation_type=None,
+    cwd_amount=None,
+    cwd_tr=None,
+    cwd_indexation_type=None,
 ) -> str:
     tickers_str = "tickers=" + ",".join(str(symbol) for symbol in tickers_list)
     reset_href = href.split("?")[0]
@@ -41,6 +63,48 @@ def create_link(
         new_url += f"&discount_rate={discount_rate}"
     if symbol:
         new_url += f"&symbol={symbol}"
+    # Rebalancing deviation
+    if abs_dev is not None:
+        new_url += f"&abs_dev={abs_dev}"
+    if rel_dev is not None:
+        new_url += f"&rel_dev={rel_dev}"
+    # Cashflow strategy
+    if cf_strategy and cf_strategy != "indexation":
+        new_url += f"&cf_strategy={cf_strategy}"
+    if cf_freq and cf_freq != "month":
+        new_url += f"&cf_freq={cf_freq}"
+    if cf_amount:
+        new_url += f"&cf_amount={cf_amount}"
+    if cf_indexation is not None:
+        new_url += f"&cf_indexation={cf_indexation}"
+    if cf_indexation_type and cf_indexation_type != "custom":
+        new_url += f"&cf_indexation_type={cf_indexation_type}"
+    if cf_pct:
+        new_url += f"&cf_pct={cf_pct}"
+    if vds_pct:
+        new_url += f"&vds_pct={vds_pct}"
+    if vds_min is not None:
+        new_url += f"&vds_min={vds_min}"
+    if vds_max is not None:
+        new_url += f"&vds_max={vds_max}"
+    if vds_adj_mm is not None and not vds_adj_mm:
+        new_url += f"&vds_adj_mm=0"
+    if vds_floor is not None:
+        new_url += f"&vds_floor={vds_floor}"
+    if vds_ceil is not None:
+        new_url += f"&vds_ceil={vds_ceil}"
+    if vds_adj_fc:
+        new_url += f"&vds_adj_fc=1"
+    if vds_indexation is not None:
+        new_url += f"&vds_indexation={vds_indexation}"
+    if vds_indexation_type and vds_indexation_type != "custom":
+        new_url += f"&vds_indexation_type={vds_indexation_type}"
+    if cwd_amount:
+        new_url += f"&cwd_amount={cwd_amount}"
+    if cwd_tr:
+        new_url += f"&cwd_tr={cwd_tr}"
+    if cwd_indexation_type and cwd_indexation_type != "custom":
+        new_url += f"&cwd_indexation_type={cwd_indexation_type}"
     return new_url
 
 
@@ -58,6 +122,12 @@ def create_filename(
     cashflow=None,
     discount_rate=None,
     symbol=None,
+    # rebalancing deviation
+    abs_dev=None,
+    rel_dev=None,
+    # cashflow strategy
+    cf_strategy=None,
+    cf_freq=None,
 ) -> str:
     """
     Create filename to serialize EF, Portfolio objects to pickle.
@@ -73,6 +143,10 @@ def create_filename(
         file_name += f"-infl={str(inflation)}"
     if rebal:
         file_name += f"-rb={rebal}"
+    if abs_dev is not None:
+        file_name += f"-ad={abs_dev}"
+    if rel_dev is not None:
+        file_name += f"-rd={rel_dev}"
     if initial_amount:
         file_name += f"-ia={initial_amount}"
     if cashflow:
@@ -81,6 +155,10 @@ def create_filename(
         file_name += f"-dr={discount_rate}"
     if symbol:
         file_name += f"-sb={symbol}"
+    if cf_strategy and cf_strategy != "indexation":
+        file_name += f"-cs={cf_strategy}"
+    if cf_freq and cf_freq != "month":
+        file_name += f"-cfq={cf_freq}"
     return file_name + ".pkl"
 
 
