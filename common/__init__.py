@@ -1,14 +1,14 @@
+import logging
 import platform
 
 from flask_caching import Cache
 
 plt = platform.system()
 
-# Set caching
 cache_directory = "cache-directory"
 
 if plt == "Linux":
-    print("caching in redis")
+    logging.info("caching in redis")
     cache = Cache(
         config={
             "CACHE_TYPE": "RedisCache",
@@ -17,7 +17,7 @@ if plt == "Linux":
         },
     )
 else:
-    print("caching in filesystem")
+    logging.info("caching in filesystem")
     cache = Cache(
         config={
             "CACHE_TYPE": "filesystem",

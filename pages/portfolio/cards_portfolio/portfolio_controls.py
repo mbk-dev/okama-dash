@@ -198,23 +198,6 @@ def card_controls(
                                         # style={"text-align": "right"}
                                     ),
                                 ),
-                                # dbc.Col(
-                                #     # save portfolio button
-                                #     html.Div(
-                                #         [
-                                #             dbc.Button(
-                                #                 "Save portfolio",
-                                #                 id="pf-save-portfolio-button",
-                                #                 className="position-relative",
-                                #                 color="link",
-                                #                 outline=False,
-                                #                 external_link=False,
-                                #                 n_clicks=0
-                                #             ),
-                                #         ],
-                                #         style={"text-align": "left"},
-                                #     )
-                                # )
                             ]
                         ),
                         dbc.Row(
@@ -502,14 +485,12 @@ def hide_monte_carlo_rows(plot_options: str, random_simulations_number):
     if plot_options != "wealth":
         # don't show rows
         style = {"display": "none"}
-        return tuple((style for i in range(0, 5)))
+        return (style,) * 5
     else:
         if random_simulations_number in [0, None]:
-            # show only first row
             return None, None, {"display": "none"}, {"display": "none"}, {"display": "none"}
         else:
-            # show all rows
-            return tuple((None for i in range(0, 5)))
+            return (None,) * 5
 
 
 @callback(

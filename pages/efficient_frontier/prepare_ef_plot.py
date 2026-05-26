@@ -318,12 +318,13 @@ def _add_assets_trace(
     return_type: str,
     trace_name: str = "Assets",
 ):
-    ror_df = ef_object.mean_return if return_type == "Arithmetic" else ef_object.get_cagr()
+    ror = ef_object.mean_return if return_type == "Arithmetic" else ef_object.get_cagr()
+    ror_df = ror.iloc[-1] if isinstance(ror, pd.DataFrame) else ror
     df = pd.concat(
         [ror_df, ef_object.risk_annual.iloc[-1]],
         axis=1,
         join="outer",
-        copy="false",
+        copy=False,
         ignore_index=False,
     )
     df *= 100

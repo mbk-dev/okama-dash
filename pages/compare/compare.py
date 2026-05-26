@@ -205,7 +205,7 @@ def get_al_figure(
         return_series = df.iloc[-1, :]
     elif plot_type == "correlation":
         matrix = al_object.assets_ror.corr()
-        matrix = matrix.applymap("{:,.2f}".format)
+        matrix = matrix.map("{:,.2f}".format)
         fig = px.imshow(matrix, text_auto=True, aspect="equal", labels=dict(x="", y="", color=""))
         return fig, matrix
 
