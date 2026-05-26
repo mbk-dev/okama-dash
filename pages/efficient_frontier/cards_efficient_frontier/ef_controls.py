@@ -14,6 +14,7 @@ from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.symbols import get_selected_symbol_options, search_symbol_options
 from common import cache
+from common.date_input import date_input, register_date_validation
 import pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt as tl
 
 app = dash.get_app()
@@ -130,26 +131,12 @@ def card_controls(
                         dbc.Row(
                             [
                                 dbc.Col(
-                                    [
-                                        html.Label("First Date"),
-                                        dbc.Input(
-                                            id="ef-first-date",
-                                            value=first_date if first_date else "2000-01",
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ],
+                                    [html.Label("First Date")]
+                                    + date_input("ef-first-date", first_date if first_date else "2000-01"),
                                 ),
                                 dbc.Col(
-                                    [
-                                        html.Label("Last Date"),
-                                        dbc.Input(
-                                            id="ef-last-date",
-                                            value=last_date if last_date else today_str,
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ],
+                                    [html.Label("Last Date")]
+                                    + date_input("ef-last-date", last_date if last_date else today_str),
                                 ),
                             ]
                         ),
@@ -556,3 +543,7 @@ def disable_submit(tickers_list, mc_number_valid) -> bool:
 
     submit_result = number_of_tickers_is_too_small or mc_number_is_incorrect
     return submit_result
+
+
+register_date_validation("ef-first-date")
+register_date_validation("ef-last-date")

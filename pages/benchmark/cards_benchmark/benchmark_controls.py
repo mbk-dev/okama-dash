@@ -17,6 +17,7 @@ from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
 from common import cache
 import common.validators as validators
+from common.date_input import date_input, register_date_validation
 from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
     benchmark_options_tooltip_plot,
     benchmark_options_tooltip_window_size,
@@ -109,26 +110,12 @@ def benchmark_card_controls(
                         dbc.Row(
                             [
                                 dbc.Col(
-                                    [
-                                        html.Label("First Date"),
-                                        dbc.Input(
-                                            id="benchmark-first-date",
-                                            value=first_date if first_date else "2000-01",
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ]
+                                    [html.Label("First Date")]
+                                    + date_input("benchmark-first-date", first_date if first_date else "2000-01")
                                 ),
                                 dbc.Col(
-                                    [
-                                        html.Label("Last Date"),
-                                        dbc.Input(
-                                            id="benchmark-last-date",
-                                            value=last_date if last_date else today_str,
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ]
+                                    [html.Label("Last Date")]
+                                    + date_input("benchmark-last-date", last_date if last_date else today_str)
                                 ),
                             ]
                         ),
@@ -359,3 +346,7 @@ def disable_submit(tickers_list, rolling_window_value) -> bool:
     condition1 = len(tickers_list) == 0
     condition2 = validators.validate_integer_bool(rolling_window_value)
     return condition1 or condition2
+
+
+register_date_validation("benchmark-first-date")
+register_date_validation("benchmark-last-date")

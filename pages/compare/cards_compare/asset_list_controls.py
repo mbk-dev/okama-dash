@@ -16,6 +16,7 @@ from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
 from common import cache
 import common.validators as validators
+from common.date_input import date_input, register_date_validation
 from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
     al_options_tooltip_inflation,
     al_options_tooltip_cagr,
@@ -74,26 +75,12 @@ def card_controls(
                         dbc.Row(
                             [
                                 dbc.Col(
-                                    [
-                                        html.Label("First Date"),
-                                        dbc.Input(
-                                            id="al-first-date",
-                                            value=first_date if first_date else "2000-01",
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ]
+                                    [html.Label("First Date")]
+                                    + date_input("al-first-date", first_date if first_date else "2000-01")
                                 ),
                                 dbc.Col(
-                                    [
-                                        html.Label("Last Date"),
-                                        dbc.Input(
-                                            id="al-last-date",
-                                            value=last_date if last_date else today_str,
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ]
+                                    [html.Label("Last Date")]
+                                    + date_input("al-last-date", last_date if last_date else today_str)
                                 ),
                             ]
                         ),
@@ -369,3 +356,7 @@ def disable_submit(tickers_list, rolling_window_value) -> bool:
     no_tickers = len(tickers_list) == 0
     rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
     return no_tickers or rolling_not_natural
+
+
+register_date_validation("al-first-date")
+register_date_validation("al-last-date")
