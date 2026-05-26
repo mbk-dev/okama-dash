@@ -23,6 +23,7 @@ import okama as ok
 import common
 import common.create_link
 import common.settings as settings
+from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row
 from common.mobile_screens import adopt_small_screens
 from common.update_style import change_style_for_hidden_row
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
@@ -30,7 +31,6 @@ from pages.portfolio.cards_portfolio.portfolio_description import card_portfolio
 from pages.portfolio.cards_portfolio.portfolio_info import card_assets_info
 from pages.portfolio.cards_portfolio.pf_statistics_table import card_table
 from pages.portfolio.cards_portfolio.pf_wealth_indexes_chart import card_graf_portfolio
-import common.crisis.crisis_data as cr
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -697,20 +697,6 @@ def get_pf_statistics_table(al_object):
     )
 
 
-def add_sharpe_ratio_row(al_object, statistics_df):
-    # add Sharpe ratio
-    inflation_ts = al_object.inflation_ts if hasattr(al_object, "inflation") else pd.Series()
-    inflation = ok.Frame.get_cagr(inflation_ts) if not inflation_ts.empty else None
-    rf_rate = inflation if inflation else settings.RISK_FREE_RATE_DEFAULT
-    sh_ratio = al_object.get_sharpe_ratio(rf_return=rf_rate)
-    # add row
-    row = {al_object.symbol: sh_ratio}
-    row.update(
-        period=al_object._pl_txt,
-        property=f"Sharpe ratio (risk free rate: {rf_rate * 100:.2f})",
-    )
-    return pd.concat([statistics_df, pd.DataFrame(row, index=[0])], ignore_index=True)
-
 
 def get_pf_figure(
     pf_object: ok.Portfolio,
@@ -846,30 +832,9 @@ def get_pf_figure(
         fig.update_traces(
             patch={"line": {"width": 3}, "name": pf_object.symbol}, selector={"legendgroup": pf_object.symbol}
         )
-        # Plot Inflation
         if condition_plot_inflation and not condition_monte_carlo:
-            fig.add_trace(
-                go.Scatter(
-                    x=ind,
-                    y=df.iloc[:, -1],
-                    mode="none",
-                    fill="tozeroy",
-                    fillcolor="rgba(226,150,65,0.5)",
-                    name="Inflation",
-                )
-            )
-        # Plot Financial crisis historical data (sample)
-        for crisis in cr.crisis_list:
-            if (chart_first_date < crisis.first_date_dt) and (chart_last_date > crisis.last_date_dt):
-                fig.add_vrect(
-                    x0=crisis.first_date,
-                    x1=crisis.last_date,
-                    annotation_text=crisis.name,
-                    annotation=dict(align="left", valign="top", textangle=-90),
-                    fillcolor="red",
-                    opacity=0.25,
-                    line_width=0,
-                )
+            add_inflation_trace(fig, ind, df)
+        add_crisis_rectangles(fig, chart_first_date, chart_last_date)
         # Plot x-axis slider
         fig.update_xaxes(
             # ticks='outside',
@@ -893,17 +858,8 @@ def get_pf_figure(
             legend_title="Assets",
         )
 
-        # plot annotations
         if not condition_monte_carlo and not has_cashflow:
-            for point in zip(annotations_xy, annotations_text):
-                fig.add_annotation(
-                    x=point[0][0],
-                    y=point[0][1],
-                    text=point[1],
-                    showarrow=False,
-                    xanchor="left",
-                    bgcolor="grey",
-                )
+            add_last_value_annotations(fig, annotations_xy, annotations_text)
         else:
             fig.update_traces(showlegend=False)
     return fig, df_backtest, df_forecast, df

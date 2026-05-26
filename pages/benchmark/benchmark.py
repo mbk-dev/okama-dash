@@ -13,6 +13,7 @@ import okama as ok
 
 import common.settings as settings
 import common.update_style
+from common.chart_helpers import add_last_value_annotations
 from common.mobile_screens import adopt_small_screens
 from pages.benchmark.cards_benchmark.benchmark_chart import card_graf_benchmark
 from pages.benchmark.cards_benchmark.benchmark_controls import benchmark_card_controls
@@ -154,16 +155,7 @@ def get_benchmark_figure(
         )
         annotations_text = [cum_return for cum_return in annotation_series]
 
-        # plot annotations
-        for point in zip(annotations_xy, annotations_text):
-            fig.add_annotation(
-                x=point[0][0],
-                y=point[0][1],
-                text=point[1],
-                showarrow=False,
-                xanchor="left",
-                bgcolor="grey",
-            )
+        add_last_value_annotations(fig, annotations_xy, annotations_text)
         fig.update_yaxes(
             # ticks='outside',
             zeroline=True,
