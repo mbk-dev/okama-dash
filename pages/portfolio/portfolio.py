@@ -1,3 +1,4 @@
+import logging
 import typing
 import warnings
 import pickle
@@ -15,7 +16,7 @@ import plotly.graph_objects as go
 
 import pandas as pd
 import numpy as np
-from scipy.stats import t, norm, lognorm
+from scipy.stats import t, norm, lognorm, kstest, jarque_bera, skew, kurtosis as scipy_kurtosis
 
 import okama as ok
 
@@ -274,6 +275,27 @@ def update_graf_portfolio(
     abs_dev_val = float(rebal_abs_deviation) / 100 if rebal_abs_deviation else None
     rel_dev_val = float(rebal_rel_deviation) / 100 if rebal_rel_deviation else None
 
+    cf_hash = common.create_link.compute_cashflow_hash(
+        cf_strategy=cf_strategy,
+        cf_freq=cf_frequency,
+        cf_amount=cf_amount,
+        cf_indexation=cf_indexation,
+        cf_percentage=cf_percentage,
+        vds_percentage=vds_percentage,
+        vds_min_withdrawal=vds_min_withdrawal,
+        vds_max_withdrawal=vds_max_withdrawal,
+        vds_adjust_minmax=vds_adjust_minmax,
+        vds_floor=vds_floor,
+        vds_ceiling=vds_ceiling,
+        vds_adjust_fc=vds_adjust_fc,
+        vds_indexation=vds_indexation,
+        cwd_amount=cwd_amount,
+        cwd_indexation=cwd_indexation,
+        cwd_thresholds=tuple(cwd_thresholds) if cwd_thresholds else None,
+        cwd_reductions=tuple(cwd_reductions) if cwd_reductions else None,
+        ts_dates=tuple(ts_dates) if ts_dates else None,
+        ts_amounts=tuple(ts_amounts) if ts_amounts else None,
+    )
     new_pf_file_name = common.create_link.create_filename(
         tickers_list=assets,
         ccy=ccy,
@@ -287,11 +309,12 @@ def update_graf_portfolio(
         initial_amount=initial_amount,
         cf_strategy=cf_strategy,
         cf_freq=cf_frequency,
+        cashflow_hash=cf_hash,
     )
     new_pf_file = data_folder / new_pf_file_name
     if new_pf_file.is_file():
         with open(new_pf_file, 'rb') as f:
-            print("found cached Portfolio file...")
+            logging.debug("found cached Portfolio file: %s", new_pf_file_name)
             pf_object = pickle.load(f)
     else:
         rebal_strategy = ok.Rebalance(
@@ -336,7 +359,6 @@ def update_graf_portfolio(
         )
         pf_object.dcf.cashflow_parameters = strategy
 
-        # Cache to pickle file
         pf_file_name = common.create_link.create_filename(
             tickers_list=pf_object.symbols,
             ccy=pf_object.currency,
@@ -350,6 +372,7 @@ def update_graf_portfolio(
             initial_amount=float(initial_amount),
             cf_strategy=cf_strategy,
             cf_freq=cf_frequency,
+            cashflow_hash=cf_hash,
         )
         data_file = data_folder / pf_file_name
         with open(data_file, 'wb') as f:
@@ -498,13 +521,20 @@ def _build_cashflow_strategy(
 
 
 def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
-    ks_norm = pf_object.kstest('norm')
-    ks_lognorm = pf_object.kstest('lognorm')
-    ks_t = pf_object.kstest('t')
+    data = pf_object.ror.dropna()
+    mu, std = norm.fit(data)
+    df_t, loc_t, scale_t = t.fit(data)
+    std_ln, loc_ln, scale_ln = lognorm.fit(data)
+
+    ks_norm = kstest(data, "norm", args=(mu, std))
+    ks_lognorm = kstest(data, "lognorm", args=(std_ln, loc_ln, scale_ln))
+    ks_t = kstest(data, "t", args=(df_t, loc_t, scale_t))
+    jb_stat, jb_pvalue = jarque_bera(data)
+
     table_list = [
-        {"distribution": "Normal", "statistics": ks_norm['statistic'], "p-value": ks_norm['p-value']},
-        {"distribution": "Lognormal", "statistics": ks_lognorm['statistic'], "p-value": ks_norm['p-value']},
-        {"distribution": "Student's T", "statistics": ks_t['statistic'], "p-value": ks_t['p-value']},
+        {"distribution": "Normal", "statistics": ks_norm.statistic, "p-value": ks_norm.pvalue},
+        {"distribution": "Lognormal", "statistics": ks_lognorm.statistic, "p-value": ks_lognorm.pvalue},
+        {"distribution": "Student's T", "statistics": ks_t.statistic, "p-value": ks_t.pvalue},
     ]
     columns = [
         dict(id="distribution", name="distribution"),
@@ -515,29 +545,27 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
         [
             dcc.Markdown(
                 """
-                **Distribution moments**  
+                **Distribution moments**
                 All values correspond to the monthly rate of return.
                 """
             ),
-            html.P(f"Mean: {pf_object.ror.mean() * 100:.2f}"),
-            html.P(f"Standard deviation: {pf_object.ror.std() * 100:.2f}"),
-            html.P(f"Skewness: {pf_object.skewness.iloc[-1]:.2f}"),
-            html.P(f"Kurtosis: {pf_object.kurtosis.iloc[-1]:.2f}"),
+            html.P(f"Mean: {data.mean() * 100:.2f}"),
+            html.P(f"Standard deviation: {data.std() * 100:.2f}"),
+            html.P(f"Skewness: {skew(data):.2f}"),
+            html.P(f"Kurtosis: {scipy_kurtosis(data):.2f}"),
             dcc.Markdown(
                 """
-                **Popular distributions tests**  
+                **Popular distributions tests**
                 """
             ),
-            html.P(
-                f"Jarque-Bera test statistic: {pf_object.jarque_bera['statistic']:.2f}, p-value: {pf_object.jarque_bera['p-value']:.2f}"),
+            html.P(f"Jarque-Bera test statistic: {jb_stat:.2f}, p-value: {jb_pvalue:.2f}"),
             dcc.Markdown(
                 """
-                **Kolmogorov-Smirnov test**  
+                **Kolmogorov-Smirnov test**
                 """
             ),
             html.Div(
                 [
-
                     dash_table.DataTable(
                         data=table_list,
                         columns=columns,
@@ -594,17 +622,10 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
 
 
 def get_forecast_wealth_statistics_table(pf_object) -> dash_table.DataTable:
-    if not pf_object.dcf.monte_carlo_wealth.empty:
-        wealth = pf_object.dcf.monte_carlo_wealth.iloc[-1, :]
-        # TODO: return after okama 1.4.5 release
-        # wealth_pv = pf_object.dcf.monte_carlo_wealth_pv.iloc[-1, :]
-        wealth_df_pv = pd.DataFrame()
-        wealth_df = pf_object.dcf.monte_carlo_wealth.copy()
-        for n, row in enumerate(wealth_df.iterrows()):
-            w = row[1]
-            w = w / (1.0 + pf_object.dcf.discount_rate / 12) ** n
-            wealth_df_pv = pd.concat([wealth_df_pv, w.to_frame().T], sort=False)
-        wealth_pv = wealth_df_pv.iloc[-1, :]
+    wealth_fv = pf_object.dcf.monte_carlo_wealth(discounting="fv")
+    if not wealth_fv.empty:
+        wealth = wealth_fv.iloc[-1, :]
+        wealth_pv = pf_object.dcf.monte_carlo_wealth(discounting="pv").iloc[-1, :]
 
         rate = f"{pf_object.dcf.discount_rate * 100:.2f}%"
         table_list = [
@@ -752,7 +773,7 @@ def get_pf_figure(
             "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
             "drawdowns": "Portfolio Drawdowns",
         }
-        show_backtest_bool = True if show_backtest == "yes" else False
+        show_backtest_bool = show_backtest == "yes"
         # Select Plot Type
         condition_monte_carlo = plot_type == "wealth" and n_monte_carlo != 0
         df_backtest = pd.DataFrame()
@@ -787,10 +808,10 @@ def get_pf_figure(
                     pf_object.dcf.set_mc_parameters(
                         distribution=distribution_monte_carlo,
                         period=years_monte_carlo,
-                        number=n_monte_carlo
+                        mc_number=n_monte_carlo,
                     )
-                    df_forecast = pf_object.dcf.monte_carlo_wealth
-                    df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", copy="false", ignore_index=False)
+                    df_forecast = pf_object.dcf.monte_carlo_wealth()
+                    df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", copy=False, ignore_index=False)
                 else:
                     df = df_backtest
         elif plot_type in {"cagr", "real_cagr"}:

@@ -1,3 +1,4 @@
+import hashlib
 import typing
 
 from common import settings as settings
@@ -102,6 +103,14 @@ def create_link(
     return new_url
 
 
+def compute_cashflow_hash(**params) -> typing.Optional[str]:
+    filtered = {k: v for k, v in sorted(params.items()) if v is not None}
+    if not filtered:
+        return None
+    raw = repr(filtered).encode()
+    return hashlib.sha256(raw).hexdigest()[:12]
+
+
 def create_filename(
     *,
     tickers_list: list[str],
@@ -122,6 +131,8 @@ def create_filename(
     # cashflow strategy
     cf_strategy=None,
     cf_freq=None,
+    # cashflow params digest
+    cashflow_hash: typing.Optional[str] = None,
 ) -> str:
     """
     Create filename to serialize EF, Portfolio objects to pickle.
@@ -133,7 +144,7 @@ def create_filename(
     file_name += f"-ccy={ccy}"
     file_name += f"-fd={first_date}"
     file_name += f"-ld={last_date}"
-    if inflation != None:
+    if inflation is not None:
         file_name += f"-infl={str(inflation)}"
     if rebal:
         file_name += f"-rb={rebal}"
@@ -153,6 +164,8 @@ def create_filename(
         file_name += f"-cs={cf_strategy}"
     if cf_freq and cf_freq != "month":
         file_name += f"-cfq={cf_freq}"
+    if cashflow_hash:
+        file_name += f"-cfh={cashflow_hash}"
     return file_name + ".pkl"
 
 
