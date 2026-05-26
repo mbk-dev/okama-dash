@@ -13,6 +13,15 @@ Any change to production code (new feature, bugfix, refactor, behavior change) m
 
 The required workflow is the `superpowers:test-driven-development` skill. Cycle: **RED → verify RED → GREEN → verify GREEN → REFACTOR**.
 
+Rules for this repo:
+- Tests run via: `pytest -q` (or `poetry run pytest -q` if not inside the poetry shell).
+- Before writing code, see the test fail for a real reason (`AssertionError` / missing function), not a typo/import error.
+- For bugfix: first a test reproducing the bug, then the fix. Without a reproducing test the bug is not considered fixed.
+- One test = one behavior. Test name describes the behavior meaningfully, no `test1` / `test_works`.
+- Real code instead of mocks wherever possible.
+- After GREEN, run the full test suite of the file/module to make sure nothing broke; output must be clean (no warnings/errors).
+- Exceptions where TDD can be skipped: only by explicit user request (one-time data migration scripts, generated code, throwaway prototypes). Notebooks — partial exception: cover the library code with tests, not the notebook rendering itself.
+
 ## After any code changes:
 1) Determine whether *executable Python code* was changed, not just comments or docstrings.
 2) If executable code was changed — always run tests: `pytest -q`.
