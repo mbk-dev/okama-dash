@@ -785,11 +785,11 @@ def get_pf_figure(
         titles["wealth"] = "Portfolio Wealth Index (with Cash Flow)" if has_cashflow else "Portfolio Wealth Index"
         if plot_type == "wealth":
             if n_monte_carlo == 0:
-                df = pf_object.dcf.wealth_index_fv_with_assets if has_cashflow else pf_object.wealth_index_with_assets
+                df = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False) if has_cashflow else pf_object.wealth_index_with_assets
                 # TODO: calculate return_series: portfolio + assets
                 return_series = pf_object.get_cumulative_return(real=False)
             else:
-                df_backtest = pf_object.dcf.wealth_index_fv_with_assets[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
+                df_backtest = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
                 initial_investment = pf_object.dcf.cashflow_parameters.initial_investment if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment") else settings.INITIAL_INVESTMENT_DEFAULT
                 last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
                 if last_backtest_value > 0:
