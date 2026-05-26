@@ -59,5 +59,5 @@ def dash_server_url():
 
 @pytest.fixture
 def portfolio_page(page, dash_server_url):
-    page.goto(f"{dash_server_url}/portfolio", wait_until="networkidle")
+    page.goto(f"{dash_server_url}/portfolio", wait_until="domcontentloaded")
     return page

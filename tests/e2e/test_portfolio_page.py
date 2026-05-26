@@ -30,22 +30,56 @@ class TestPortfolioPageLoad:
 
 class TestPageNavigation:
     def test_portfolio_loads(self, page, dash_server_url):
-        page.goto(f"{dash_server_url}/portfolio", wait_until="networkidle")
+        page.goto(f"{dash_server_url}/portfolio", wait_until="domcontentloaded")
         assert "/portfolio" in page.url
 
     def test_ef_loads(self, page, dash_server_url):
-        page.goto(dash_server_url, wait_until="networkidle")
+        page.goto(dash_server_url, wait_until="domcontentloaded")
         assert page.locator("body").is_visible()
 
     def test_compare_loads(self, page, dash_server_url):
-        page.goto(f"{dash_server_url}/compare", wait_until="networkidle")
+        page.goto(f"{dash_server_url}/compare", wait_until="domcontentloaded")
         assert "/compare" in page.url
 
     def test_benchmark_loads(self, page, dash_server_url):
-        page.goto(f"{dash_server_url}/benchmark", wait_until="networkidle")
+        page.goto(f"{dash_server_url}/benchmark", wait_until="domcontentloaded")
         assert "/benchmark" in page.url
 
-    @pytest.mark.skip(reason="Database page hangs with mocked okama — needs additional mocking in Phase 4")
     def test_database_loads(self, page, dash_server_url):
         page.goto(f"{dash_server_url}/database", wait_until="domcontentloaded")
         assert "/database" in page.url
+
+
+class TestMobileViewport:
+    def test_portfolio_controls_visible_on_mobile(self, dash_server_url, browser):
+        context = browser.new_context(viewport={"width": 375, "height": 812})
+        mobile_page = context.new_page()
+        mobile_page.goto(f"{dash_server_url}/portfolio", wait_until="domcontentloaded")
+
+        btn = mobile_page.locator("#pf-submit-button")
+        btn.wait_for(state="visible", timeout=10_000)
+        assert btn.is_visible()
+
+        box = btn.bounding_box()
+        assert box is not None
+        assert box["x"] >= 0
+        assert box["x"] + box["width"] <= 375
+
+        mobile_page.close()
+        context.close()
+
+    def test_ef_controls_visible_on_mobile(self, dash_server_url, browser):
+        context = browser.new_context(viewport={"width": 375, "height": 812})
+        mobile_page = context.new_page()
+        mobile_page.goto(dash_server_url, wait_until="domcontentloaded")
+
+        btn = mobile_page.locator("#ef-submit-button-state")
+        btn.wait_for(state="visible", timeout=10_000)
+        assert btn.is_visible()
+
+        box = btn.bounding_box()
+        assert box is not None
+        assert box["x"] + box["width"] <= 375
+
+        mobile_page.close()
+        context.close()
