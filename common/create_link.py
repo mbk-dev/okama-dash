@@ -1,5 +1,6 @@
 import hashlib
 import typing
+from urllib.parse import quote
 
 from common import settings as settings
 
@@ -41,19 +42,21 @@ def create_link(
     cwd_tr=None,
     cf_ts=None,
 ) -> str:
-    tickers_str = "tickers=" + ",".join(str(symbol) for symbol in tickers_list)
+    def _q(val) -> str:
+        return quote(str(val), safe="")
+
+    tickers_str = "tickers=" + ",".join(_q(s) for s in tickers_list)
     reset_href = href.split("?")[0]
     new_url = f"{reset_href}?{tickers_str}"
     if benchmark:
-        new_url += f"&benchmark={benchmark}"
+        new_url += f"&benchmark={_q(benchmark)}"
     if weights_list:
-        weights_str = "&weights=" + ",".join(str(w) for w in weights_list)
-        new_url += weights_str
-    new_url += f"&ccy={ccy}"
-    new_url += f"&first_date={first_date}"
-    new_url += f"&last_date={last_date}"
+        new_url += "&weights=" + ",".join(str(w) for w in weights_list)
+    new_url += f"&ccy={_q(ccy)}"
+    new_url += f"&first_date={_q(first_date)}"
+    new_url += f"&last_date={_q(last_date)}"
     if rebal:
-        new_url += f"&rebal={rebal}"
+        new_url += f"&rebal={_q(rebal)}"
     if initial_amount:
         new_url += f"&initial_amount={initial_amount}"
     if cashflow:
@@ -61,17 +64,15 @@ def create_link(
     if discount_rate:
         new_url += f"&discount_rate={discount_rate}"
     if symbol:
-        new_url += f"&symbol={symbol}"
-    # Rebalancing deviation
+        new_url += f"&symbol={_q(symbol)}"
     if abs_dev is not None:
         new_url += f"&abs_dev={abs_dev}"
     if rel_dev is not None:
         new_url += f"&rel_dev={rel_dev}"
-    # Cashflow strategy
     if cf_strategy and cf_strategy != "indexation":
-        new_url += f"&cf_strategy={cf_strategy}"
+        new_url += f"&cf_strategy={_q(cf_strategy)}"
     if cf_freq and cf_freq != "month":
-        new_url += f"&cf_freq={cf_freq}"
+        new_url += f"&cf_freq={_q(cf_freq)}"
     if cf_amount:
         new_url += f"&cf_amount={cf_amount}"
     if cf_indexation is not None:
@@ -85,21 +86,21 @@ def create_link(
     if vds_max is not None:
         new_url += f"&vds_max={vds_max}"
     if vds_adj_mm is not None and not vds_adj_mm:
-        new_url += f"&vds_adj_mm=0"
+        new_url += "&vds_adj_mm=0"
     if vds_floor is not None:
         new_url += f"&vds_floor={vds_floor}"
     if vds_ceil is not None:
         new_url += f"&vds_ceil={vds_ceil}"
     if vds_adj_fc:
-        new_url += f"&vds_adj_fc=1"
+        new_url += "&vds_adj_fc=1"
     if vds_indexation is not None:
         new_url += f"&vds_indexation={vds_indexation}"
     if cwd_amount:
         new_url += f"&cwd_amount={cwd_amount}"
     if cwd_tr:
-        new_url += f"&cwd_tr={cwd_tr}"
+        new_url += f"&cwd_tr={_q(cwd_tr)}"
     if cf_ts:
-        new_url += f"&cf_ts={cf_ts}"
+        new_url += f"&cf_ts={_q(cf_ts)}"
     return new_url
 
 

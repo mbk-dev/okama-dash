@@ -1,8 +1,16 @@
+import logging
+
+import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.graph_objects as go
 import okama as ok
 
 import common.settings as settings
+
+
+def make_error_alert(error: Exception) -> dbc.Alert:
+    logging.exception("Callback error")
+    return dbc.Alert(f"Error: {error}", color="danger", dismissable=True)
 import common.crisis.crisis_data as cr
 
 

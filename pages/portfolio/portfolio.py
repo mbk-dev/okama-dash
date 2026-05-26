@@ -1,10 +1,13 @@
 import logging
+import os
+import time
 import typing
 import warnings
 import pickle
 from pathlib import Path
 
 import dash
+import dash_bootstrap_components as dbc
 import plotly
 from dash import dash_table, callback, ALL, html, dcc
 from dash.dash_table.Format import Format, Scheme
@@ -23,7 +26,7 @@ import okama as ok
 import common
 import common.create_link
 import common.settings as settings
-from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row
+from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row, make_error_alert
 from common.mobile_screens import adopt_small_screens
 from common.update_style import change_style_for_hidden_row
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
@@ -35,6 +38,40 @@ from pages.portfolio.cards_portfolio.pf_wealth_indexes_chart import card_graf_po
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
 data_folder = Path(__file__).parent.parent.parent / common.cache_directory
+
+PF_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60
+PF_CACHE_CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
+_pf_cleanup_marker = data_folder / ".pf-cache-cleanup"
+_pf_cleanup_lock = data_folder / ".pf-cache-cleanup.lock"
+
+
+def _cleanup_expired_pf_cache_files() -> None:
+    data_folder.mkdir(parents=True, exist_ok=True)
+    now = time.time()
+    if _pf_cleanup_marker.exists():
+        if now - _pf_cleanup_marker.stat().st_mtime < PF_CACHE_CLEANUP_INTERVAL_SECONDS:
+            return
+    try:
+        lock_fd = os.open(str(_pf_cleanup_lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        return
+    try:
+        os.close(lock_fd)
+        if _pf_cleanup_marker.exists():
+            if now - _pf_cleanup_marker.stat().st_mtime < PF_CACHE_CLEANUP_INTERVAL_SECONDS:
+                return
+        threshold = now - PF_CACHE_TTL_SECONDS
+        for path in data_folder.glob("*.pkl"):
+            if "-cv=ef-" in path.name:
+                continue
+            try:
+                if path.stat().st_mtime < threshold:
+                    path.unlink(missing_ok=True)
+            except FileNotFoundError:
+                continue
+        _pf_cleanup_marker.touch()
+    finally:
+        _pf_cleanup_lock.unlink(missing_ok=True)
 
 dash.register_page(
     __name__,
@@ -267,6 +304,38 @@ def update_graf_portfolio(
             dash.no_update,
         )
 
+    _cleanup_expired_pf_cache_files()
+    try:
+        return _update_graf_portfolio_inner(
+            screen, log_on, assets, weights, ccy, rebalancing_period,
+            rebal_abs_deviation, rebal_rel_deviation, fd_value, ld_value,
+            initial_amount, discount_rate, symbol, cf_strategy, cf_frequency,
+            cf_amount, cf_indexation, cf_percentage,
+            vds_percentage, vds_min_withdrawal, vds_max_withdrawal, vds_adjust_minmax,
+            vds_floor, vds_ceiling, vds_adjust_fc, vds_indexation,
+            cwd_amount, cwd_indexation, cwd_thresholds, cwd_reductions,
+            ts_dates, ts_amounts,
+            plot_type, inflation_on, rolling_window,
+            n_monte_carlo, years_monte_carlo, distribution_monte_carlo, show_backtest,
+        )
+    except Exception as e:
+        alert = make_error_alert(e)
+        empty_fig = go.Figure()
+        return empty_fig, {}, alert, dash_table.DataTable(), dash_table.DataTable(), None
+
+
+def _update_graf_portfolio_inner(
+    screen, log_on, assets, weights, ccy, rebalancing_period,
+    rebal_abs_deviation, rebal_rel_deviation, fd_value, ld_value,
+    initial_amount, discount_rate, symbol, cf_strategy, cf_frequency,
+    cf_amount, cf_indexation, cf_percentage,
+    vds_percentage, vds_min_withdrawal, vds_max_withdrawal, vds_adjust_minmax,
+    vds_floor, vds_ceiling, vds_adjust_fc, vds_indexation,
+    cwd_amount, cwd_indexation, cwd_thresholds, cwd_reductions,
+    ts_dates, ts_amounts,
+    plot_type, inflation_on, rolling_window,
+    n_monte_carlo, years_monte_carlo, distribution_monte_carlo, show_backtest,
+):
     assets = [i for i in assets if i is not None]
     weights = [i / 100.0 for i in weights if i is not None]
     symbol = symbol.replace(" ", "_")
@@ -698,6 +767,107 @@ def get_pf_statistics_table(al_object):
 
 
 
+def _nullify_after_first_zero(df: pd.DataFrame, column: str) -> None:
+    s = df[column]
+    zero_mask = s == 0
+    if zero_mask.any():
+        first_zero = zero_mask.idxmax()
+        df.loc[s.index > first_zero, column] = np.nan
+
+
+def _get_distribution_figure(pf_object: ok.Portfolio) -> go.Figure:
+    data = pf_object.ror
+    df_t, loc, scale = t.fit(data)
+    mu, std = norm.fit(data)
+    std_ln, loc_ln, scale_ln = lognorm.fit(data)
+    xmin, xmax = data.min(), data.max()
+    x = np.linspace(xmin, xmax, 100)
+    bins_number = 50 if data.shape[0] >= 120 else 10
+    bin_size = (xmax - xmin) / bins_number
+    pdf_df = pd.DataFrame(
+        {
+            "Student’s t": t.pdf(x, loc=loc, scale=scale, df=df_t) * bin_size,
+            "Normal": norm.pdf(x, mu, std) * bin_size,
+            "Lognormal": lognorm.pdf(x, std_ln, loc_ln, scale_ln) * bin_size,
+        },
+        index=x + bin_size / 2,
+    )
+    fig = px.line(pdf_df)
+    fig.add_trace(
+        go.Histogram(
+            x=data,
+            histnorm="probability",
+            xbins=go.histogram.XBins(size=bin_size),
+            marker=go.histogram.Marker(color="lightgreen"),
+            name="Historical distribution",
+        )
+    )
+    fig.update_layout(
+        title={"text": "Rate of return distribution", "y": 0.9, "x": 0.5, "xanchor": "center", "yanchor": "top"},
+        legend_title="Legend",
+    )
+    fig.update_xaxes(title_text=None)
+    fig.update_yaxes(title_text="Probability")
+    return fig
+
+
+def _get_wealth_data(pf_object, has_cashflow, n_monte_carlo, show_backtest_bool, distribution_mc, years_mc):
+    df_backtest = pd.DataFrame()
+    df_forecast = pd.DataFrame()
+    if n_monte_carlo == 0:
+        df = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False) if has_cashflow else pf_object.wealth_index_with_assets
+        if has_cashflow:
+            _nullify_after_first_zero(df, pf_object.symbol)
+        return_series = pf_object.get_cumulative_return(real=False)
+        return df, df_backtest, df_forecast, return_series
+
+    df_backtest = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
+    if not df_backtest.empty:
+        _nullify_after_first_zero(df_backtest, pf_object.symbol)
+    initial_investment = pf_object.dcf.cashflow_parameters.initial_investment if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment") else settings.INITIAL_INVESTMENT_DEFAULT
+    last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
+    if last_backtest_value > 0:
+        pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
+        pf_object.dcf.set_mc_parameters(distribution=distribution_mc, period=years_mc, mc_number=n_monte_carlo)
+        df_forecast = pf_object.dcf.monte_carlo_wealth()
+        df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", copy=False, ignore_index=False)
+    else:
+        df = df_backtest
+    return df, df_backtest, df_forecast, None
+
+
+def _build_timeseries_figure(pf_object, df, plot_type, titles, inflation_on, log_scale, condition_monte_carlo, has_cashflow, return_series):
+    ind = df.index.to_timestamp("D")
+    condition_plot_inflation = inflation_on and plot_type != "real_cagr"
+
+    fig = px.line(
+        df,
+        x=ind,
+        y=df.columns[:-1] if condition_plot_inflation and not condition_monte_carlo else df.columns,
+        log_y=log_scale if plot_type == "wealth" else False,
+        title=titles[plot_type],
+        height=800,
+    )
+    fig.update_traces({"line": {"width": 1}})
+    fig.update_traces(
+        patch={"line": {"width": 3}, "name": pf_object.symbol}, selector={"legendgroup": pf_object.symbol}
+    )
+    if condition_plot_inflation and not condition_monte_carlo:
+        add_inflation_trace(fig, ind, df)
+    add_crisis_rectangles(fig, ind[0], ind[-1])
+    fig.update_xaxes(rangeslider_visible=True, showgrid=False, zeroline=False)
+    fig.update_yaxes(zeroline=True, zerolinecolor="black", zerolinewidth=1, showgrid=False)
+    fig.update_layout(xaxis_title=None, legend_title="Assets")
+
+    if not condition_monte_carlo and not has_cashflow:
+        annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
+        annotations_text = list((return_series * 100).map("{:,.2f}%".format))
+        add_last_value_annotations(fig, annotations_xy, annotations_text)
+    else:
+        fig.update_traces(showlegend=False)
+    return fig
+
+
 def get_pf_figure(
     pf_object: ok.Portfolio,
     plot_type: str,
@@ -711,157 +881,40 @@ def get_pf_figure(
     cf_strategy: str = "indexation",
 ) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if plot_type == "distribution":
-        data = pf_object.ror
-        df_backtest = pd.DataFrame()
-        df_forecast = pd.DataFrame()
-        # Fit distributions to the data:
-        df, loc, scale = t.fit(data)  # Student's T distrbution
-        mu, std = norm.fit(data)  # mu - mean value
-        std_lognorm, loc_lognorm, scale_lognorm = lognorm.fit(data)
-        # set PDF
-        xmin, xmax = data.min(), data.max()
-        x = np.linspace(xmin, xmax, 100)
-        bins_number = 50 if data.shape[0] >= 120 else 10
-        bin_size = (xmax - xmin) / bins_number
-        p1 = t.pdf(x, loc=loc, scale=scale, df=df) * bin_size
-        p2 = norm.pdf(x, mu, std) * bin_size
-        p3 = lognorm.pdf(x, std_lognorm, loc_lognorm, scale_lognorm) * bin_size
-        df = pd.DataFrame({'Student’s t': p1, 'Normal': p2, 'Lognormal':p3}, index=x + bin_size / 2)
-        fig = px.line(df)
-        fig.add_trace(
-            go.Histogram(
-                x=data,
-                histnorm='probability',
-                xbins=go.histogram.XBins(size=bin_size),
-                marker=go.histogram.Marker(color="lightgreen"),
-                name="Historical distribution"
-            )
-        )
+        fig = _get_distribution_figure(pf_object)
+        return fig, pd.DataFrame(), pd.DataFrame(), pf_object.ror.to_frame()
 
-        fig.update_layout(
-            # Update title font
-            title={
-                "text": "Rate of return distribution",
-                "y": 0.9,  # Sets the y position with respect to `yref`
-                "x": 0.5,  # Sets the x position of title with respect to `xref`
-                "xanchor": "center",  # Sets the title's horizontal alignment with respect to its x position
-                "yanchor": "top",  # Sets the title's vertical alignment with respect to its y position. "
-            },
-            legend_title="Legend",
-        )
+    titles = {
+        "wealth": "Portfolio Wealth Index",
+        "cagr": f"Rolling CAGR (window={rolling_window} years)",
+        "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
+        "drawdowns": "Portfolio Drawdowns",
+    }
+    show_backtest_bool = show_backtest == "yes"
+    condition_monte_carlo = plot_type == "wealth" and n_monte_carlo != 0
+    has_cashflow = cf_strategy != "indexation" or (
+        hasattr(pf_object.dcf.cashflow_parameters, "amount") and pf_object.dcf.cashflow_parameters.amount != 0
+    )
+    if has_cashflow:
+        titles["wealth"] = "Portfolio Wealth Index (with Cash Flow)"
 
-        # Add X and Y labels
-        fig.update_xaxes(title_text=None)
-        fig.update_yaxes(title_text="Probability")
-    else:
-        titles = {
-            "cagr": f"Rolling CAGR (window={rolling_window} years)",
-            "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
-            "drawdowns": "Portfolio Drawdowns",
-        }
-        show_backtest_bool = show_backtest == "yes"
-        # Select Plot Type
-        condition_monte_carlo = plot_type == "wealth" and n_monte_carlo != 0
-        df_backtest = pd.DataFrame()
-        df_forecast = pd.DataFrame()
-        has_cashflow = cf_strategy != "indexation" or (
-            hasattr(pf_object.dcf.cashflow_parameters, "amount") and pf_object.dcf.cashflow_parameters.amount != 0
+    df_backtest = pd.DataFrame()
+    df_forecast = pd.DataFrame()
+    return_series = None
+    if plot_type == "wealth":
+        df, df_backtest, df_forecast, return_series = _get_wealth_data(
+            pf_object, has_cashflow, n_monte_carlo, show_backtest_bool, distribution_monte_carlo, years_monte_carlo,
         )
-        titles["wealth"] = "Portfolio Wealth Index (with Cash Flow)" if has_cashflow else "Portfolio Wealth Index"
-        if plot_type == "wealth":
-            if n_monte_carlo == 0:
-                df = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False) if has_cashflow else pf_object.wealth_index_with_assets
-                if has_cashflow:
-                    s = df[pf_object.symbol]
-                    zero_mask = s == 0
-                    if zero_mask.any():
-                        first_zero = zero_mask.idxmax()
-                        df.loc[s.index > first_zero, pf_object.symbol] = np.nan
-                # TODO: calculate return_series: portfolio + assets
-                return_series = pf_object.get_cumulative_return(real=False)
-            else:
-                df_backtest = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
-                if not df_backtest.empty:
-                    s = df_backtest[pf_object.symbol]
-                    zero_mask = s == 0
-                    if zero_mask.any():
-                        first_zero = zero_mask.idxmax()
-                        df_backtest.loc[s.index > first_zero, pf_object.symbol] = np.nan
-                initial_investment = pf_object.dcf.cashflow_parameters.initial_investment if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment") else settings.INITIAL_INVESTMENT_DEFAULT
-                last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
-                if last_backtest_value > 0:
-                    pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
-                    pf_object.dcf.set_mc_parameters(
-                        distribution=distribution_monte_carlo,
-                        period=years_monte_carlo,
-                        mc_number=n_monte_carlo,
-                    )
-                    df_forecast = pf_object.dcf.monte_carlo_wealth()
-                    df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", copy=False, ignore_index=False)
-                else:
-                    df = df_backtest
-        elif plot_type in {"cagr", "real_cagr"}:
-            real = plot_type != "cagr"
-            df = pf_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)
-            return_series = df.iloc[-1, :]
-        elif plot_type == "drawdowns":
-            df = pf_object.drawdowns.to_frame()
-            return_series = df.iloc[-1, :]
+    elif plot_type in {"cagr", "real_cagr"}:
+        df = pf_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=plot_type != "cagr")
+        return_series = df.iloc[-1, :]
+    elif plot_type == "drawdowns":
+        df = pf_object.drawdowns.to_frame()
+        return_series = df.iloc[-1, :]
 
-        ind = df.index.to_timestamp("D")
-        chart_first_date = ind[0]
-        chart_last_date = ind[-1]
-
-        if not condition_monte_carlo and not has_cashflow:
-            annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
-            annotation_series = (return_series * 100).map("{:,.2f}%".format)
-            annotations_text = list(annotation_series)
-
-        # inflation must not be in the chart for "Real CAGR"
-        condition_plot_inflation = inflation_on and plot_type != "real_cagr"
-
-        fig = px.line(
-            df,
-            x=ind,
-            y=df.columns[:-1] if condition_plot_inflation and not condition_monte_carlo else df.columns,
-            log_y=log_scale if plot_type == "wealth" else False,
-            title=titles[plot_type],
-            height=800,
-        )
-        fig.update_traces({"line": {"width": 1}})
-        fig.update_traces(
-            patch={"line": {"width": 3}, "name": pf_object.symbol}, selector={"legendgroup": pf_object.symbol}
-        )
-        if condition_plot_inflation and not condition_monte_carlo:
-            add_inflation_trace(fig, ind, df)
-        add_crisis_rectangles(fig, chart_first_date, chart_last_date)
-        # Plot x-axis slider
-        fig.update_xaxes(
-            # ticks='outside',
-            rangeslider_visible=True,
-            showgrid=False,
-            gridcolor="lightgrey",
-            zeroline=False,
-            zerolinewidth=2,
-            zerolinecolor="black",
-        )
-        fig.update_yaxes(
-            # ticks='outside',
-            zeroline=True,
-            zerolinecolor="black",
-            zerolinewidth=1,
-            showgrid=False,
-            gridcolor="lightgrey",
-        )
-        fig.update_layout(
-            xaxis_title=None,
-            legend_title="Assets",
-        )
-
-        if not condition_monte_carlo and not has_cashflow:
-            add_last_value_annotations(fig, annotations_xy, annotations_text)
-        else:
-            fig.update_traces(showlegend=False)
+    fig = _build_timeseries_figure(
+        pf_object, df, plot_type, titles, inflation_on, log_scale, condition_monte_carlo, has_cashflow, return_series,
+    )
     return fig, df_backtest, df_forecast, df
 
 

@@ -13,8 +13,9 @@ import okama as ok
 
 import common.settings as settings
 import common.update_style
-from common.chart_helpers import add_last_value_annotations
+from common.chart_helpers import add_last_value_annotations, make_error_alert
 from common.mobile_screens import adopt_small_screens
+import plotly.graph_objects as go
 from pages.benchmark.cards_benchmark.benchmark_chart import card_graf_benchmark
 from pages.benchmark.cards_benchmark.benchmark_controls import benchmark_card_controls
 
@@ -89,19 +90,24 @@ def update_graf_benchmark(
 ):
     if not selected_symbols or not benchmark:
         raise dash.exceptions.PreventUpdate
-    tickers = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
-    symbols = [benchmark] + tickers
-    al_object = ok.AssetList(
-        symbols,
-        first_date=fd_value,
-        last_date=ld_value,
-        ccy=ccy,
-        inflation=False,
-    )
-    fig, df_data = get_benchmark_figure(al_object, plot_type, expanding_rolling, rolling_window)
-    json_data = df_data.to_json(orient="split", default_handler=str)
-    fig, config = adopt_small_screens(fig, screen)
-    return fig, config, json_data
+    try:
+        tickers = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
+        symbols = [benchmark] + tickers
+        al_object = ok.AssetList(
+            symbols,
+            first_date=fd_value,
+            last_date=ld_value,
+            ccy=ccy,
+            inflation=False,
+        )
+        fig, df_data = get_benchmark_figure(al_object, plot_type, expanding_rolling, rolling_window)
+        json_data = df_data.to_json(orient="split", default_handler=str)
+        fig, config = adopt_small_screens(fig, screen)
+        return fig, config, json_data
+    except Exception as e:
+        alert_fig = go.Figure()
+        alert_fig.add_annotation(text=str(e), showarrow=False, font=dict(color="red", size=14))
+        return alert_fig, {}, None
 
 
 def get_benchmark_figure(

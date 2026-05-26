@@ -16,7 +16,8 @@ import okama as ok
 
 import common.settings as settings
 import common.update_style
-from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row
+from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row, make_error_alert
+import plotly.graph_objects as go
 
 from common.mobile_screens import adopt_small_screens
 from pages.compare.cards_compare.asset_list_controls import card_controls
@@ -105,6 +106,14 @@ def update_graf_compare(
 
     if not selected_symbols:
         raise dash.exceptions.PreventUpdate
+    try:
+        return _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window)
+    except Exception as e:
+        alert = make_error_alert(e)
+        return go.Figure(), {}, alert, None
+
+
+def _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     al_object = ok.AssetList(
         symbols,

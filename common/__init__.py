@@ -1,18 +1,18 @@
 import logging
-import platform
+import os
 
 from flask_caching import Cache
 
-plt = platform.system()
-
 cache_directory = "cache-directory"
 
-if plt == "Linux":
+_cache_backend = os.environ.get("OKAMA_CACHE_BACKEND", "redis")
+
+if _cache_backend == "redis":
     logging.info("caching in redis")
     cache = Cache(
         config={
             "CACHE_TYPE": "RedisCache",
-            "CACHE_REDIS_URL": "redis://localhost:6379/0",
+            "CACHE_REDIS_URL": os.environ.get("OKAMA_REDIS_URL", "redis://localhost:6379/0"),
             "CACHE_DEFAULT_TIMEOUT": 500,
         },
     )

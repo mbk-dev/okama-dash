@@ -4,10 +4,13 @@ from dash import callback, html, dcc
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
+import plotly.graph_objects as go
+
 import common
 import common.create_link
 import common.math
 import common.update_style
+from common.chart_helpers import make_error_alert
 from common.parse_query import make_list_from_string
 
 from pages.efficient_frontier.cards_efficient_frontier.ef_description import card_ef_description
@@ -142,32 +145,36 @@ def update_ef_cards(
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     if not symbols:
         raise dash.exceptions.PreventUpdate
-    ef_object, ef_file_name = get_or_create_ef_object(
-        symbols=symbols,
-        ccy=ccy,
-        first_date=fd_value,
-        last_date=ld_value,
-        rebalancing_period=rebalancing_period,
-    )
-    ef_options = dict(
-        plot_type=plot_option,
-        return_type=mean_type_option,
-        mdp=mdp_option,
-        cml=cml_option,
-        rf_rate=rf_rate,
-        n_monte_carlo=n_monte_carlo,
-    )
-    ef = ef_object.ef_points * 100
+    try:
+        ef_object, ef_file_name = get_or_create_ef_object(
+            symbols=symbols,
+            ccy=ccy,
+            first_date=fd_value,
+            last_date=ld_value,
+            rebalancing_period=rebalancing_period,
+        )
+        ef_options = dict(
+            plot_type=plot_option,
+            return_type=mean_type_option,
+            mdp=mdp_option,
+            cml=cml_option,
+            rf_rate=rf_rate,
+            n_monte_carlo=n_monte_carlo,
+        )
+        ef = ef_object.ef_points * 100
 
-    fig1 = prepare_ef(ef, ef_object, ef_options, ef_cache_key=ef_file_name)
-    fig2 = prepare_transition_map(ef)
+        fig1 = prepare_ef(ef, ef_object, ef_options, ef_cache_key=ef_file_name)
+        fig2 = prepare_transition_map(ef)
 
-    # Change layout for mobile screens
-    if screen and screen["in_width"] < 800:
-        fig1 = compact_ef_for_small_screens(fig1)
-    fig1, config1 = adopt_small_screens(fig1, screen)
-    fig2, config2 = adopt_small_screens(fig2, screen)
-    return fig1, fig2, config1, config2, ef_file_name
+        if screen and screen["in_width"] < 800:
+            fig1 = compact_ef_for_small_screens(fig1)
+        fig1, config1 = adopt_small_screens(fig1, screen)
+        fig2, config2 = adopt_small_screens(fig2, screen)
+        return fig1, fig2, config1, config2, ef_file_name
+    except Exception as e:
+        alert_fig = go.Figure()
+        alert_fig.add_annotation(text=str(e), showarrow=False, font=dict(color="red", size=14))
+        return alert_fig, go.Figure(), {}, {}, None
 
 
 @callback(
