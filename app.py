@@ -1,4 +1,22 @@
+import os
 import warnings
+
+if os.environ.get("TESTING") == "1":
+    from unittest.mock import MagicMock
+
+    import okama as _ok
+    from tests.mocks.okama_mock import get_mock_namespaces, make_mock_portfolio, mock_symbols_in_namespace
+
+    _ok.assets_namespaces = get_mock_namespaces()
+    _ok.symbols_in_namespace = mock_symbols_in_namespace
+    _ok.Portfolio = lambda *a, **kw: make_mock_portfolio()
+    _ok.Rebalance = MagicMock()
+    _ok.AssetList = MagicMock()
+    _ok.IndexationStrategy = MagicMock()
+    _ok.PercentageStrategy = MagicMock()
+    _ok.VanguardDynamicSpending = MagicMock()
+    _ok.CutWithdrawalsIfDrawdown = MagicMock()
+    _ok.TimeSeriesStrategy = MagicMock()
 
 import dash
 from dash import html, dcc
