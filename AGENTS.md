@@ -104,7 +104,7 @@ Rules for this repo:
 
 ## Test suite
 
-171 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+177 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -126,6 +126,7 @@ tests/
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks
 │   ├── test_ef_click_find.py        # display_click_data (5 tests), find_portfolio (8 tests)
+│   ├── test_database_callbacks.py   # db_search (6 tests): search results, empty, namespace routing
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
@@ -139,10 +140,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 79 | ~1s |
-| `poetry run pytest -m component` | Dash callbacks | 80 | ~2s |
+| `poetry run pytest -m component` | Dash callbacks | 86 | ~2s |
 | `poetry run pytest -m e2e` | Playwright browser | 12 | ~20s |
-| `poetry run pytest -q` | Everything | 171 | ~23s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 159 | ~2s |
+| `poetry run pytest -q` | Everything | 177 | ~23s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 165 | ~2s |
 
 ### What's covered per page
 
@@ -152,7 +153,7 @@ tests/
 | **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio | load, mobile |
 | **Compare** | — | show/hide callbacks | load |
 | **Benchmark** | — | show/hide, get_y_title | load |
-| **Database** | — | — | load |
+| **Database** | — | db_search (results, empty, namespace routing, ticker drop) | load |
 | **common/** | validators, math, create_link, symbols | change_style_for_hidden_row | — |
 
 ### Gaps (not yet covered)
@@ -162,8 +163,6 @@ tests/
   plotly figure building. Testing them end-to-end requires a more elaborate mock of okama
   return types (DataFrames with correct shape/columns). Currently only their sub-helpers
   are tested.
-- **Database search callback** (`db_search`): needs `ok.search()` mock with realistic
-  DataFrame response.
 - **Shareable link round-trip**: generate URL → load page → verify controls pre-filled.
 
 ### okama mock strategy
