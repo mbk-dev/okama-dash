@@ -112,7 +112,7 @@ no external API calls, no Redis needed, fully reproducible.
 ```
 tests/
 ├── conftest.py              # Shared fixtures: mock_okama_symbols, mock_portfolio, null_cache
-├── mocks/okama_mock.py      # MockPortfolio, MockAssetList, mock namespace data, symbol fixtures
+├── mocks/okama_mock.py      # Picklable + MagicMock mocks for Portfolio, AssetList, symbols
 ├── fixtures/symbols_data.json
 ├── unit/                    # @pytest.mark.unit — pure logic, no Dash
 │   ├── test_validators.py           # validate_integer bounds, types, error messages
@@ -155,18 +155,12 @@ tests/
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio | load, controls, mobile, shareable link, submit→chart |
+| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio | load, controls, mobile, shareable link, submit→traces |
 | **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards | load, mobile, shareable link, submit→chart |
-| **Compare** | — | show/hide, update_graf_compare (wealth/cagr/correlation, stats) | load, shareable link, submit→chart |
-| **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→chart |
+| **Compare** | — | show/hide, update_graf_compare (wealth/cagr/correlation, stats) | load, shareable link, submit→traces |
+| **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) | load |
 | **common/** | validators, math, create_link, symbols | change_style_for_hidden_row | — |
-
-### Gaps (not yet covered)
-
-- **E2E interaction: data-quality assertions** — Submit→chart tests verify chart row
-  visibility and SVG presence, but not correct traces/data (mocks return error annotations
-  due to pickle incompatibility). Proper data-rendered E2E needs picklable mock objects.
 
 ### okama mock strategy
 
@@ -178,8 +172,10 @@ All tests are independent from external data. okama API is mocked at two levels:
   `@cache.memoize()` binds at import time). `patched_okama_portfolio` patches `ok.Portfolio`,
   `ok.Rebalance`, and cashflow strategy classes.
 - **E2E tests:** `TESTING=1` env var activates mock injection in `app.py` before Dash loads
-  pages. This patches `ok.assets_namespaces`, `ok.namespaces`, `ok.symbols_in_namespace`,
-  `ok.Portfolio`, `ok.search`, and all strategy classes.
+  pages. Uses **picklable** mock classes (`PicklablePortfolio`, `PicklableAssetList`) instead
+  of MagicMock — callbacks can pickle/unpickle portfolio objects and render real chart traces.
+  Component tests still use MagicMock factories (`make_mock_portfolio`, `make_mock_asset_list`)
+  since they don't go through pickle.
 
 ### Adding new tests
 

@@ -6,20 +6,27 @@ if os.environ.get("TESTING") == "1":
 
     import pandas as pd
     import okama as _ok
-    from tests.mocks.okama_mock import get_mock_namespaces, make_mock_portfolio, mock_symbols_in_namespace
+    from tests.mocks.okama_mock import (
+        get_mock_namespaces,
+        mock_symbols_in_namespace,
+        PicklableAssetList,
+        PicklablePortfolio,
+        _CashflowParameters,
+        _RebalanceStrategy,
+    )
 
     _ok.assets_namespaces = get_mock_namespaces()
     _ok.namespaces = {ns: f"Mock {ns} namespace" for ns in get_mock_namespaces()}
     _ok.symbols_in_namespace = mock_symbols_in_namespace
     _ok.search = MagicMock(return_value=pd.DataFrame({"symbol": [], "name": []}))
-    _ok.Portfolio = lambda *a, **kw: make_mock_portfolio()
-    _ok.Rebalance = MagicMock()
-    _ok.AssetList = MagicMock()
-    _ok.IndexationStrategy = MagicMock()
-    _ok.PercentageStrategy = MagicMock()
-    _ok.VanguardDynamicSpending = MagicMock()
-    _ok.CutWithdrawalsIfDrawdown = MagicMock()
-    _ok.TimeSeriesStrategy = MagicMock()
+    _ok.Portfolio = lambda *a, **kw: PicklablePortfolio()
+    _ok.Rebalance = lambda *a, **kw: _RebalanceStrategy(**{k: v for k, v in kw.items() if k == "period"})
+    _ok.AssetList = PicklableAssetList
+    _ok.IndexationStrategy = lambda pf, *a, **kw: _CashflowParameters()
+    _ok.PercentageStrategy = lambda pf, *a, **kw: _CashflowParameters()
+    _ok.VanguardDynamicSpending = lambda *a, **kw: _CashflowParameters()
+    _ok.CutWithdrawalsIfDrawdown = lambda *a, **kw: _CashflowParameters()
+    _ok.TimeSeriesStrategy = lambda pf, *a, **kw: _CashflowParameters()
 
 import dash
 from dash import html, dcc
