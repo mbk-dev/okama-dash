@@ -104,7 +104,7 @@ Rules for this repo:
 
 ## Test suite
 
-181 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+185 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -133,7 +133,8 @@ tests/
     ├── conftest.py                  # Gunicorn server (TESTING=1, 2 workers) + Playwright
     ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
     │                                # mobile viewport 375px (Portfolio + EF)
-    └── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages
+    ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages
+    └── test_submit_interaction.py   # Submit → chart visible for all 4 pages
 ```
 
 ### Run commands
@@ -142,18 +143,18 @@ tests/
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 79 | ~1s |
 | `poetry run pytest -m component` | Dash callbacks | 86 | ~2s |
-| `poetry run pytest -m e2e` | Playwright browser | 16 | ~45s |
-| `poetry run pytest -q` | Everything | 181 | ~45s |
+| `poetry run pytest -m e2e` | Playwright browser | 20 | ~46s |
+| `poetry run pytest -q` | Everything | 185 | ~46s |
 | `poetry run pytest -m "not e2e"` | Fast suite | 165 | ~2s |
 
 ### What's covered per page
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats) | load, controls, mobile, shareable link |
-| **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio | load, mobile, shareable link |
-| **Compare** | — | show/hide callbacks | load, shareable link |
-| **Benchmark** | — | show/hide, get_y_title | load, shareable link |
+| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats) | load, controls, mobile, shareable link, submit→chart |
+| **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio | load, mobile, shareable link, submit→chart |
+| **Compare** | — | show/hide callbacks | load, shareable link, submit→chart |
+| **Benchmark** | — | show/hide, get_y_title | load, shareable link, submit→chart |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) | load |
 | **common/** | validators, math, create_link, symbols | change_style_for_hidden_row | — |
 
@@ -164,8 +165,9 @@ tests/
   plotly figure building. Testing them end-to-end requires a more elaborate mock of okama
   return types (DataFrames with correct shape/columns). Currently only their sub-helpers
   are tested.
-- **E2E interaction tests** — fill form + click Submit → verify chart rendered (currently
-  only testing page load and shareable link prefill, not callback execution in browser).
+- **E2E interaction: data-quality assertions** — Submit→chart tests verify chart row
+  visibility and SVG presence, but not correct traces/data (mocks return error annotations
+  due to pickle incompatibility). Proper data-rendered E2E needs picklable mock objects.
 
 ### okama mock strategy
 
