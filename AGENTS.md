@@ -138,7 +138,7 @@ tests/
     ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
     │                                # mobile viewport 375px (Portfolio + EF)
     ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages
-    └── test_submit_interaction.py   # Submit → chart visible for all 4 pages
+    └── test_submit_interaction.py   # Submit → chart with real traces for all 4 pages
 ```
 
 ### Run commands
@@ -201,6 +201,9 @@ After any code changes, follow this checklist:
    and fix every reported issue. If a warning is truly unavoidable, silence it with a
    targeted `# noqa: <CODE>` comment on the offending line and include a brief rationale.
    Never disable rules globally or use a bare `# noqa`.
+6. After finishing a batch of changes, verify that `AGENTS.md` (test counts, structure
+   tree, coverage table, gaps section) and project memory are still accurate. Update any
+   stale numbers, descriptions, or file listings before committing.
 
 ## Python style & modernization
 
