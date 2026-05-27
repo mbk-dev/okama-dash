@@ -104,7 +104,7 @@ Rules for this repo:
 
 ## Test suite
 
-158 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+171 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -125,6 +125,7 @@ tests/
 │   │                                # _resolve_indexation, survival stats visibility
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks
+│   ├── test_ef_click_find.py        # display_click_data (5 tests), find_portfolio (8 tests)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
@@ -138,17 +139,17 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 79 | ~1s |
-| `poetry run pytest -m component` | Dash callbacks | 67 | ~2s |
+| `poetry run pytest -m component` | Dash callbacks | 80 | ~2s |
 | `poetry run pytest -m e2e` | Playwright browser | 12 | ~20s |
-| `poetry run pytest -q` | Everything | 158 | ~23s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 146 | ~2s |
+| `poetry run pytest -q` | Everything | 171 | ~23s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 159 | ~2s |
 
 ### What's covered per page
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
 | **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats) | load, controls, mobile |
-| **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide | load, mobile |
+| **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio | load, mobile |
 | **Compare** | — | show/hide callbacks | load |
 | **Benchmark** | — | show/hide, get_y_title | load |
 | **Database** | — | — | load |
@@ -161,8 +162,6 @@ tests/
   plotly figure building. Testing them end-to-end requires a more elaborate mock of okama
   return types (DataFrames with correct shape/columns). Currently only their sub-helpers
   are tested.
-- **`display_click_data` / `find_portfolio`** (EF): parse clickData dicts and call
-  cached EF objects. Needs EF pickle mock.
 - **Database search callback** (`db_search`): needs `ok.search()` mock with realistic
   DataFrame response.
 - **Shareable link round-trip**: generate URL → load page → verify controls pre-filled.
