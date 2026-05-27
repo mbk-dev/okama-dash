@@ -36,8 +36,12 @@ def dash_server_url():
     proc = subprocess.Popen(
         [
             sys.executable,
-            "-c",
-            f"import sys; sys.path.insert(0, {PROJECT_ROOT!r}); from app import app; app.run(debug=False, port={port})",
+            "-m",
+            "gunicorn",
+            "run_gunicorn:server",
+            "--bind", f"127.0.0.1:{port}",
+            "--workers", "2",
+            "--timeout", "30",
         ],
         env=env,
         cwd=PROJECT_ROOT,
