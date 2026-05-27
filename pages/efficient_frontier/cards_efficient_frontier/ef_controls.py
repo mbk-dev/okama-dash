@@ -13,12 +13,9 @@ from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.symbols import get_selected_symbol_options, search_symbol_options
-from common import cache
 from common.date_input import date_input, register_date_validation
 import pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt as tl
 
-app = dash.get_app()
-cache.init_app(app.server)
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -475,7 +472,7 @@ def update_link_ef(href: str, tickers_list: list, ccy: str, first_date: str, las
     )
 
 
-@app.callback(
+@callback(
     Output("ef-symbols-list", "data"),
     Input("ef-symbols-list", "searchValue"),
     Input("ef-symbols-list", "value"),
@@ -484,7 +481,7 @@ def optimize_search_ef(search_value, selected_values):
     return search_symbol_options(search_value, selected_values)
 
 
-@app.callback(
+@callback(
     Output("monte-carlo-option", "valid"),
     Output("monte-carlo-option", "invalid"),
     Input("monte-carlo-option", "value"),
@@ -499,7 +496,7 @@ def check_validity_monte_carlo(number: int):
     return False, False
 
 
-@app.callback(
+@callback(
     Output("ef-symbols-list", "disabled"),
     Input("ef-symbols-list", "value"),
 )
@@ -510,7 +507,7 @@ def disable_search(tickers_list) -> bool:
     return len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
 
 
-@app.callback(
+@callback(
     Output("ef-copy-link-button", "disabled"),
     Input("ef-symbols-list", "value"),
 )
@@ -525,7 +522,7 @@ def disable_link_button(tickers_list) -> bool:
     return check_if_list_empty_or_big(tickers_list) or len(tickers_list) < 2
 
 
-@app.callback(
+@callback(
     Output("ef-submit-button-state", "disabled"),
     Input("ef-symbols-list", "value"),
     Input("monte-carlo-option", "valid"),

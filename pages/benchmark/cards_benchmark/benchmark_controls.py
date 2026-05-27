@@ -15,7 +15,6 @@ from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
-from common import cache
 import common.validators as validators
 from common.date_input import date_input, register_date_validation
 from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
@@ -24,8 +23,7 @@ from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
     benchmark_options_tooltip_type,
 )
 
-app = dash.get_app()
-cache.init_app(app.server)
+
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -284,7 +282,7 @@ def update_link_benchmark(
     )
 
 
-@app.callback(
+@callback(
     Output("select-benchmark", "data"),
     Input("select-benchmark", "searchValue"),
     Input("select-benchmark", "value"),
@@ -295,7 +293,7 @@ def optimize_search_benchmark(search_value, selected_value):
     return search_symbol_options(search_value, [selected_value] if selected_value else None)
 
 
-@app.callback(
+@callback(
     Output("benchmark-assets-list", "data"),
     Input("benchmark-assets-list", "searchValue"),
     Input("benchmark-assets-list", "value"),
@@ -304,7 +302,7 @@ def optimize_search_assets_benchmark(search_value, selected_values):
     return search_symbol_options(search_value, selected_values)
 
 
-@app.callback(
+@callback(
     Output("benchmark-assets-list", "disabled"),
     Input("benchmark-assets-list", "value"),
 )
@@ -315,7 +313,7 @@ def disable_search(tickers_list) -> bool:
     return len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
 
 
-@app.callback(
+@callback(
     Output("benchmark-copy-link-button", "disabled"),
     Input("benchmark-assets-list", "value"),
 )
@@ -330,7 +328,7 @@ def disable_link_button(tickers_list) -> bool:
     return check_if_list_empty_or_big(tickers_list)
 
 
-@app.callback(
+@callback(
     Output("benchmark-submit-button", "disabled"),
     Input("benchmark-assets-list", "value"),
     Input("benchmark-rolling-window", "value"),

@@ -12,7 +12,7 @@ def mock_okama_symbols(monkeypatch):
     namespaces = get_mock_namespaces()
     monkeypatch.setattr("okama.assets_namespaces", namespaces)
     monkeypatch.setattr("okama.symbols_in_namespace", mock_symbols_in_namespace)
-    monkeypatch.setattr("common.settings.namespaces", namespaces)
+    monkeypatch.setattr("common.settings.get_namespaces", lambda: namespaces)
     return namespaces
 
 

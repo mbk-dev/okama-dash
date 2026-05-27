@@ -17,7 +17,7 @@ def get_symbols() -> list:
     """
     Get all available symbols (tickers) from assets namespaces.
     """
-    list_of_symbols = [ok.symbols_in_namespace(ns).symbol for ns in settings.namespaces]
+    list_of_symbols = [ok.symbols_in_namespace(ns).symbol for ns in settings.get_namespaces()]
     classifier_df = pd.concat(list_of_symbols, axis=0, join="outer", copy=False, ignore_index=True)
     return classifier_df.to_list()
 

@@ -21,15 +21,12 @@ from common.create_link import create_link
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
-from common import cache
 import common.validators as validators
 from common.date_input import date_input, register_date_validation
 import pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt as tl
 from pages.portfolio.cards_portfolio.rebalancing_controls import rebalancing_accordion_item
 from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
 
-app = dash.get_app()
-cache.init_app(app.server)
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -513,7 +510,7 @@ def update_inflation_switch(plot_options: str, inflation_switch_value) -> Tuple[
         return inflation_switch_value, False
 
 
-@app.callback(
+@callback(
     Output("pf-logarithmic-scale-switch-div", "hidden"),
     Input(component_id="pf-submit-button", component_property="n_clicks"),
     State(component_id="pf-plot-option", component_property="value"),
@@ -639,7 +636,7 @@ def update_link_pf(
 
 
 # ----------------------- Ticker | Weight constructor -------------------------------------------
-@app.callback(
+@callback(
     Output("dynamic-container", "children"),
     Input("pf_tickers_url", "data"),
     Input("pf_weights_url", "data"),
@@ -744,7 +741,7 @@ def append_row(row_index, symbol, weight, weight_placeholder):
     )
 
 
-@app.callback(
+@callback(
     Output({"type": "pf-dynamic-dropdown", "index": MATCH}, "data"),
     Input({"type": "pf-dynamic-dropdown", "index": MATCH}, "searchValue"),
     Input({"type": "pf-dynamic-dropdown", "index": MATCH}, "value"),
@@ -755,7 +752,7 @@ def optimize_search_al(search_value, selected_value) -> list:
     return search_symbol_options(search_value, [selected_value] if selected_value else None)
 
 
-@app.callback(
+@callback(
     Output("pf-portfolio-weights-sum", "children"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
 )
@@ -765,7 +762,7 @@ def print_weights_sum(values) -> Tuple[str, bool]:
     return f"Total: {np.around(weights_sum, decimals=3)}", weights_sum_is_not_100
 
 
-@app.callback(
+@callback(
     Output("pf-withdrawal-rate", "value"),
     Input("pf-initial-amount", "value"),
     Input("pf-cf-amount", "value"),
@@ -784,7 +781,7 @@ def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy, frequ
     return f"{withdrawal_rate:.0f}%"
 
 
-@app.callback(
+@callback(
     Output("pf-submit-button", "disabled"),
     Output("pf-copy-link-button", "disabled"),
     Output("dynamic-add-filter", "disabled"),
@@ -840,7 +837,7 @@ def disable_submit_add_link_buttons(
     return submit_result, link_result, add_result
 
 
-@app.callback(
+@callback(
     Output("pf-monte-carlo-number", "valid"),
     Output("pf-monte-carlo-number", "invalid"),
     Input("pf-monte-carlo-number", "value"),

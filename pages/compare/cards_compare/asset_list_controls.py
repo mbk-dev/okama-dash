@@ -1,6 +1,5 @@
 from typing import Optional
 
-import dash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
@@ -14,7 +13,6 @@ from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
-from common import cache
 import common.validators as validators
 from common.date_input import date_input, register_date_validation
 from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
@@ -22,9 +20,6 @@ from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
     al_options_tooltip_cagr,
     al_options_window,
 )
-
-app = dash.get_app()
-cache.init_app(app.server)
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -278,7 +273,7 @@ def update_link_to_ef(tickers_list: Optional[list], ccy: str, first_date: str, l
     return create_link(ccy=ccy, first_date=first_date, href="/", last_date=last_date, tickers_list=tickers_list)
 
 
-@app.callback(
+@callback(
     Output("al-symbols-list", "data"),
     Input("al-symbols-list", "searchValue"),
     Input("al-symbols-list", "value"),
@@ -287,7 +282,7 @@ def optimize_search_al(search_value, selected_values):
     return search_symbol_options(search_value, selected_values)
 
 
-@app.callback(
+@callback(
     Output("al-logarithmic-scale-switch-div", "hidden"),
     Input(component_id="al-submit-button", component_property="n_clicks"),
     State(component_id="al-plot-option", component_property="value"),
@@ -296,7 +291,7 @@ def show_log_scale_switch(n_clicks, plot_type: str):
     return plot_type not in ("wealth",)
 
 
-@app.callback(
+@callback(
     Output("al-symbols-list", "disabled"),
     Input("al-symbols-list", "value"),
 )
@@ -307,7 +302,7 @@ def disable_search(tickers_list) -> bool:
     return len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
 
 
-@app.callback(
+@callback(
     Output("al-copy-link-button", "disabled"),
     Input("al-symbols-list", "value"),
 )
@@ -322,7 +317,7 @@ def disable_al_link_button(tickers_list) -> bool:
     return check_if_list_empty_or_big(tickers_list)
 
 
-@app.callback(
+@callback(
     Output("al-controls-switch-to-ef-link", "disabled"),
     Input("al-symbols-list", "value"),
 )
@@ -340,7 +335,7 @@ def disable_ef_link_button(tickers_list) -> bool:
     return first_condition or second_condition
 
 
-@app.callback(
+@callback(
     Output("al-submit-button", "disabled"), Input("al-symbols-list", "value"), Input("al-rolling-window", "value")
 )
 def disable_submit(tickers_list, rolling_window_value) -> bool:
