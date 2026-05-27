@@ -23,6 +23,75 @@ def get_mock_namespaces() -> list[str]:
     return load_symbols_data()["namespaces"]
 
 
+def make_mock_asset_list(symbols: list[str] | None = None) -> MagicMock:
+    if symbols is None:
+        symbols = ["AAPL.US", "MSFT.US"]
+    mock = MagicMock()
+    mock.symbols = symbols
+    mock.symbol = symbols[0] if len(symbols) == 1 else "AssetList"
+    mock._pl_txt = "annually"
+
+    dates = pd.period_range("2020-01", "2024-12", freq="M")
+    n = len(dates)
+    n_assets = len(symbols)
+    rng = np.random.default_rng(42)
+
+    wealth_data = np.cumprod(1 + rng.normal(0.005, 0.03, (n, n_assets)), axis=0) * 1000
+    mock.wealth_indexes = pd.DataFrame(wealth_data, index=dates, columns=symbols)
+
+    ror_data = rng.normal(0.005, 0.03, (n, n_assets))
+    mock.assets_ror = pd.DataFrame(ror_data, index=dates, columns=symbols)
+
+    mock.get_cumulative_return = MagicMock(
+        return_value=pd.Series(rng.uniform(0.05, 0.20, n_assets), index=symbols)
+    )
+    mock.get_rolling_cagr = MagicMock(
+        return_value=pd.DataFrame(rng.normal(0.08, 0.02, (n, n_assets)), index=dates, columns=symbols)
+    )
+    mock.get_sharpe_ratio = MagicMock(
+        return_value=pd.Series(rng.uniform(0.3, 1.0, n_assets), index=symbols)
+    )
+
+    describe_data = {
+        "property": [
+            "CAGR", "Risk", "CVAR", "Max drawdown",
+            "Max dd date start", "Max dd date end", "Max dd days", "Dividend yield",
+        ],
+        "period": ["annually"] * 8,
+    }
+    for s in symbols:
+        describe_data[s] = rng.uniform(-0.05, 0.20, 8).tolist()
+    mock.describe = MagicMock(return_value=pd.DataFrame(describe_data))
+
+    mock.inflation_ts = pd.Series(dtype=float)
+
+    # Benchmark-specific methods
+    ts_data = rng.normal(0.0, 0.02, (n, max(n_assets - 1, 1)))
+    ts_cols = symbols[1:] if n_assets > 1 else symbols
+    mock.tracking_difference = MagicMock(
+        return_value=pd.DataFrame(ts_data, index=dates, columns=ts_cols)
+    )
+    mock.tracking_difference_annualized = MagicMock(
+        return_value=pd.DataFrame(ts_data, index=dates, columns=ts_cols)
+    )
+
+    annual_dates = pd.period_range("2020", "2024", freq="Y")
+    annual_data = rng.normal(0.0, 0.03, (len(annual_dates), max(n_assets - 1, 1)))
+    mock.tracking_difference_annual = pd.DataFrame(annual_data, index=annual_dates, columns=ts_cols)
+
+    mock.tracking_error = MagicMock(
+        return_value=pd.DataFrame(np.abs(ts_data), index=dates, columns=ts_cols)
+    )
+    mock.index_corr = MagicMock(
+        return_value=pd.DataFrame(rng.uniform(0.8, 1.0, (n, max(n_assets - 1, 1))), index=dates, columns=ts_cols)
+    )
+    mock.index_beta = MagicMock(
+        return_value=pd.DataFrame(rng.uniform(0.8, 1.2, (n, max(n_assets - 1, 1))), index=dates, columns=ts_cols)
+    )
+
+    return mock
+
+
 def make_mock_portfolio() -> MagicMock:
     mock = MagicMock()
     mock.symbol = "TestPF.PF"

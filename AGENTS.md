@@ -104,7 +104,7 @@ Rules for this repo:
 
 ## Test suite
 
-185 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+214 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -112,7 +112,7 @@ no external API calls, no Redis needed, fully reproducible.
 ```
 tests/
 ├── conftest.py              # Shared fixtures: mock_okama_symbols, mock_portfolio, null_cache
-├── mocks/okama_mock.py      # MockPortfolio, mock namespace data, symbol fixtures
+├── mocks/okama_mock.py      # MockPortfolio, MockAssetList, mock namespace data, symbol fixtures
 ├── fixtures/symbols_data.json
 ├── unit/                    # @pytest.mark.unit — pure logic, no Dash
 │   ├── test_validators.py           # validate_integer bounds, types, error messages
@@ -127,6 +127,10 @@ tests/
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks
 │   ├── test_ef_click_find.py        # display_click_data (5 tests), find_portfolio (8 tests)
 │   ├── test_database_callbacks.py   # db_search (6 tests): search results, empty, namespace routing
+│   ├── test_compare_data_callback.py  # update_graf_compare (6): wealth/cagr/correlation, stats, errors
+│   ├── test_benchmark_data_callback.py  # update_graf_benchmark (10): 6 plot types, bar chart, errors
+│   ├── test_ef_data_callback.py       # update_ef_cards (5): figures, ef_points×100, mobile, errors
+│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (8): figure, y-titles, weights, errors
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
@@ -142,29 +146,24 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 79 | ~1s |
-| `poetry run pytest -m component` | Dash callbacks | 86 | ~2s |
+| `poetry run pytest -m component` | Dash callbacks | 115 | ~3s |
 | `poetry run pytest -m e2e` | Playwright browser | 20 | ~46s |
-| `poetry run pytest -q` | Everything | 185 | ~46s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 165 | ~2s |
+| `poetry run pytest -q` | Everything | 214 | ~48s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 194 | ~3s |
 
 ### What's covered per page
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats) | load, controls, mobile, shareable link, submit→chart |
-| **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio | load, mobile, shareable link, submit→chart |
-| **Compare** | — | show/hide callbacks | load, shareable link, submit→chart |
-| **Benchmark** | — | show/hide, get_y_title | load, shareable link, submit→chart |
+| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio | load, controls, mobile, shareable link, submit→chart |
+| **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards | load, mobile, shareable link, submit→chart |
+| **Compare** | — | show/hide, update_graf_compare (wealth/cagr/correlation, stats) | load, shareable link, submit→chart |
+| **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→chart |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) | load |
 | **common/** | validators, math, create_link, symbols | change_style_for_hidden_row | — |
 
 ### Gaps (not yet covered)
 
-- **Data-heavy callbacks** (`update_graf_portfolio`, `update_graf_compare`,
-  `update_graf_benchmark`, `update_ef_cards`): these orchestrate okama object creation →
-  plotly figure building. Testing them end-to-end requires a more elaborate mock of okama
-  return types (DataFrames with correct shape/columns). Currently only their sub-helpers
-  are tested.
 - **E2E interaction: data-quality assertions** — Submit→chart tests verify chart row
   visibility and SVG presence, but not correct traces/data (mocks return error annotations
   due to pickle incompatibility). Proper data-rendered E2E needs picklable mock objects.
