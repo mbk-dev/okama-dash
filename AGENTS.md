@@ -102,7 +102,12 @@ Rules for this repo:
   scripts, generated code, throwaway prototypes). Notebooks — partial exception: cover the
   library code with tests, not the notebook rendering itself.
 
-## Test suite structure
+## Test suite
+
+158 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+no external API calls, no Redis needed, fully reproducible.
+
+### Structure
 
 ```
 tests/
@@ -110,29 +115,57 @@ tests/
 ├── mocks/okama_mock.py      # MockPortfolio, mock namespace data, symbol fixtures
 ├── fixtures/symbols_data.json
 ├── unit/                    # @pytest.mark.unit — pure logic, no Dash
-│   ├── test_validators.py
-│   ├── test_math.py
-│   ├── test_create_link.py
-│   └── test_symbols.py
+│   ├── test_validators.py           # validate_integer bounds, types, error messages
+│   ├── test_math.py                 # round_list sum preservation
+│   ├── test_create_link.py          # URL builder, filename builder, list size check
+│   └── test_symbols.py              # symbol search (prefix, name-token, case-insensitive)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
-│   ├── conftest.py          # session-scoped Dash app + patched_okama_portfolio fixture
-│   ├── test_portfolio_callbacks.py
-│   ├── test_ef_callbacks.py
-│   └── test_compare_benchmark_callbacks.py
-└── e2e/                     # @pytest.mark.e2e — Playwright browser tests
-    ├── conftest.py          # Dash server subprocess (TESTING=1) + Playwright
-    └── test_portfolio_page.py
+│   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
+│   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
+│   │                                # _resolve_indexation, survival stats visibility
+│   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
+│   │                                # portfolio_weights, expand_weights, show/hide callbacks
+│   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
+│                                            # get_y_title (6 plot types)
+└── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
+    ├── conftest.py                  # Dash server subprocess (TESTING=1) + Playwright
+    └── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
+                                     # mobile viewport 375px (Portfolio + EF)
 ```
 
-Run commands:
+### Run commands
 
-| Command | Scope | Duration |
-|---------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | ~1s |
-| `poetry run pytest -m component` | Dash callbacks | ~2s |
-| `poetry run pytest -m e2e` | Playwright browser | ~20s |
-| `poetry run pytest -q` | Everything | ~23s |
-| `poetry run pytest -m "not e2e"` | Fast suite | ~3s |
+| Command | Scope | Tests | Duration |
+|---------|-------|-------|----------|
+| `poetry run pytest -m unit` | Pure logic | 79 | ~1s |
+| `poetry run pytest -m component` | Dash callbacks | 67 | ~2s |
+| `poetry run pytest -m e2e` | Playwright browser | 12 | ~20s |
+| `poetry run pytest -q` | Everything | 158 | ~23s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 146 | ~2s |
+
+### What's covered per page
+
+| Page | Unit | Component | E2E |
+|------|------|-----------|-----|
+| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats) | load, controls, mobile |
+| **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide | load, mobile |
+| **Compare** | — | show/hide callbacks | load |
+| **Benchmark** | — | show/hide, get_y_title | load |
+| **Database** | — | — | load |
+| **common/** | validators, math, create_link, symbols | change_style_for_hidden_row | — |
+
+### Gaps (not yet covered)
+
+- **Data-heavy callbacks** (`update_graf_portfolio`, `update_graf_compare`,
+  `update_graf_benchmark`, `update_ef_cards`): these orchestrate okama object creation →
+  plotly figure building. Testing them end-to-end requires a more elaborate mock of okama
+  return types (DataFrames with correct shape/columns). Currently only their sub-helpers
+  are tested.
+- **`display_click_data` / `find_portfolio`** (EF): parse clickData dicts and call
+  cached EF objects. Needs EF pickle mock.
+- **Database search callback** (`db_search`): needs `ok.search()` mock with realistic
+  DataFrame response.
+- **Shareable link round-trip**: generate URL → load page → verify controls pre-filled.
 
 ### okama mock strategy
 
@@ -154,6 +187,8 @@ All tests are independent from external data. okama API is mocked at two levels:
   at module level).
 - E2E tests use `domcontentloaded` wait strategy (not `networkidle`) to avoid timeouts
   with single-threaded Dash dev server.
+- Fixture data lives in `tests/fixtures/symbols_data.json` — 8 mock tickers across 2
+  namespaces (US, INDX). Extend this file when new tests need additional symbols.
 
 ## Code change workflow
 
