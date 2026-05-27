@@ -1,13 +1,11 @@
-
-
-def round_list(l: list, decimal_positions: int) -> list:
+def round_list(values: list, decimal_positions: int) -> list:
     """
     Round list values while maintaining the sum.
     """
-    new_l = list()
+    result = []
     rest = 0.0
-    for n in l:
-        new_n = round(n + rest,decimal_positions)
+    for n in values:
+        new_n = round(n + rest, decimal_positions)
         rest += n - new_n
-        new_l.append(new_n)
-    return new_l
+        result.append(new_n)
+    return result

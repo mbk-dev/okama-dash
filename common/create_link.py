@@ -1,5 +1,4 @@
 import hashlib
-import typing
 from urllib.parse import quote
 
 from common import settings as settings
@@ -104,7 +103,7 @@ def create_link(
     return new_url
 
 
-def compute_cashflow_hash(**params) -> typing.Optional[str]:
+def compute_cashflow_hash(**params) -> str | None:
     filtered = {k: v for k, v in sorted(params.items()) if v is not None}
     if not filtered:
         return None
@@ -120,7 +119,7 @@ def create_filename(
     last_date: str,
     # portfolio
     weights_list=None,
-    inflation: typing.Optional[bool] = None,
+    inflation: bool | None = None,
     rebal=None,
     initial_amount=None,
     cashflow=None,
@@ -133,7 +132,7 @@ def create_filename(
     cf_strategy=None,
     cf_freq=None,
     # cashflow params digest
-    cashflow_hash: typing.Optional[str] = None,
+    cashflow_hash: str | None = None,
 ) -> str:
     """
     Create filename to serialize EF, Portfolio objects to pickle.

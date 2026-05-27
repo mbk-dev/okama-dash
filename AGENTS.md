@@ -102,6 +102,59 @@ Rules for this repo:
   scripts, generated code, throwaway prototypes). Notebooks — partial exception: cover the
   library code with tests, not the notebook rendering itself.
 
+## Test suite structure
+
+```
+tests/
+├── conftest.py              # Shared fixtures: mock_okama_symbols, mock_portfolio, null_cache
+├── mocks/okama_mock.py      # MockPortfolio, mock namespace data, symbol fixtures
+├── fixtures/symbols_data.json
+├── unit/                    # @pytest.mark.unit — pure logic, no Dash
+│   ├── test_validators.py
+│   ├── test_math.py
+│   ├── test_create_link.py
+│   └── test_symbols.py
+├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
+│   ├── conftest.py          # session-scoped Dash app + patched_okama_portfolio fixture
+│   ├── test_portfolio_callbacks.py
+│   ├── test_ef_callbacks.py
+│   └── test_compare_benchmark_callbacks.py
+└── e2e/                     # @pytest.mark.e2e — Playwright browser tests
+    ├── conftest.py          # Dash server subprocess (TESTING=1) + Playwright
+    └── test_portfolio_page.py
+```
+
+Run commands:
+
+| Command | Scope | Duration |
+|---------|-------|----------|
+| `poetry run pytest -m unit` | Pure logic | ~1s |
+| `poetry run pytest -m component` | Dash callbacks | ~2s |
+| `poetry run pytest -m e2e` | Playwright browser | ~20s |
+| `poetry run pytest -q` | Everything | ~23s |
+| `poetry run pytest -m "not e2e"` | Fast suite | ~3s |
+
+### okama mock strategy
+
+All tests are independent from external data. okama API is mocked at two levels:
+
+- **Unit/component tests:** `mock_okama_symbols` fixture patches `okama.assets_namespaces`
+  and `okama.symbols_in_namespace`. `null_cache` fixture initializes Flask-Caching with
+  `NullCache` via `common.cache.init_app()` (the original cache object must be reused because
+  `@cache.memoize()` binds at import time). `patched_okama_portfolio` patches `ok.Portfolio`,
+  `ok.Rebalance`, and cashflow strategy classes.
+- **E2E tests:** `TESTING=1` env var activates mock injection in `app.py` before Dash loads
+  pages. This patches `ok.assets_namespaces`, `ok.namespaces`, `ok.symbols_in_namespace`,
+  `ok.Portfolio`, `ok.search`, and all strategy classes.
+
+### Adding new tests
+
+- Component tests that import `pages/` modules need the session-scoped `_dash_app` fixture
+  from `tests/component/conftest.py` (because `portfolio_controls.py` calls `dash.get_app()`
+  at module level).
+- E2E tests use `domcontentloaded` wait strategy (not `networkidle`) to avoid timeouts
+  with single-threaded Dash dev server.
+
 ## Code change workflow
 
 After any code changes, follow this checklist:

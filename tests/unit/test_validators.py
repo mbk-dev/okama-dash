@@ -23,34 +23,34 @@ class TestValidateInteger:
 
     def test_min_exclusive_rejects_equal(self):
         validate_integer("x", 6, min_value=5)
-        with pytest.raises(ValueError, match="must be >= 5"):
+        with pytest.raises(ValueError, match=r"must be > 5"):
             validate_integer("x", 5, min_value=5)
 
     def test_min_exclusive_rejects_below(self):
-        with pytest.raises(ValueError, match="must be >= 5"):
+        with pytest.raises(ValueError, match=r"must be > 5"):
             validate_integer("x", 4, min_value=5)
 
     def test_min_inclusive_allows_equal(self):
         validate_integer("x", 5, min_value=5, inclusive=True)
 
     def test_min_inclusive_rejects_below(self):
-        with pytest.raises(ValueError, match="must be > 5"):
+        with pytest.raises(ValueError, match=r"must be >= 5"):
             validate_integer("x", 4, min_value=5, inclusive=True)
 
     def test_max_exclusive_rejects_equal(self):
         validate_integer("x", 4, max_value=5)
-        with pytest.raises(ValueError, match="must be <= 5"):
+        with pytest.raises(ValueError, match=r"must be < 5"):
             validate_integer("x", 5, max_value=5)
 
     def test_max_exclusive_rejects_above(self):
-        with pytest.raises(ValueError, match="must be <= 5"):
+        with pytest.raises(ValueError, match=r"must be < 5"):
             validate_integer("x", 6, max_value=5)
 
     def test_max_inclusive_allows_equal(self):
         validate_integer("x", 5, max_value=5, inclusive=True)
 
     def test_max_inclusive_rejects_above(self):
-        with pytest.raises(ValueError, match="must be < 5"):
+        with pytest.raises(ValueError, match=r"must be <= 5"):
             validate_integer("x", 6, max_value=5, inclusive=True)
 
     def test_custom_min_message(self):
