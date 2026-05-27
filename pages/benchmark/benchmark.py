@@ -1,5 +1,4 @@
 import typing
-import warnings
 
 import dash
 from dash import callback
@@ -21,8 +20,6 @@ from pages.benchmark.cards_benchmark.benchmark_controls import benchmark_card_co
 
 from pages.benchmark.cards_benchmark.benchmark_description import card_benchmark_description
 from pages.benchmark.cards_benchmark.benchmark_info import card_benchmark_info
-
-warnings.simplefilter(action="ignore", category=FutureWarning)
 
 dash.register_page(
     __name__,
@@ -153,7 +150,7 @@ def get_benchmark_figure(
 
         return_series = df.iloc[-1, :]
 
-        annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
+        annotations_xy = [(ind[-1], y) for y in df.iloc[-1].to_numpy()]
         annotation_series = (
             return_series.map("{:,.2f}%".format)
             if plot_type not in ("correlation", "beta")

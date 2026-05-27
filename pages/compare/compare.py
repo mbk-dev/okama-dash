@@ -1,5 +1,4 @@
 import typing
-import warnings
 
 import dash
 import dash.exceptions
@@ -25,8 +24,6 @@ from pages.compare.cards_compare.assets_info import card_assets_info
 from pages.compare.cards_compare.compare_description import card_compare_description
 from pages.compare.cards_compare.statistics_table import card_table
 from pages.compare.cards_compare.wealth_indexes_chart import card_graf_compare
-
-warnings.simplefilter(action="ignore", category=FutureWarning)
 
 dash.register_page(
     __name__,
@@ -208,7 +205,7 @@ def get_al_figure(
     chart_first_date = ind[0]
     chart_last_date = ind[-1]
 
-    annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
+    annotations_xy = [(ind[-1], y) for y in df.iloc[-1].to_numpy()]
     annotation_series = (return_series * 100).map("{:,.2f}%".format)
     annotations_text = [cum_return for cum_return in annotation_series]
 

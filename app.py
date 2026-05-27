@@ -1,5 +1,4 @@
 import os
-import warnings
 
 if os.environ.get("TESTING") == "1":
     from unittest.mock import MagicMock
@@ -36,8 +35,6 @@ from dash.dependencies import Input, Output, State
 import plotly.io as pio
 
 import navigation, footer
-
-warnings.simplefilter(action="ignore", category=FutureWarning)
 
 pio.templates.default = "plotly_white"
 

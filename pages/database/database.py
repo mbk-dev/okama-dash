@@ -1,13 +1,9 @@
-import warnings
-
 import dash
 import dash_bootstrap_components as dbc
 from pages.database.cards_database.db_description import card_db_description
 from pages.database.cards_database.db_namespaces import card_db_namespaces
 from pages.database.cards_database.db_search_controls import card_db_search_controls
 from pages.database.cards_database.db_search_results import card_db_search_results
-
-warnings.simplefilter(action="ignore", category=FutureWarning)
 
 dash.register_page(
     __name__,

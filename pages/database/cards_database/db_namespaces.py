@@ -13,7 +13,7 @@ column1_name = "Namespaces"
 column2_name = "Description"
 
 namespaces_df = pd.DataFrame.from_dict(ok.namespaces, orient="index").reset_index(names=column1_name)
-namespaces_df.rename(columns={0: column2_name}, inplace=True)
+namespaces_df = namespaces_df.rename(columns={0: column2_name})
 namespaces_df = namespaces_df[[column1_name, column2_name]]
 
 db_namespaces_table = dash_table.DataTable(

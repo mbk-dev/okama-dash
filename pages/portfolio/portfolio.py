@@ -2,7 +2,6 @@ import logging
 import os
 import time
 import typing
-import warnings
 import pickle
 from pathlib import Path
 
@@ -34,8 +33,6 @@ from pages.portfolio.cards_portfolio.portfolio_description import card_portfolio
 from pages.portfolio.cards_portfolio.portfolio_info import card_assets_info
 from pages.portfolio.cards_portfolio.pf_statistics_table import card_table
 from pages.portfolio.cards_portfolio.pf_wealth_indexes_chart import card_graf_portfolio
-
-warnings.simplefilter(action="ignore", category=FutureWarning)
 
 data_folder = Path(__file__).parent.parent.parent / common.cache_directory
 
@@ -830,7 +827,7 @@ def _get_wealth_data(pf_object, has_cashflow, n_monte_carlo, show_backtest_bool,
         pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
         pf_object.dcf.set_mc_parameters(distribution=distribution_mc, period=years_mc, mc_number=n_monte_carlo)
         df_forecast = pf_object.dcf.monte_carlo_wealth()
-        df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", copy=False, ignore_index=False)
+        df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", ignore_index=False)
     else:
         df = df_backtest
     return df, df_backtest, df_forecast, None
@@ -860,7 +857,7 @@ def _build_timeseries_figure(pf_object, df, plot_type, titles, inflation_on, log
     fig.update_layout(xaxis_title=None, legend_title="Assets")
 
     if not condition_monte_carlo and not has_cashflow:
-        annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
+        annotations_xy = [(ind[-1], y) for y in df.iloc[-1].to_numpy()]
         annotations_text = list((return_series * 100).map("{:,.2f}%".format))
         add_last_value_annotations(fig, annotations_xy, annotations_text)
     else:

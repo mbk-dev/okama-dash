@@ -320,12 +320,11 @@ def _add_assets_trace(
         [ror_df, ef_object.risk_annual.iloc[-1]],
         axis=1,
         join="outer",
-        copy=False,
         ignore_index=False,
     )
     df *= 100
     df.columns = ["Return", "Risk"]
-    df.reset_index(drop=False, inplace=True)
+    df = df.reset_index(drop=False)
     assets_weights = np.eye(len(df)) * 100
     fig.add_trace(
         go.Scatter(
