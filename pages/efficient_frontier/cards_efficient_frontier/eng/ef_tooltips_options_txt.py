@@ -42,8 +42,20 @@ ef_options_tooltip_mdp = dcc.Markdown(
 )
 ef_options_monte_carlo = dcc.Markdown(
     """
-    Generate N random portfolios with Monte Carlo simulation. 
+    Generate N random portfolios with Monte Carlo simulation.
     Risk and Return are calculated for a set of random weights.
+    """
+)
+
+ef_options_simulation = dcc.Markdown(
+    """
+    Fill the interior of the efficient frontier. The two methods are alternatives.
+
+    **Monte Carlo** generates N random portfolios.
+
+    **Grid** enumerates all portfolios on a fixed weight step (minimum 10 %). The step is
+    chosen automatically so the number of portfolios stays within a safe budget; you can
+    also pick a coarser step manually.
     """
 )
 

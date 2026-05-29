@@ -13,6 +13,7 @@ from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.symbols import get_selected_symbol_options, search_symbol_options
+from common.ef_grid import grid_step_options, AUTO_STEP
 from common.date_input import date_input, register_date_validation
 import pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt as tl
 
@@ -296,39 +297,83 @@ def card_controls(
                             ],
                             className="p-1",
                         ),
-                        dbc.Row(html.H6(children="Monte Carlo Simulation")),
+                        dbc.Row(html.H6(children="Simulation")),
                         dbc.Row(
                             [
                                 dbc.Label(
                                     [
-                                        "Number of points",
+                                        "Method",
                                         html.I(
                                             className="bi bi-info-square ms-2",
-                                            id="info-monte-carlo",
+                                            id="info-sim-mode",
                                         ),
                                     ],
                                     width=6,
                                 ),
                                 dbc.Col(
-                                    [
-                                        dbc.Input(
-                                            type="number",
-                                            value=0,
-                                            id="monte-carlo-option",
-                                        ),
-                                        dbc.FormFeedback("", type="valid"),
-                                        dbc.FormFeedback(
-                                            f"it should be an integer number ≤{settings.MC_EF_MAX}", type="invalid"
-                                        ),
-                                    ],
+                                    dbc.RadioItems(
+                                        options=[
+                                            {"label": "Off", "value": "Off"},
+                                            {"label": "Monte Carlo", "value": "Monte Carlo"},
+                                            {"label": "Grid", "value": "Grid"},
+                                        ],
+                                        value="Off",
+                                        id="ef-sim-mode",
+                                    ),
                                     width=6,
                                 ),
                                 dbc.Tooltip(
-                                    tl.ef_options_monte_carlo,
-                                    target="info-monte-carlo",
+                                    tl.ef_options_simulation,
+                                    target="info-sim-mode",
                                 ),
                             ],
                             className="p-1",
+                        ),
+                        html.Div(
+                            dbc.Row(
+                                [
+                                    dbc.Label("Number of points", width=6),
+                                    dbc.Col(
+                                        [
+                                            dbc.Input(
+                                                type="number",
+                                                value=0,
+                                                id="monte-carlo-option",
+                                            ),
+                                            dbc.FormFeedback("", type="valid"),
+                                            dbc.FormFeedback(
+                                                f"it should be an integer number ≤{settings.MC_EF_MAX}",
+                                                type="invalid",
+                                            ),
+                                        ],
+                                        width=6,
+                                    ),
+                                ],
+                                className="p-1",
+                            ),
+                            id="ef-mc-input-wrapper",
+                            style={"display": "none"},
+                        ),
+                        html.Div(
+                            dbc.Row(
+                                [
+                                    dbc.Label("Weight step", width=6),
+                                    dbc.Col(
+                                        dcc.Dropdown(
+                                            id="ef-grid-step",
+                                            options=grid_step_options(
+                                                len(tickers) if tickers else len(settings.default_symbols)
+                                            ),
+                                            value=AUTO_STEP,
+                                            clearable=False,
+                                        ),
+                                        width=6,
+                                    ),
+                                ],
+                                className="p-1",
+                            ),
+                            id="ef-grid-step-wrapper",
+                            style={"display": "none"},
                         ),
                         dbc.Row(html.H6(children="Transition map")),
                         dbc.Row(
@@ -377,6 +422,22 @@ def card_controls(
         class_name="mb-3",
     )
     return card
+
+
+@callback(
+    Output("ef-mc-input-wrapper", "style"),
+    Output("ef-grid-step-wrapper", "style"),
+    Input("ef-sim-mode", "value"),
+)
+def toggle_simulation_inputs(mode: str) -> tuple[dict, dict]:
+    """Show the Monte Carlo input or the grid step dropdown based on the mode."""
+    hidden = {"display": "none"}
+    shown: dict = {}
+    if mode == "Monte Carlo":
+        return shown, hidden
+    if mode == "Grid":
+        return hidden, shown
+    return hidden, hidden
 
 
 @callback(
