@@ -101,8 +101,9 @@ class PicklablePortfolio:
             "TestPF.PF": [0.08, 0.12, -0.15],
         })
 
-    def get_cumulative_return(self, real: bool = False) -> pd.Series:
-        return pd.Series([0.08, 0.10, 0.07], index=["TestPF.PF", "AAPL.US", "MSFT.US"])
+    def get_cumulative_return(self, real: bool = False) -> pd.DataFrame:
+        cum_data = np.cumprod(1 + self.ror.to_numpy()[:, None] * np.array([[1.0, 1.1, 0.9]]), axis=0) - 1.0
+        return pd.DataFrame(cum_data, index=self._dates, columns=["TestPF.PF", "AAPL.US", "MSFT.US"])
 
     def get_rolling_cagr(self, window: int | None = None, real: bool = False) -> pd.DataFrame:
         return pd.DataFrame(
@@ -152,7 +153,8 @@ class PicklableAssetList:
         self._beta_data = pd.DataFrame(
             rng.uniform(0.8, 1.2, (n, max(n_assets - 1, 1))), index=dates, columns=ts_cols,
         )
-        self._cum_return = pd.Series(rng.uniform(0.05, 0.20, n_assets), index=symbols)
+        cum_return_data = np.cumprod(1 + ror_data, axis=0) - 1.0
+        self._cum_return = pd.DataFrame(cum_return_data, index=dates, columns=symbols)
         self._rolling_cagr = pd.DataFrame(
             rng.normal(0.08, 0.02, (n, n_assets)), index=dates, columns=symbols,
         )
@@ -172,7 +174,7 @@ class PicklableAssetList:
             data[s] = rng.uniform(-0.05, 0.20, 8).tolist()
         return pd.DataFrame(data)
 
-    def get_cumulative_return(self, real: bool = False) -> pd.Series:
+    def get_cumulative_return(self, real: bool = False) -> pd.DataFrame:
         return self._cum_return
 
     def get_rolling_cagr(self, window: int | None = None, real: bool = False) -> pd.DataFrame:
@@ -223,8 +225,9 @@ def make_mock_asset_list(symbols: list[str] | None = None) -> MagicMock:
     ror_data = rng.normal(0.005, 0.03, (n, n_assets))
     mock.assets_ror = pd.DataFrame(ror_data, index=dates, columns=symbols)
 
+    cum_return_data = np.cumprod(1 + ror_data, axis=0) - 1.0
     mock.get_cumulative_return = MagicMock(
-        return_value=pd.Series(rng.uniform(0.05, 0.20, n_assets), index=symbols)
+        return_value=pd.DataFrame(cum_return_data, index=dates, columns=symbols)
     )
     mock.get_rolling_cagr = MagicMock(
         return_value=pd.DataFrame(rng.normal(0.08, 0.02, (n, n_assets)), index=dates, columns=symbols)
@@ -313,11 +316,10 @@ def make_mock_portfolio() -> MagicMock:
 
     mock.drawdowns = pd.Series(rng.uniform(-0.2, 0, n), index=dates, name="TestPF.PF")
 
-    cumulative_return = pd.Series(
-        [0.08, 0.10, 0.07],
-        index=["TestPF.PF", "AAPL.US", "MSFT.US"],
+    cum_return_data = np.cumprod(1 + rng.normal(0.005, 0.03, (n, 3)), axis=0) - 1.0
+    mock.get_cumulative_return.return_value = pd.DataFrame(
+        cum_return_data, index=dates, columns=["TestPF.PF", "AAPL.US", "MSFT.US"],
     )
-    mock.get_cumulative_return.return_value = cumulative_return
     mock.get_rolling_cagr.return_value = pd.DataFrame(
         rng.normal(0.08, 0.02, (n, 3)),
         index=dates,

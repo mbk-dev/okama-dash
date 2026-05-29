@@ -119,7 +119,7 @@ def _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, 
         ccy=ccy,
         inflation=inflation_on,
     )
-    log_scale = log_on if plot_type == "wealth" else False  # log scale Y must be available only for wealth chart
+    log_scale = log_on if plot_type in ("wealth", "cumulative_return") else False
     fig, df_data = get_al_figure(al_object, plot_type, inflation_on, rolling_window, log_scale)
     json_data = df_data.to_json(orient="split", default_handler=str)
     if plot_type == "correlation":
@@ -128,6 +128,8 @@ def _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, 
         fig.update_xaxes(side="top")
     elif plot_type == "wealth":
         fig.update_yaxes(title_text="Wealth Index")
+    elif plot_type == "cumulative_return":
+        fig.update_yaxes(title_text="Cumulative Return")
     else:
         fig.update_yaxes(title_text="CAGR")
 
@@ -182,6 +184,7 @@ def get_al_figure(
 ) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame]:
     titles = {
         "wealth": "Assets Wealth indexes",
+        "cumulative_return": "Assets Cumulative return",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
         "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
         "correlation": "Correlation Matrix",
@@ -190,7 +193,10 @@ def get_al_figure(
     # Select Plot Type
     if plot_type == "wealth":
         df = al_object.wealth_indexes
-        return_series = al_object.get_cumulative_return(real=False)
+        return_series = al_object.get_cumulative_return(real=False).iloc[-1]
+    elif plot_type == "cumulative_return":
+        df = al_object.get_cumulative_return(real=False)
+        return_series = df.iloc[-1]
     elif plot_type in ("cagr", "real_cagr"):
         real = False if plot_type == "cagr" else True
         df = al_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=real)

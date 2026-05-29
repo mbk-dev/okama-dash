@@ -127,6 +127,7 @@ def card_controls(
                                         dbc.RadioItems(
                                             options=[
                                                 {"label": "Wealth Index", "value": "wealth"},
+                                                {"label": "Cumulative return", "value": "cumulative_return"},
                                                 {"label": "Rolling Cagr", "value": "cagr"},
                                                 {"label": "Rolling Real Cagr", "value": "real_cagr"},
                                                 {"label": "Correlation matrix", "value": "correlation"},
@@ -226,7 +227,7 @@ def card_controls(
     Input(component_id="al-plot-option", component_property="value"),
 )
 def update_rolling_input(plot_options: str):
-    return plot_options in {"wealth", "correlation"}
+    return plot_options in {"wealth", "cumulative_return", "correlation"}
 
 
 @callback(
@@ -288,7 +289,7 @@ def optimize_search_al(search_value, selected_values):
     State(component_id="al-plot-option", component_property="value"),
 )
 def show_log_scale_switch(n_clicks, plot_type: str):
-    return plot_type not in ("wealth",)
+    return plot_type not in ("wealth", "cumulative_return")
 
 
 @callback(
