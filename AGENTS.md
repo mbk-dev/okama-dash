@@ -31,6 +31,7 @@ okama-dash/
 │   ├── mantine.py           # Dash Mantine component wrappers
 │   ├── update_style.py      # Dynamic style manipulation
 │   ├── mobile_screens.py    # Responsive layout adapters
+│   ├── object_cache.py      # Unified file-based pickle cache for okama objects
 │   ├── math.py              # Financial calculations
 │   ├── inflation.py         # Inflation data helpers
 │   ├── xlsx.py              # Excel export utilities
@@ -104,7 +105,7 @@ Rules for this repo:
 
 ## Test suite
 
-214 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+258 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -118,16 +119,18 @@ tests/
 │   ├── test_validators.py           # validate_integer bounds, types, error messages
 │   ├── test_math.py                 # round_list sum preservation
 │   ├── test_create_link.py          # URL builder, filename builder, list size check
-│   └── test_symbols.py              # symbol search (prefix, name-token, case-insensitive)
+│   ├── test_symbols.py              # symbol search (prefix, name-token, case-insensitive)
+│   └── test_object_cache.py         # object cache: key building, get_or_create, cleanup (16 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
 │   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
 │   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
-│   │                                # _resolve_indexation, survival stats visibility
+│   │                                # _resolve_indexation, survival stats visibility,
+│   │                                # CWD threshold validation, disable Add button logic
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks
 │   ├── test_ef_click_find.py        # display_click_data (5 tests), find_portfolio (8 tests)
 │   ├── test_database_callbacks.py   # db_search (6 tests): search results, empty, namespace routing
-│   ├── test_compare_data_callback.py  # update_graf_compare (6): wealth/cagr/correlation, stats, errors
+│   ├── test_compare_data_callback.py  # update_graf_compare (7): wealth/cumulative_return/cagr/correlation, stats, errors
 │   ├── test_benchmark_data_callback.py  # update_graf_benchmark (10): 6 plot types, bar chart, errors
 │   ├── test_ef_data_callback.py       # update_ef_cards (5): figures, ef_points×100, mobile, errors
 │   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (8): figure, y-titles, weights, errors
@@ -145,11 +148,11 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 79 | ~1s |
-| `poetry run pytest -m component` | Dash callbacks | 115 | ~3s |
+| `poetry run pytest -m unit` | Pure logic | 95 | ~1s |
+| `poetry run pytest -m component` | Dash callbacks | 143 | ~3s |
 | `poetry run pytest -m e2e` | Playwright browser | 20 | ~46s |
-| `poetry run pytest -q` | Everything | 214 | ~48s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 194 | ~3s |
+| `poetry run pytest -q` | Everything | 258 | ~60s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 238 | ~3s |
 
 ### What's covered per page
 
@@ -157,10 +160,10 @@ tests/
 |------|------|-----------|-----|
 | **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio | load, controls, mobile, shareable link, submit→traces |
 | **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards | load, mobile, shareable link, submit→chart |
-| **Compare** | — | show/hide, update_graf_compare (wealth/cagr/correlation, stats) | load, shareable link, submit→traces |
+| **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/cagr/correlation, stats) | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) | load |
-| **common/** | validators, math, create_link, symbols | change_style_for_hidden_row | — |
+| **common/** | validators, math, create_link, symbols, object_cache | change_style_for_hidden_row | — |
 
 ### okama mock strategy
 
