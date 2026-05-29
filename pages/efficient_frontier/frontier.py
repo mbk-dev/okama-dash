@@ -12,6 +12,7 @@ import common.math
 import common.update_style
 from common.chart_helpers import make_error_alert
 from common.parse_query import make_list_from_string
+from common.ef_grid import parse_grid_step_value
 
 from pages.efficient_frontier.cards_efficient_frontier.ef_description import card_ef_description
 from pages.efficient_frontier.cards_efficient_frontier.ef_info import card_ef_info
@@ -123,6 +124,9 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
     State(component_id="risk-free-rate-option", component_property="value"),
     # Monte-Carlo
     State(component_id="monte-carlo-option", component_property="value"),
+    # Simulation mode + grid step
+    State(component_id="ef-sim-mode", component_property="value"),
+    State(component_id="ef-grid-step", component_property="value"),
     prevent_initial_call=True,
 )
 def update_ef_cards(
@@ -141,6 +145,8 @@ def update_ef_cards(
     cml_option: str,
     rf_rate: float,
     n_monte_carlo: int,
+    sim_mode: str,
+    grid_step_value: str,
 ):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     if not symbols:
@@ -153,14 +159,21 @@ def update_ef_cards(
             last_date=ld_value,
             rebalancing_period=rebalancing_period,
         )
-        ef_options = dict(
-            plot_type=plot_option,
-            return_type=mean_type_option,
-            mdp=mdp_option,
-            cml=cml_option,
-            rf_rate=rf_rate,
-            n_monte_carlo=n_monte_carlo,
-        )
+        grid_step = None
+        effective_n_monte_carlo = 0
+        if sim_mode == "Grid":
+            grid_step = parse_grid_step_value(grid_step_value, len(symbols))
+        elif sim_mode == "Monte Carlo":
+            effective_n_monte_carlo = n_monte_carlo
+        ef_options = {
+            "plot_type": plot_option,
+            "return_type": mean_type_option,
+            "mdp": mdp_option,
+            "cml": cml_option,
+            "rf_rate": rf_rate,
+            "n_monte_carlo": effective_n_monte_carlo,
+            "grid_step": grid_step,
+        }
         ef = ef_object.ef_points * 100
 
         fig1 = prepare_ef(ef, ef_object, ef_options, ef_cache_key=ef_file_name)

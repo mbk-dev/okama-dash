@@ -51,6 +51,7 @@ class TestUpdateEfCards:
                 rebalancing_period="month", plot_option="ef",
                 mean_type_option="Arithmetic", mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
+                sim_mode="Off", grid_step_value="Auto",
             )
 
         assert isinstance(r_fig1, go.Figure)
@@ -68,6 +69,7 @@ class TestUpdateEfCards:
                 rebalancing_period="month", plot_option="ef",
                 mean_type_option="Arithmetic", mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
+                sim_mode="Off", grid_step_value="Auto",
             )
 
     def test_exception_returns_error_figure(self):
@@ -84,6 +86,7 @@ class TestUpdateEfCards:
                 rebalancing_period="month", plot_option="ef",
                 mean_type_option="Arithmetic", mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
+                sim_mode="Off", grid_step_value="Auto",
             )
 
         assert isinstance(fig1, go.Figure)
@@ -107,6 +110,7 @@ class TestUpdateEfCards:
                 rebalancing_period="month", plot_option="ef",
                 mean_type_option="Arithmetic", mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
+                sim_mode="Off", grid_step_value="Auto",
             )
 
         ef_arg = mock_prep_ef.call_args[0][0]
@@ -131,6 +135,7 @@ class TestUpdateEfCards:
                 rebalancing_period="month", plot_option="ef",
                 mean_type_option="Arithmetic", mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
+                sim_mode="Off", grid_step_value="Auto",
             )
 
         mock_compact.assert_called_once()
@@ -171,3 +176,61 @@ def test_grid_trace_added_when_grid_step_set():
     ef_object.get_grid_portfolios.assert_called_once_with(
         step=0.5, max_points=_settings.GRID_POINT_BUDGET
     )
+
+
+def test_grid_mode_passes_resolved_step_to_prepare_ef():
+    from pages.efficient_frontier.frontier import update_ef_cards
+
+    mock_ef = _make_mock_ef_object()
+    captured = {}
+
+    def fake_prepare_ef(ef, ef_object, ef_options, ef_cache_key=None):
+        captured["ef_options"] = ef_options
+        return go.Figure()
+
+    with (
+        patch(f"{FRONTIER_MODULE}.get_or_create_ef_object", return_value=(mock_ef, "test.pkl")),
+        patch(f"{FRONTIER_MODULE}.prepare_ef", side_effect=fake_prepare_ef),
+        patch(f"{FRONTIER_MODULE}.prepare_transition_map", return_value=go.Figure()),
+    ):
+        update_ef_cards(
+            screen=None, n_clicks=1,
+            selected_symbols=["A.US", "B.US", "C.US", "D.US", "E.US", "F.US"],
+            ccy="USD", fd_value="2020-01", ld_value="2024-12",
+            rebalancing_period="month", plot_option="Frontier",
+            mean_type_option="Geometric", mdp_option="Off",
+            cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
+            sim_mode="Grid", grid_step_value="Auto",
+        )
+
+    assert captured["ef_options"]["grid_step"] == 0.10   # 6 assets -> 10%
+    assert captured["ef_options"]["n_monte_carlo"] == 0
+
+
+def test_monte_carlo_mode_passes_n_and_no_grid_step():
+    from pages.efficient_frontier.frontier import update_ef_cards
+
+    mock_ef = _make_mock_ef_object()
+    captured = {}
+
+    def fake_prepare_ef(ef, ef_object, ef_options, ef_cache_key=None):
+        captured["ef_options"] = ef_options
+        return go.Figure()
+
+    with (
+        patch(f"{FRONTIER_MODULE}.get_or_create_ef_object", return_value=(mock_ef, "test.pkl")),
+        patch(f"{FRONTIER_MODULE}.prepare_ef", side_effect=fake_prepare_ef),
+        patch(f"{FRONTIER_MODULE}.prepare_transition_map", return_value=go.Figure()),
+    ):
+        update_ef_cards(
+            screen=None, n_clicks=1,
+            selected_symbols=["A.US", "B.US"],
+            ccy="USD", fd_value="2020-01", ld_value="2024-12",
+            rebalancing_period="month", plot_option="Frontier",
+            mean_type_option="Geometric", mdp_option="Off",
+            cml_option="Off", rf_rate=0.0, n_monte_carlo=100,
+            sim_mode="Monte Carlo", grid_step_value="Auto",
+        )
+
+    assert captured["ef_options"]["grid_step"] is None
+    assert captured["ef_options"]["n_monte_carlo"] == 100
