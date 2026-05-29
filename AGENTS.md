@@ -209,6 +209,24 @@ After any code changes, follow this checklist:
    tree, coverage table, gaps section) and project memory are still accurate. Update any
    stale numbers, descriptions, or file listings before committing.
 
+## Recording findings in memory
+
+Whenever you incidentally discover something worth fixing that is **out of scope
+for the current task** — a bug, a factual inaccuracy in code/docs, code that can
+be improved (dead code, deprecations, smells), or a security issue — record it in
+project memory yourself instead of silently moving on. Do not wait to be asked.
+
+- Append it to the `findings-to-fix` memory (running log of open findings), with a
+  short description, the date you noticed it, affected files, and a suggested fix.
+- Add or update the one-line pointer in `MEMORY.md`.
+- If the finding is in scope for the task you're already doing, just fix it (per
+  the TDD and code-change rules) — the log is only for things you won't fix now.
+- When a logged finding is later fixed, strike it through with the date rather than
+  deleting it, so the history stays visible.
+
+This keeps mid-task discoveries from being lost and gives one place to look before
+planning cleanup or refactor work.
+
 ## Temporary files
 
 - Any temporary or throwaway file (scratch scripts, screenshots from manual
