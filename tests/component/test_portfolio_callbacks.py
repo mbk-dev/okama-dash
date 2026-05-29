@@ -241,14 +241,11 @@ class TestBuildCashflowStrategy:
             assert kw["amount"] == 200.0
             assert kw["crash_threshold_reduction"] == [(0.2, 0.4), (0.5, 1.0)]
 
-    def test_cwd_default_thresholds_when_empty(self, patched_okama_portfolio):
+    def test_cwd_raises_when_thresholds_empty(self, patched_okama_portfolio):
         from pages.portfolio.portfolio import _build_cashflow_strategy
 
         mock_pf = patched_okama_portfolio["portfolio_instance"]
-        with patch("pages.portfolio.portfolio.ok.CutWithdrawalsIfDrawdown") as mock_cls:
-            mock_instance = MagicMock()
-            mock_cls.return_value = mock_instance
-
+        with pytest.raises(ValueError, match="threshold"):
             _build_cashflow_strategy(
                 pf_object=mock_pf,
                 strategy_type="cwd",
@@ -260,9 +257,6 @@ class TestBuildCashflowStrategy:
                     "cwd_reductions": [],
                 },
             )
-
-            kw = mock_cls.call_args[1]
-            assert kw["crash_threshold_reduction"] == [(0.20, 0.40), (0.50, 1.0)]
 
     def test_time_series_strategy(self, patched_okama_portfolio):
         from pages.portfolio.portfolio import _build_cashflow_strategy
@@ -285,3 +279,168 @@ class TestBuildCashflowStrategy:
             mock_cls.assert_called_once_with(mock_pf)
             assert mock_instance.initial_investment == 1000.0
             assert mock_instance.time_series_dic == {"2020-01": 100.0, "2020-06": 200.0}
+
+
+class TestValidateCwdThresholds:
+    def test_valid_pair_returns_none(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        assert validate_cwd_thresholds([20, 50], [40, 100]) is None
+
+    def test_all_empty_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([None, None], [None, None])
+        assert result is not None
+        assert "threshold" in result.lower()
+
+    def test_empty_lists_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([], [])
+        assert result is not None
+
+    def test_partial_threshold_only_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([20, 30], [40, None])
+        assert result is not None
+        assert "partially" in result.lower() or "incomplete" in result.lower()
+
+    def test_partial_reduction_only_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([20, None], [40, 100])
+        assert result is not None
+
+    def test_valid_with_trailing_empty_row_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([20, 50, None], [40, 100, None])
+        assert result is None
+
+    def test_mixed_valid_and_partial_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([20, 30, 50], [40, None, 100])
+        assert result is not None
+
+    def test_decreasing_thresholds_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([50, 20], [40, 100])
+        assert result is not None
+        assert "increase" in result.lower() or "ascending" in result.lower()
+
+    def test_decreasing_reductions_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([20, 50], [100, 40])
+        assert result is not None
+
+    def test_equal_thresholds_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([20, 20], [40, 100])
+        assert result is not None
+
+    def test_equal_reductions_returns_error(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        result = validate_cwd_thresholds([20, 50], [40, 40])
+        assert result is not None
+
+    def test_ascending_values_valid(self):
+        from pages.portfolio.portfolio import validate_cwd_thresholds
+
+        assert validate_cwd_thresholds([10, 20, 50], [30, 60, 100]) is None
+
+
+class TestCwdBuildRaisesOnInvalidThresholds:
+    def test_cwd_raises_on_all_empty(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import _build_cashflow_strategy
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        with pytest.raises(ValueError, match="threshold"):
+            _build_cashflow_strategy(
+                pf_object=mock_pf,
+                strategy_type="cwd",
+                **{
+                    **CASHFLOW_DEFAULTS,
+                    "cwd_amount": 200,
+                    "cwd_indexation": 0.02,
+                    "cwd_thresholds": [None, None],
+                    "cwd_reductions": [None, None],
+                },
+            )
+
+    def test_cwd_raises_on_partial_row(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import _build_cashflow_strategy
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        with pytest.raises(ValueError):
+            _build_cashflow_strategy(
+                pf_object=mock_pf,
+                strategy_type="cwd",
+                **{
+                    **CASHFLOW_DEFAULTS,
+                    "cwd_amount": 200,
+                    "cwd_indexation": 0.02,
+                    "cwd_thresholds": [20, 30],
+                    "cwd_reductions": [40, None],
+                },
+            )
+
+
+class TestDisableCwdAddButton:
+    def test_disabled_when_last_row_empty(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import should_disable_cwd_add
+
+        assert should_disable_cwd_add([20, None], [40, None]) is True
+
+    def test_disabled_when_last_threshold_only(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import should_disable_cwd_add
+
+        assert should_disable_cwd_add([20, 30], [40, None]) is True
+
+    def test_disabled_when_last_reduction_only(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import should_disable_cwd_add
+
+        assert should_disable_cwd_add([20, None], [40, 100]) is True
+
+    def test_enabled_when_all_complete(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import should_disable_cwd_add
+
+        assert should_disable_cwd_add([20, 50], [40, 100]) is False
+
+    def test_enabled_when_empty_lists(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import should_disable_cwd_add
+
+        assert should_disable_cwd_add([], []) is False
+
+
+class TestNextCwdPlaceholder:
+    def test_increments_by_10(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import next_cwd_placeholder
+
+        assert next_cwd_placeholder(20, 40) == (30, 50)
+
+    def test_caps_at_100(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import next_cwd_placeholder
+
+        assert next_cwd_placeholder(95, 95) == (100, 100)
+
+    def test_already_100_stays_100(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import next_cwd_placeholder
+
+        assert next_cwd_placeholder(100, 100) == (100, 100)
+
+    def test_no_previous_returns_defaults(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import next_cwd_placeholder
+
+        assert next_cwd_placeholder(None, None) == (20, 40)
+
+    def test_mixed_cap(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import next_cwd_placeholder
+
+        assert next_cwd_placeholder(50, 95) == (60, 100)

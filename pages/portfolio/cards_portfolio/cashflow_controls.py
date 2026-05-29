@@ -780,7 +780,16 @@ register_date_validation({"type": "pf-cf-ts-date", "index": MATCH})
 
 # --- CWD dynamic rows ---
 
-def _cwd_row(index, threshold_val=None, reduction_val=None):
+def next_cwd_placeholder(
+    prev_threshold: float | None,
+    prev_reduction: float | None,
+) -> tuple[int, int]:
+    if prev_threshold is None or prev_reduction is None:
+        return (20, 40)
+    return (min(int(prev_threshold) + 10, 100), min(int(prev_reduction) + 10, 100))
+
+
+def _cwd_row(index, threshold_val=None, reduction_val=None, threshold_ph="20", reduction_ph="40"):
     return dbc.Row(
         [
             dbc.Col(
@@ -790,7 +799,7 @@ def _cwd_row(index, threshold_val=None, reduction_val=None):
                     min=0,
                     max=100,
                     step=1,
-                    placeholder="20",
+                    placeholder=threshold_ph,
                     value=threshold_val,
                 ),
                 width=5,
@@ -802,7 +811,7 @@ def _cwd_row(index, threshold_val=None, reduction_val=None):
                     min=0,
                     max=100,
                     step=1,
-                    placeholder="40",
+                    placeholder=reduction_ph,
                     value=reduction_val,
                 ),
                 width=5,
@@ -849,4 +858,28 @@ def manage_cwd_rows(add_clicks, remove_clicks, ids, thresholds, reductions):
             {"index": 1, "threshold": 50, "reduction": 100},
         ]
 
-    return [_cwd_row(r["index"], r["threshold"], r["reduction"]) for r in rows]
+    result = []
+    prev_t, prev_r = None, None
+    for r in rows:
+        t_ph, r_ph = next_cwd_placeholder(prev_t, prev_r)
+        result.append(_cwd_row(r["index"], r["threshold"], r["reduction"], str(t_ph), str(r_ph)))
+        if r["threshold"] is not None and r["reduction"] is not None:
+            prev_t, prev_r = r["threshold"], r["reduction"]
+    return result
+
+
+def should_disable_cwd_add(thresholds: list, reductions: list) -> bool:
+    if not thresholds or not reductions:
+        return False
+    last_t = thresholds[-1]
+    last_r = reductions[-1]
+    return last_t is None or last_r is None
+
+
+@callback(
+    Output("pf-cf-cwd-add", "disabled"),
+    Input({"type": "pf-cf-cwd-threshold", "index": ALL}, "value"),
+    Input({"type": "pf-cf-cwd-reduction", "index": ALL}, "value"),
+)
+def disable_cwd_add_button(thresholds, reductions):
+    return should_disable_cwd_add(thresholds, reductions)
