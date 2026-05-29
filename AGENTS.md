@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-258 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+274 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -121,7 +121,8 @@ tests/
 │   ├── test_math.py                 # round_list sum preservation
 │   ├── test_create_link.py          # URL builder, filename builder, list size check
 │   ├── test_symbols.py              # symbol search (prefix, name-token, case-insensitive)
-│   └── test_object_cache.py         # object cache: key building, get_or_create, cleanup (16 tests)
+│   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup (16 tests)
+│   └── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
 │   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
 │   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
@@ -133,7 +134,8 @@ tests/
 │   ├── test_database_callbacks.py   # db_search (6 tests): search results, empty, namespace routing
 │   ├── test_compare_data_callback.py  # update_graf_compare (7): wealth/cumulative_return/cagr/correlation, stats, errors
 │   ├── test_benchmark_data_callback.py  # update_graf_benchmark (10): 6 plot types, bar chart, errors
-│   ├── test_ef_data_callback.py       # update_ef_cards (5): figures, ef_points×100, mobile, errors
+│   ├── test_ef_data_callback.py       # update_ef_cards (8): figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution
+│   ├── test_ef_grid_callbacks.py     # sim-mode visibility, dynamic grid step options, grid↔pairwise exclusivity, submit gating (6 tests)
 │   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (8): figure, y-titles, weights, errors
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types)
@@ -149,18 +151,18 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 95 | ~1s |
-| `poetry run pytest -m component` | Dash callbacks | 143 | ~3s |
-| `poetry run pytest -m e2e` | Playwright browser | 20 | ~46s |
-| `poetry run pytest -q` | Everything | 258 | ~60s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 238 | ~3s |
+| `poetry run pytest -m unit` | Pure logic | 102 | ~4s |
+| `poetry run pytest -m component` | Dash callbacks | 152 | ~5s |
+| `poetry run pytest -m e2e` | Playwright browser | 20 | ~70s |
+| `poetry run pytest -q` | Everything | 274 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 254 | ~6s |
 
 ### What's covered per page
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
 | **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio | load, controls, mobile, shareable link, submit→traces |
-| **Efficient Frontier** | — | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards | load, mobile, shareable link, submit→chart |
+| **Efficient Frontier** | adaptive grid step (ef_grid) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards, simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace | load, mobile, shareable link, submit→chart |
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/cagr/correlation, stats) | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) | load |
