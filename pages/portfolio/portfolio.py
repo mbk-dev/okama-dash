@@ -1,9 +1,5 @@
 import logging
-import os
-import time
 import typing
-import pickle
-from pathlib import Path
 
 import dash
 import dash_bootstrap_components as dbc
@@ -11,7 +7,6 @@ import plotly
 from dash import dash_table, callback, ALL, html, dcc
 from dash.dash_table.Format import Format, Scheme
 from dash.dependencies import Input, Output, State
-import dash_bootstrap_components as dbc
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -22,53 +17,16 @@ from scipy.stats import t, norm, lognorm, kstest, jarque_bera, skew, kurtosis as
 
 import okama as ok
 
-import common
 import common.create_link
 import common.settings as settings
-from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row, make_error_alert
+from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row
 from common.mobile_screens import adopt_small_screens
-from common.update_style import change_style_for_hidden_row
+from common.object_cache import get_or_create, TTL_PORTFOLIO
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
 from pages.portfolio.cards_portfolio.portfolio_description import card_portfolio_description
 from pages.portfolio.cards_portfolio.portfolio_info import card_assets_info
 from pages.portfolio.cards_portfolio.pf_statistics_table import card_table
 from pages.portfolio.cards_portfolio.pf_wealth_indexes_chart import card_graf_portfolio
-
-data_folder = Path(__file__).parent.parent.parent / common.cache_directory
-
-PF_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60
-PF_CACHE_CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
-_pf_cleanup_marker = data_folder / ".pf-cache-cleanup"
-_pf_cleanup_lock = data_folder / ".pf-cache-cleanup.lock"
-
-
-def _cleanup_expired_pf_cache_files() -> None:
-    data_folder.mkdir(parents=True, exist_ok=True)
-    now = time.time()
-    if _pf_cleanup_marker.exists():
-        if now - _pf_cleanup_marker.stat().st_mtime < PF_CACHE_CLEANUP_INTERVAL_SECONDS:
-            return
-    try:
-        lock_fd = os.open(str(_pf_cleanup_lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-    except FileExistsError:
-        return
-    try:
-        os.close(lock_fd)
-        if _pf_cleanup_marker.exists():
-            if now - _pf_cleanup_marker.stat().st_mtime < PF_CACHE_CLEANUP_INTERVAL_SECONDS:
-                return
-        threshold = now - PF_CACHE_TTL_SECONDS
-        for path in data_folder.glob("*.pkl"):
-            if "-cv=ef-" in path.name:
-                continue
-            try:
-                if path.stat().st_mtime < threshold:
-                    path.unlink(missing_ok=True)
-            except FileNotFoundError:
-                continue
-        _pf_cleanup_marker.touch()
-    finally:
-        _pf_cleanup_lock.unlink(missing_ok=True)
 
 dash.register_page(
     __name__,
@@ -127,6 +85,16 @@ def layout(
 ):
     page = dbc.Container(
         [
+            dbc.Toast(
+                "",
+                id="pf-error-toast",
+                header="Validation Error",
+                is_open=False,
+                dismissable=True,
+                duration=0,
+                color="danger",
+                style={"position": "fixed", "top": 10, "right": 10, "zIndex": 9999, "width": 350},
+            ),
             dbc.Row(
                 [
                     dbc.Col(
@@ -189,6 +157,10 @@ def layout(
     Output(component_id="pf-monte-carlo-statistics", component_property="children"),
     Output(component_id="pf-monte-carlo-wealth-statistics", component_property="children"),
     Output(component_id="pf-store-chart-data", component_property="data"),
+    Output(component_id="pf-error-toast", component_property="is_open"),
+    Output(component_id="pf-error-toast", component_property="children"),
+    Output(component_id="pf-graf-row", component_property="style"),
+    Output(component_id="pf-portfolio-statistics-row", component_property="style"),
     # user screen info
     Input(component_id="store", component_property="data"),
     # main Inputs
@@ -294,16 +266,12 @@ def update_graf_portfolio(
         patched_fig["layout"]["yaxis"]["type"] = "log" if log_on else "linear"
         return (
             patched_fig,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
+            dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update,
+            dash.no_update, dash.no_update, dash.no_update, dash.no_update,
         )
 
-    _cleanup_expired_pf_cache_files()
     try:
-        return _update_graf_portfolio_inner(
+        result = _update_graf_portfolio_inner(
             screen, log_on, assets, weights, ccy, rebalancing_period,
             rebal_abs_deviation, rebal_rel_deviation, fd_value, ld_value,
             initial_amount, discount_rate, symbol, cf_strategy, cf_frequency,
@@ -315,10 +283,14 @@ def update_graf_portfolio(
             plot_type, inflation_on, rolling_window,
             n_monte_carlo, years_monte_carlo, distribution_monte_carlo, show_backtest,
         )
+        return (*result, False, "", None, None)
     except Exception as e:
-        alert = make_error_alert(e)
+        logging.exception("Callback error")
         empty_fig = go.Figure()
-        return empty_fig, {}, alert, dash_table.DataTable(), dash_table.DataTable(), None
+        return (
+            empty_fig, {}, dash_table.DataTable(), dash_table.DataTable(), dash_table.DataTable(), None,
+            True, f"Error: {e}", {"display": "none"}, {"display": "none"},
+        )
 
 
 def _update_graf_portfolio_inner(
@@ -362,33 +334,13 @@ def _update_graf_portfolio_inner(
         ts_dates=tuple(ts_dates) if ts_dates else None,
         ts_amounts=tuple(ts_amounts) if ts_amounts else None,
     )
-    new_pf_file_name = common.create_link.create_filename(
-        tickers_list=assets,
-        ccy=ccy,
-        first_date=fd_value,
-        last_date=ld_value,
-        weights_list=weights,
-        inflation=inflation_on,
-        rebal=rebalancing_period,
-        abs_dev=rebal_abs_deviation,
-        rel_dev=rebal_rel_deviation,
-        initial_amount=initial_amount,
-        cf_strategy=cf_strategy,
-        cf_freq=cf_frequency,
-        cashflow_hash=cf_hash,
-    )
-    new_pf_file = data_folder / new_pf_file_name
-    if new_pf_file.is_file():
-        with open(new_pf_file, 'rb') as f:
-            logging.debug("found cached Portfolio file: %s", new_pf_file_name)
-            pf_object = pickle.load(f)
-    else:
+    def _construct_portfolio():
         rebal_strategy = ok.Rebalance(
             period=rebalancing_period,
             abs_deviation=abs_dev_val,
             rel_deviation=rel_dev_val,
         )
-        pf_object = ok.Portfolio(
+        pf = ok.Portfolio(
             assets=assets,
             weights=weights,
             first_date=fd_value,
@@ -398,9 +350,9 @@ def _update_graf_portfolio_inner(
             inflation=inflation_on,
             symbol=symbol,
         )
-        pf_object.dcf.use_discounted_values = True
-        strategy = _build_cashflow_strategy(
-            pf_object=pf_object,
+        pf.dcf.use_discounted_values = True
+        pf.dcf.cashflow_parameters = _build_cashflow_strategy(
+            pf_object=pf,
             strategy_type=cf_strategy,
             frequency=cf_frequency,
             initial_amount=float(initial_amount),
@@ -423,26 +375,28 @@ def _update_graf_portfolio_inner(
             ts_amounts=ts_amounts,
             has_inflation=inflation_on,
         )
-        pf_object.dcf.cashflow_parameters = strategy
+        return pf
 
-        pf_file_name = common.create_link.create_filename(
-            tickers_list=pf_object.symbols,
-            ccy=pf_object.currency,
-            first_date=pf_object.first_date.strftime('%Y-%m'),
-            last_date=pf_object.last_date.strftime('%Y-%m'),
-            weights_list=pf_object.weights,
-            inflation=inflation_on,
-            rebal=pf_object.rebalancing_strategy.period,
-            abs_dev=rebal_abs_deviation,
-            rel_dev=rebal_rel_deviation,
-            initial_amount=float(initial_amount),
-            cf_strategy=cf_strategy,
-            cf_freq=cf_frequency,
-            cashflow_hash=cf_hash,
-        )
-        data_file = data_folder / pf_file_name
-        with open(data_file, 'wb') as f:
-            pickle.dump(pf_object, f, protocol=pickle.HIGHEST_PROTOCOL)
+    pf_object, _ = get_or_create(
+        obj_type="portfolio",
+        constructor_fn=_construct_portfolio,
+        cache_key_params={
+            "symbols": assets,
+            "weights": weights,
+            "ccy": ccy,
+            "first_date": fd_value,
+            "last_date": ld_value,
+            "inflation": inflation_on,
+            "rebal": rebalancing_period,
+            "abs_dev": rebal_abs_deviation,
+            "rel_dev": rebal_rel_deviation,
+            "initial_amount": initial_amount,
+            "cf_strategy": cf_strategy,
+            "cf_freq": cf_frequency,
+            "cashflow_hash": cf_hash,
+        },
+        ttl_seconds=TTL_PORTFOLIO,
+    )
 
     fig, df_backtest, df_forecast, df_data = get_pf_figure(
         pf_object,
@@ -488,6 +442,33 @@ def _resolve_indexation(indexation_value, has_inflation=True):
     if indexation_value is not None:
         return float(indexation_value)
     return "inflation" if has_inflation else 0
+
+
+def validate_cwd_thresholds(
+    cwd_thresholds: list | None,
+    cwd_reductions: list | None,
+) -> str | None:
+    if not cwd_thresholds or not cwd_reductions:
+        return "CWD requires at least one complete threshold pair."
+    has_complete = False
+    for thresh, reduc in zip(cwd_thresholds, cwd_reductions, strict=False):
+        t_set = thresh is not None
+        r_set = reduc is not None
+        if t_set and r_set:
+            has_complete = True
+        elif t_set or r_set:
+            return "Incomplete CWD threshold row: both Drawdown threshold (%) and Reduction (%) must be filled."
+    if not has_complete:
+        return "CWD requires at least one complete threshold pair."
+    complete = [
+        (float(thresh), float(reduc))
+        for thresh, reduc in zip(cwd_thresholds, cwd_reductions, strict=False)
+        if thresh is not None and reduc is not None
+    ]
+    for i in range(1, len(complete)):
+        if complete[i][0] <= complete[i - 1][0] or complete[i][1] <= complete[i - 1][1]:
+            return "Drawdown threshold (%) and Reduction (%) must strictly increase with each row."
+    return None
 
 
 def _build_cashflow_strategy(
@@ -558,14 +539,15 @@ def _build_cashflow_strategy(
         return s
 
     if strategy_type == "cwd":
+        error = validate_cwd_thresholds(cwd_thresholds, cwd_reductions)
+        if error:
+            raise ValueError(error)
         indexation = _resolve_indexation(cwd_indexation, has_inflation)
-        thresholds = []
-        if cwd_thresholds and cwd_reductions:
-            for t, r in zip(cwd_thresholds, cwd_reductions):
-                if t is not None and r is not None:
-                    thresholds.append((float(t) / 100, float(r) / 100))
-        if not thresholds:
-            thresholds = [(0.20, 0.40), (0.50, 1.0)]
+        thresholds = [
+            (float(thresh) / 100, float(reduc) / 100)
+            for thresh, reduc in zip(cwd_thresholds, cwd_reductions, strict=False)
+            if thresh is not None and reduc is not None
+        ]
         s = ok.CutWithdrawalsIfDrawdown(
             parent=pf_object,
             initial_investment=initial_amount,
@@ -915,12 +897,3 @@ def get_pf_figure(
     return fig, df_backtest, df_forecast, df
 
 
-@callback(
-    Output(component_id="pf-graf-row", component_property="style"),
-    Output(component_id="pf-portfolio-statistics-row", component_property="style"),
-    Input(component_id="pf-submit-button", component_property="n_clicks"),
-    State(component_id="pf-graf-row", component_property="style"),
-)
-def show_graf_and_portfolio_data_rows(n_clicks, style):
-    style = change_style_for_hidden_row(n_clicks, style)
-    return style, style

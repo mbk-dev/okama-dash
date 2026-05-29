@@ -17,7 +17,7 @@ def patched_okama_portfolio(tmp_path):
     mock_pf = make_mock_portfolio()
 
     with (
-        patch("pages.portfolio.portfolio.data_folder", tmp_path),
+        patch("pages.portfolio.portfolio.get_or_create", return_value=(mock_pf, "test.pkl")),
         patch("pages.portfolio.portfolio.ok.Portfolio", return_value=mock_pf) as mock_cls,
         patch("pages.portfolio.portfolio.ok.Rebalance") as mock_rebal,
         patch("pages.portfolio.portfolio.ok.IndexationStrategy") as mock_idx_strat,

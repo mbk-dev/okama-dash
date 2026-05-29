@@ -14,6 +14,7 @@ import plotly.express as px
 import okama as ok
 
 import common.settings as settings
+from common.object_cache import get_or_create, TTL_ASSET_LIST
 import common.update_style
 from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row, make_error_alert
 import plotly.graph_objects as go
@@ -112,12 +113,23 @@ def update_graf_compare(
 
 def _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
-    al_object = ok.AssetList(
-        symbols,
-        first_date=fd_value,
-        last_date=ld_value,
-        ccy=ccy,
-        inflation=inflation_on,
+    al_object, _ = get_or_create(
+        obj_type="assetlist",
+        constructor_fn=lambda: ok.AssetList(
+            symbols,
+            first_date=fd_value,
+            last_date=ld_value,
+            ccy=ccy,
+            inflation=inflation_on,
+        ),
+        cache_key_params={
+            "symbols": symbols,
+            "ccy": ccy,
+            "first_date": fd_value,
+            "last_date": ld_value,
+            "inflation": inflation_on,
+        },
+        ttl_seconds=TTL_ASSET_LIST,
     )
     log_scale = log_on if plot_type in ("wealth", "cumulative_return") else False
     fig, df_data = get_al_figure(al_object, plot_type, inflation_on, rolling_window, log_scale)

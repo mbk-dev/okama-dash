@@ -11,6 +11,7 @@ import pandas as pd
 import okama as ok
 
 import common.settings as settings
+from common.object_cache import get_or_create, TTL_ASSET_LIST
 import common.update_style
 from common.chart_helpers import add_last_value_annotations, make_error_alert
 from common.mobile_screens import adopt_small_screens
@@ -90,12 +91,23 @@ def update_graf_benchmark(
     try:
         tickers = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
         symbols = [benchmark] + tickers
-        al_object = ok.AssetList(
-            symbols,
-            first_date=fd_value,
-            last_date=ld_value,
-            ccy=ccy,
-            inflation=False,
+        al_object, _ = get_or_create(
+            obj_type="assetlist",
+            constructor_fn=lambda: ok.AssetList(
+                symbols,
+                first_date=fd_value,
+                last_date=ld_value,
+                ccy=ccy,
+                inflation=False,
+            ),
+            cache_key_params={
+                "symbols": symbols,
+                "ccy": ccy,
+                "first_date": fd_value,
+                "last_date": ld_value,
+                "inflation": False,
+            },
+            ttl_seconds=TTL_ASSET_LIST,
         )
         fig, df_data = get_benchmark_figure(al_object, plot_type, expanding_rolling, rolling_window)
         json_data = df_data.to_json(orient="split", default_handler=str)

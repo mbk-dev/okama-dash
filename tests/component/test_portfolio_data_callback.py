@@ -40,12 +40,15 @@ def patched_pf_inner(tmp_path):
     mock_fig.add_scatter(x=[1, 2], y=[100, 110], name="TestPF.PF")
     empty_df = pd.DataFrame()
 
+    def _run_constructor(obj_type, constructor_fn, cache_key_params, ttl_seconds):
+        constructor_fn()
+        return mock_pf, "test.pkl"
+
     with (
-        patch(f"{PF_MODULE}.data_folder", tmp_path),
+        patch(f"{PF_MODULE}.get_or_create", side_effect=_run_constructor),
         patch(f"{PF_MODULE}.ok.Portfolio", return_value=mock_pf),
         patch(f"{PF_MODULE}.ok.Rebalance", return_value=MagicMock()),
         patch(f"{PF_MODULE}.ok.IndexationStrategy", return_value=MagicMock()),
-        patch(f"{PF_MODULE}.pickle.dump"),
         patch(f"{PF_MODULE}.get_pf_figure", return_value=(mock_fig, empty_df, empty_df, empty_df)),
         patch(f"{PF_MODULE}.get_pf_statistics_table", return_value=dash_table.DataTable(data=[{"a": 1}])),
     ):
@@ -114,12 +117,12 @@ class TestUpdateGrafPortfolioInner:
 
 
 class TestUpdateGrafPortfolioOuter:
-    def test_exception_returns_error_figure(self):
+    def test_exception_opens_toast_with_message(self):
         from pages.portfolio.portfolio import update_graf_portfolio
 
         with (
             patch(f"{PF_MODULE}.dash.ctx") as mock_ctx,
-            patch(f"{PF_MODULE}._cleanup_expired_pf_cache_files"),
+
             patch(f"{PF_MODULE}._update_graf_portfolio_inner", side_effect=ValueError("boom")),
         ):
             mock_ctx.triggered_id = "pf-submit-button"
@@ -127,6 +130,61 @@ class TestUpdateGrafPortfolioOuter:
                 **_default_args(), n_clicks=1,
             )
 
-        fig = result[0]
-        assert isinstance(fig, go.Figure)
-        assert result[5] is None
+        toast_is_open = result[6]
+        toast_children = result[7]
+        assert toast_is_open is True
+        assert "boom" in str(toast_children)
+
+    def test_exception_hides_graph_and_stats_rows(self):
+        from pages.portfolio.portfolio import update_graf_portfolio
+
+        with (
+            patch(f"{PF_MODULE}.dash.ctx") as mock_ctx,
+
+            patch(f"{PF_MODULE}._update_graf_portfolio_inner", side_effect=ValueError("boom")),
+        ):
+            mock_ctx.triggered_id = "pf-submit-button"
+            result = update_graf_portfolio(
+                **_default_args(), n_clicks=1,
+            )
+
+        graf_row_style = result[8]
+        stats_row_style = result[9]
+        assert graf_row_style == {"display": "none"}
+        assert stats_row_style == {"display": "none"}
+
+    def test_success_closes_toast_and_shows_rows(self, patched_pf_inner):
+        from pages.portfolio.portfolio import update_graf_portfolio
+
+        with (
+            patch(f"{PF_MODULE}.dash.ctx") as mock_ctx,
+
+        ):
+            mock_ctx.triggered_id = "pf-submit-button"
+            result = update_graf_portfolio(
+                **_default_args(), n_clicks=1,
+            )
+
+        toast_is_open = result[6]
+        graf_row_style = result[8]
+        stats_row_style = result[9]
+        assert toast_is_open is False
+        assert graf_row_style is None
+        assert stats_row_style is None
+
+    def test_log_scale_toggle_no_update_toast_and_rows(self):
+        import dash
+        from pages.portfolio.portfolio import update_graf_portfolio
+
+        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
+            mock_ctx.triggered_id = "pf-logarithmic-scale-switch"
+            args = _default_args()
+            args["log_on"] = True
+            result = update_graf_portfolio(
+                **args, n_clicks=1,
+            )
+
+        assert result[6] is dash.no_update
+        assert result[7] is dash.no_update
+        assert result[8] is dash.no_update
+        assert result[9] is dash.no_update

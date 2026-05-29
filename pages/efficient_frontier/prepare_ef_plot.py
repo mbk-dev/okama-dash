@@ -9,9 +9,8 @@ from plotly import graph_objects as go
 import plotly.express as px
 
 from common import cache
-from pages.efficient_frontier.ef_cache import CACHE_TIMEOUT, load_ef_object
-
-DERIVED_CACHE_VERSION = "ef-derived-v1"
+from common.object_cache import load_cached as load_ef_object
+from pages.efficient_frontier.ef_cache import CACHE_TIMEOUT, DERIVED_CACHE_VERSION
 
 
 def _normalize_plot_types(plot_type) -> list[str]:
