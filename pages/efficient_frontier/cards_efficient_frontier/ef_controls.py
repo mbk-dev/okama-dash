@@ -465,33 +465,34 @@ def update_risk_free_rate(cml: str):
     Output("mdp-line-option", "value"),
     Output("cml-option", "options"),
     Output("cml-option", "value"),
-    Output("monte-carlo-option", "disabled"),
-    Output("monte-carlo-option", "value"),
+    Output("ef-sim-mode", "value"),
     Input("ef-plot-options", "value"),
     Input("ef-mean-type-option", "value"),
     Input("mdp-line-option", "value"),
     Input("cml-option", "value"),
-    Input("monte-carlo-option", "value"),
+    Input("ef-sim-mode", "value"),
 )
-def sync_incompatible_options(plot_type, mean_type_value, mdp_value, cml_value, monte_carlo_value):
+def sync_incompatible_options(plot_type, mean_type_value, mdp_value, cml_value, sim_mode):
     plot_types = _normalize_plot_types(plot_type)
     mean_type_value = mean_type_value or "Geometric"
     mdp_value = mdp_value or "Off"
     cml_value = cml_value or "Off"
-    monte_carlo_value = 0 if monte_carlo_value is None else monte_carlo_value
+    sim_mode = sim_mode or "Off"
     triggered_id = dash.ctx.triggered_id
 
-    incompatible_selected = mdp_value == "On" or cml_value == "On" or monte_carlo_value > 0
+    sim_active = sim_mode in {"Monte Carlo", "Grid"}
+    incompatible_selected = mdp_value == "On" or cml_value == "On" or sim_active
     pairwise_selected = "Pairwise" in plot_types
 
-    if triggered_id in {"mdp-line-option", "cml-option", "monte-carlo-option"} and incompatible_selected:
+    if triggered_id in {"mdp-line-option", "cml-option", "ef-sim-mode"} and incompatible_selected:
         plot_types = [option for option in plot_types if option != "Pairwise"]
         pairwise_selected = False
 
     if triggered_id == "ef-plot-options" and pairwise_selected:
         mdp_value = "Off"
         cml_value = "Off"
-        monte_carlo_value = 0
+        sim_mode = "Off"
+        sim_active = False
         incompatible_selected = False
 
     if not plot_types:
@@ -507,9 +508,10 @@ def sync_incompatible_options(plot_type, mean_type_value, mdp_value, cml_value, 
         cml_value = "Off"
 
     if pairwise_selected:
-        monte_carlo_value = 0
+        sim_mode = "Off"
+        sim_active = False
 
-    pairwise_disabled = mdp_value == "On" or cml_value == "On" or monte_carlo_value > 0
+    pairwise_disabled = mdp_value == "On" or cml_value == "On" or sim_active
 
     return (
         _get_plot_options(pairwise_disabled=pairwise_disabled),
@@ -518,8 +520,7 @@ def sync_incompatible_options(plot_type, mean_type_value, mdp_value, cml_value, 
         mdp_value,
         _get_toggle_options(disabled=mdp_cml_disabled),
         cml_value,
-        pairwise_selected,
-        monte_carlo_value,
+        sim_mode,
     )
 
 
@@ -597,20 +598,19 @@ def disable_link_button(tickers_list) -> bool:
     Output("ef-submit-button-state", "disabled"),
     Input("ef-symbols-list", "value"),
     Input("monte-carlo-option", "valid"),
+    Input("ef-sim-mode", "value"),
 )
-def disable_submit(tickers_list, mc_number_valid) -> bool:
+def disable_submit(tickers_list, mc_number_valid, sim_mode) -> bool:
     """
     Disable Submit button.
 
-    conditions:
+    Conditions:
     - number of tickers is < 2
-    - MC number is incorrect
+    - Monte Carlo mode is selected and its point count is invalid
     """
     number_of_tickers_is_too_small = len(tickers_list) < 2
-    mc_number_is_incorrect = mc_number_valid == False
-
-    submit_result = number_of_tickers_is_too_small or mc_number_is_incorrect
-    return submit_result
+    mc_number_is_incorrect = sim_mode == "Monte Carlo" and mc_number_valid is False
+    return number_of_tickers_is_too_small or mc_number_is_incorrect
 
 
 register_date_validation("ef-first-date")
