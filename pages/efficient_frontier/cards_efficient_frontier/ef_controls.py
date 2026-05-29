@@ -441,6 +441,16 @@ def toggle_simulation_inputs(mode: str) -> tuple[dict, dict]:
 
 
 @callback(
+    Output("ef-grid-step", "options"),
+    Input("ef-symbols-list", "value"),
+)
+def update_grid_step_options(tickers_list) -> list[dict]:
+    """Rebuild grid step options so steps over the point budget are disabled."""
+    n_assets = len(tickers_list) if tickers_list else 0
+    return grid_step_options(n_assets)
+
+
+@callback(
     Output(component_id="risk-free-rate-option", component_property="disabled"),
     Input(component_id="cml-option", component_property="value"),
 )
