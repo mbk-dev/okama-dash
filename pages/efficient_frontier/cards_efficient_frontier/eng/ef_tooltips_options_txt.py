@@ -36,14 +36,8 @@ ef_options_tooltip_rf_rate = dcc.Markdown(
 )
 ef_options_tooltip_mdp = dcc.Markdown(
     """
-    Each point on the **Most diversified portfolios (MDP)** line is a portfolio with optimized "Diversification ratio" 
+    Each point on the **Most diversified portfolios (MDP)** line is a portfolio with optimized "Diversification ratio"
     for a given return.
-    """
-)
-ef_options_monte_carlo = dcc.Markdown(
-    """
-    Generate N random portfolios with Monte Carlo simulation.
-    Risk and Return are calculated for a set of random weights.
     """
 )
 

@@ -218,6 +218,70 @@ def _get_grid_portfolios_data(ef_cache_key: str, step: float, return_type: str) 
     return _get_grid_portfolios_data_cached(DERIVED_CACHE_VERSION, ef_cache_key, step, return_type)
 
 
+def _add_monte_carlo_trace(
+    fig: go.Figure,
+    ef_object: okama.EfficientFrontier,
+    ef_options: dict,
+    return_type: str,
+    hovertemplate: str,
+    ef_cache_key: str | None,
+) -> None:
+    if ef_cache_key:
+        mc_data = _get_monte_carlo_data(ef_cache_key, ef_options["n_monte_carlo"], return_type)
+        mc_x = mc_data["risk"]
+        mc_y = _get_cached_return_values(mc_data, return_type)
+        weights_array = mc_data["weights"]
+    else:
+        df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"]) * 100
+        mc_y_column = _resolve_return_column(df, return_type)
+        mc_asset_columns = _get_asset_columns(df, ef_object)
+        weights_array = df[mc_asset_columns].to_numpy().tolist() if mc_asset_columns else None
+        mc_x = df["Risk"].tolist()
+        mc_y = df[mc_y_column].tolist()
+    fig.add_trace(
+        go.Scatter(
+            x=mc_x,
+            y=mc_y,
+            customdata=weights_array,
+            hovertemplate=hovertemplate,
+            mode="markers",
+            name="Monte-Carlo Simulation",
+        )
+    )
+
+
+def _add_grid_portfolios_trace(
+    fig: go.Figure,
+    ef_object: okama.EfficientFrontier,
+    ef_options: dict,
+    return_type: str,
+    hovertemplate: str,
+    ef_cache_key: str | None,
+) -> None:
+    if ef_cache_key:
+        grid_data = _get_grid_portfolios_data(ef_cache_key, ef_options["grid_step"], return_type)
+        grid_x = grid_data["risk"]
+        grid_y = _get_cached_return_values(grid_data, return_type)
+        weights_array = grid_data["weights"]
+    else:
+        df = ef_object.get_grid_portfolios(step=ef_options["grid_step"], max_points=GRID_POINT_BUDGET) * 100
+        grid_y_column = _resolve_return_column(df, return_type)
+        grid_asset_columns = _get_asset_columns(df, ef_object)
+        weights_array = df[grid_asset_columns].to_numpy().tolist() if grid_asset_columns else None
+        grid_x = df["Risk"].tolist()
+        grid_y = df[grid_y_column].tolist()
+    fig.add_trace(
+        go.Scatter(
+            x=grid_x,
+            y=grid_y,
+            customdata=weights_array,
+            hovertemplate=hovertemplate,
+            mode="markers",
+            name="Grid portfolios",
+        )
+    )
+
+
 def _to_string_list(text) -> list[str]:
     if text is None:
         return []
@@ -602,52 +666,10 @@ def _prepare_single_ef(
         _add_assets_trace(fig, ef_object, return_type, trace_name="Assets")
     # Monte-Carlo simulation
     if ef_options["n_monte_carlo"]:
-        if ef_cache_key:
-            mc_data = _get_monte_carlo_data(ef_cache_key, ef_options["n_monte_carlo"], return_type)
-            mc_x = mc_data["risk"]
-            mc_y = _get_cached_return_values(mc_data, return_type)
-            weights_array = mc_data["weights"]
-        else:
-            df = ef_object.get_monte_carlo(n=ef_options["n_monte_carlo"]) * 100
-            mc_y_column = _resolve_return_column(df, return_type)
-            mc_asset_columns = _get_asset_columns(df, ef_object)
-            weights_array = df[mc_asset_columns].to_numpy().tolist() if mc_asset_columns else None
-            mc_x = df["Risk"].tolist()
-            mc_y = df[mc_y_column].tolist()
-        fig.add_trace(
-            go.Scatter(
-                x=mc_x,
-                y=mc_y,
-                customdata=weights_array,
-                hovertemplate=hovertemplate,
-                mode="markers",
-                name=f"Monte-Carlo Simulation",
-            )
-        )
+        _add_monte_carlo_trace(fig, ef_object, ef_options, return_type, hovertemplate, ef_cache_key)
     # Grid portfolios
     if ef_options.get("grid_step"):
-        if ef_cache_key:
-            grid_data = _get_grid_portfolios_data(ef_cache_key, ef_options["grid_step"], return_type)
-            grid_x = grid_data["risk"]
-            grid_y = _get_cached_return_values(grid_data, return_type)
-            weights_array = grid_data["weights"]
-        else:
-            df = ef_object.get_grid_portfolios(step=ef_options["grid_step"], max_points=GRID_POINT_BUDGET) * 100
-            grid_y_column = _resolve_return_column(df, return_type)
-            grid_asset_columns = _get_asset_columns(df, ef_object)
-            weights_array = df[grid_asset_columns].to_numpy().tolist() if grid_asset_columns else None
-            grid_x = df["Risk"].tolist()
-            grid_y = df[grid_y_column].tolist()
-        fig.add_trace(
-            go.Scatter(
-                x=grid_x,
-                y=grid_y,
-                customdata=weights_array,
-                hovertemplate=hovertemplate,
-                mode="markers",
-                name="Grid portfolios",
-            )
-        )
+        _add_grid_portfolios_trace(fig, ef_object, ef_options, return_type, hovertemplate, ef_cache_key)
     return _update_figure_layout(fig)
 
 
