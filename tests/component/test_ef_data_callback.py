@@ -7,6 +7,8 @@ import pytest
 
 import dash.exceptions
 
+from common import settings as _settings
+
 pytestmark = pytest.mark.component
 
 FRONTIER_MODULE = "pages.efficient_frontier.frontier"
@@ -132,3 +134,40 @@ class TestUpdateEfCards:
             )
 
         mock_compact.assert_called_once()
+
+
+def test_grid_trace_added_when_grid_step_set():
+    from pages.efficient_frontier.prepare_ef_plot import _prepare_single_ef
+
+    ef = pd.DataFrame({
+        "Risk": [0.05, 0.10],
+        "CAGR": [0.04, 0.08],
+        "A.US": [1.0, 0.0],
+        "B.US": [0.0, 1.0],
+    })
+    ef_object = MagicMock()
+    ef_object.symbols = ["A.US", "B.US"]
+    ef_object.get_grid_portfolios.return_value = pd.DataFrame({
+        "Risk": [0.06, 0.07, 0.08],
+        "CAGR": [0.05, 0.06, 0.07],
+        "A.US": [0.5, 0.3, 0.2],
+        "B.US": [0.5, 0.7, 0.8],
+    })
+    ef_options = {
+        "return_type": "Geometric",
+        "mdp": "Off",
+        "cml": "Off",
+        "n_monte_carlo": 0,
+        "grid_step": 0.5,
+    }
+
+    fig = _prepare_single_ef(
+        ef, ef_object, ef_options, fig=go.Figure(), include_assets=False, ef_cache_key=None
+    )
+
+    grid_traces = [trace for trace in fig.data if trace.name == "Grid portfolios"]
+    assert len(grid_traces) == 1
+    assert list(grid_traces[0].x) == pytest.approx([6.0, 7.0, 8.0])   # Risk * 100
+    ef_object.get_grid_portfolios.assert_called_once_with(
+        step=0.5, max_points=_settings.GRID_POINT_BUDGET
+    )

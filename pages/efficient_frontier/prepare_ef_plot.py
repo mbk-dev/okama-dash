@@ -10,6 +10,7 @@ import plotly.express as px
 
 from common import cache
 from common.object_cache import load_cached as load_ef_object
+from common.settings import GRID_POINT_BUDGET
 from pages.efficient_frontier.ef_cache import CACHE_TIMEOUT, DERIVED_CACHE_VERSION
 
 
@@ -191,6 +192,30 @@ def _get_monte_carlo_data(ef_cache_key: str, n_monte_carlo: int, return_type: st
         n_monte_carlo,
         return_type,
     )
+
+
+@cache.memoize(timeout=CACHE_TIMEOUT)
+def _get_grid_portfolios_data_cached(
+    cache_version: str,
+    ef_cache_key: str,
+    step: float,
+    return_type: str,
+) -> dict:
+    del cache_version
+    ef_object = load_ef_object(ef_cache_key)
+    df = ef_object.get_grid_portfolios(step=step, max_points=GRID_POINT_BUDGET) * 100
+    grid_asset_columns = _get_asset_columns(df, ef_object)
+    weights_array = df[grid_asset_columns].to_numpy() if grid_asset_columns else None
+    return {
+        "risk": df["Risk"].tolist(),
+        "mean_return": _get_column_values(df, ("Mean return", "Return", "CAGR")),
+        "cagr": _get_column_values(df, ("CAGR", "Return", "Mean return")),
+        "weights": weights_array.tolist() if weights_array is not None else None,
+    }
+
+
+def _get_grid_portfolios_data(ef_cache_key: str, step: float, return_type: str) -> dict:
+    return _get_grid_portfolios_data_cached(DERIVED_CACHE_VERSION, ef_cache_key, step, return_type)
 
 
 def _to_string_list(text) -> list[str]:
@@ -597,6 +622,30 @@ def _prepare_single_ef(
                 hovertemplate=hovertemplate,
                 mode="markers",
                 name=f"Monte-Carlo Simulation",
+            )
+        )
+    # Grid portfolios
+    if ef_options.get("grid_step"):
+        if ef_cache_key:
+            grid_data = _get_grid_portfolios_data(ef_cache_key, ef_options["grid_step"], return_type)
+            grid_x = grid_data["risk"]
+            grid_y = _get_cached_return_values(grid_data, return_type)
+            weights_array = grid_data["weights"]
+        else:
+            df = ef_object.get_grid_portfolios(step=ef_options["grid_step"], max_points=GRID_POINT_BUDGET) * 100
+            grid_y_column = _resolve_return_column(df, return_type)
+            grid_asset_columns = _get_asset_columns(df, ef_object)
+            weights_array = df[grid_asset_columns].to_numpy().tolist() if grid_asset_columns else None
+            grid_x = df["Risk"].tolist()
+            grid_y = df[grid_y_column].tolist()
+        fig.add_trace(
+            go.Scatter(
+                x=grid_x,
+                y=grid_y,
+                customdata=weights_array,
+                hovertemplate=hovertemplate,
+                mode="markers",
+                name="Grid portfolios",
             )
         )
     return _update_figure_layout(fig)
