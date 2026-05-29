@@ -20,3 +20,5 @@ RISK_FREE_RATE_DEFAULT = 0.05
 INITIAL_INVESTMENT_DEFAULT = 1000
 
 EF_POINTS = 80
+GRID_POINT_BUDGET = 5000  # Max grid portfolios per request (parity with MC_EF_MAX)
+GRID_ALLOWED_STEPS = (0.10, 0.20, 0.25, 0.50)  # Explicit grid weight steps (>= 10%)
