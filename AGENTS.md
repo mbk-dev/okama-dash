@@ -40,6 +40,7 @@ okama-dash/
 │
 ├── assets/                  # Static files served by Dash (CSS, JS, images)
 ├── cache-directory/         # Runtime file-system cache (Flask-Caching fallback)
+├── tmp/                     # Scratch space for temporary files (contents gitignored)
 └── docs/                    # Specs and plans (not deployed)
 ```
 
@@ -207,6 +208,17 @@ After any code changes, follow this checklist:
 6. After finishing a batch of changes, verify that `AGENTS.md` (test counts, structure
    tree, coverage table, gaps section) and project memory are still accurate. Update any
    stale numbers, descriptions, or file listings before committing.
+
+## Temporary files
+
+- Any temporary or throwaway file (scratch scripts, screenshots from manual
+  verification, ad-hoc data dumps, intermediate exports) must be created inside
+  the `tmp/` directory at the project root — never in the project root itself or
+  in source/test folders.
+- Delete each temporary file as soon as it is no longer needed. Do not leave
+  scratch artifacts behind after a task is finished.
+- `tmp/` is tracked (via `tmp/.gitignore`) but its contents are ignored, so
+  nothing written there can be committed by accident.
 
 ## Python style & modernization
 

@@ -1,0 +1,4 @@
+# Scratch space for temporary files (see AGENTS.md → "Temporary files").
+# Track the folder, ignore everything written into it.
+*
+!.gitignore
