@@ -41,11 +41,17 @@ ef_options_tooltip_mdp = dcc.Markdown(
     """
 )
 
-ef_options_simulation = dcc.Markdown(
+ef_options_simulation_mc = dcc.Markdown(
     """
-    Fill the interior of the efficient frontier. The two methods are alternatives.
+    Fill the interior of the efficient frontier with random portfolios.
 
     **Monte Carlo** generates N random portfolios.
+    """
+)
+
+ef_options_simulation_grid = dcc.Markdown(
+    """
+    Fill the interior of the efficient frontier with a regular grid of portfolios.
 
     **Grid** enumerates all portfolios on a fixed weight step (minimum 10 %). The step is
     chosen automatically so the number of portfolios stays within a safe budget; you can

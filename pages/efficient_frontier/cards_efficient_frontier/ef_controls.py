@@ -297,34 +297,50 @@ def card_controls(
                             ],
                             className="p-1",
                         ),
-                        dbc.Row(html.H6(children="Simulation")),
+                        dbc.Row(html.H6(children="Inside Efficient Frontier")),
                         dbc.Row(
                             [
-                                dbc.Label(
-                                    [
-                                        "Method",
-                                        html.I(
-                                            className="bi bi-info-square ms-2",
-                                            id="info-sim-mode",
-                                        ),
-                                    ],
-                                    width=6,
-                                ),
                                 dbc.Col(
                                     dbc.RadioItems(
                                         options=[
                                             {"label": "Off", "value": "Off"},
-                                            {"label": "Monte Carlo", "value": "Monte Carlo"},
-                                            {"label": "Grid", "value": "Grid"},
+                                            {
+                                                "label": html.Span(
+                                                    [
+                                                        "Monte Carlo",
+                                                        html.I(
+                                                            className="bi bi-info-square ms-2",
+                                                            id="info-sim-mc",
+                                                        ),
+                                                    ]
+                                                ),
+                                                "value": "Monte Carlo",
+                                            },
+                                            {
+                                                "label": html.Span(
+                                                    [
+                                                        "Grid",
+                                                        html.I(
+                                                            className="bi bi-info-square ms-2",
+                                                            id="info-sim-grid",
+                                                        ),
+                                                    ]
+                                                ),
+                                                "value": "Grid",
+                                            },
                                         ],
                                         value="Off",
                                         id="ef-sim-mode",
                                     ),
-                                    width=6,
+                                    width=12,
                                 ),
                                 dbc.Tooltip(
-                                    tl.ef_options_simulation,
-                                    target="info-sim-mode",
+                                    tl.ef_options_simulation_mc,
+                                    target="info-sim-mc",
+                                ),
+                                dbc.Tooltip(
+                                    tl.ef_options_simulation_grid,
+                                    target="info-sim-grid",
                                 ),
                             ],
                             className="p-1",
