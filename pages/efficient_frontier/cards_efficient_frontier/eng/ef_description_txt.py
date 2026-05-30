@@ -3,7 +3,7 @@ from dash import dcc
 ef_description_text = dcc.Markdown(
     """
     Efficient Frontier widget uses monthly total return historical data to calculate optimized portfolio points.
-    Optimization uses annualized risk (annualized standard deviation) as an utility function. 
+    Optimization uses annualized risk (annualized standard deviation) as a utility function.
     
     Widget uses portfolios with configurable rebalancing frequency.  
 

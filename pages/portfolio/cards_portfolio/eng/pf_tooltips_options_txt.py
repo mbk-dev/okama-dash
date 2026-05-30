@@ -10,7 +10,7 @@ pf_rebalancing_period = dcc.Markdown(
     the initial allocation.
 
     "No rebalancing (buy & hold)" means the weights change
-     with assets price without any limit.
+     with asset prices without any limit.
     """
 )
 
@@ -80,7 +80,7 @@ pf_options_tooltip_discount_rate = dcc.Markdown(
 )
 pf_options_tooltip_ticker = dcc.Markdown(
     """
-    Text symbol of portfolio. It is similar to tickers but have a namespace information.
+    Text symbol of portfolio. It is similar to tickers but has namespace information.
     Portfolio symbol must end with .PF (all_weather_portfolio.PF). No spaces in ticker are allowed.
     """
 )

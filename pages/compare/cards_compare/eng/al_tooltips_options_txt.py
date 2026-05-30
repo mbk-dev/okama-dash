@@ -21,7 +21,7 @@ al_options_tooltip_cagr = dcc.Markdown(
     **Rolling Real CAGR** - Inflation adjusted annualized returns (real CAGR) calculated 
     for a moving window (at least 1 year). Requires base currency inflation data.  
 
-    **Correlation Matrix** - show correlation matrix for the assets (heatmap win numbers).  
+    **Correlation Matrix** - show correlation matrix for the assets (heatmap with numbers).
 """
 )
 al_options_window = dcc.Markdown(

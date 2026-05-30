@@ -128,8 +128,8 @@ def card_controls(
                                             options=[
                                                 {"label": "Wealth Index", "value": "wealth"},
                                                 {"label": "Cumulative return", "value": "cumulative_return"},
-                                                {"label": "Rolling Cagr", "value": "cagr"},
-                                                {"label": "Rolling Real Cagr", "value": "real_cagr"},
+                                                {"label": "Rolling CAGR", "value": "cagr"},
+                                                {"label": "Rolling Real CAGR", "value": "real_cagr"},
                                                 {"label": "Correlation matrix", "value": "correlation"},
                                             ],
                                             value="wealth",

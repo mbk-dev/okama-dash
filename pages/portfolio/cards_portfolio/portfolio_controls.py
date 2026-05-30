@@ -217,8 +217,8 @@ def card_controls(
                                         dbc.RadioItems(
                                             options=[
                                                 {"label": "Wealth Index", "value": "wealth"},
-                                                {"label": "Rolling Cagr", "value": "cagr"},
-                                                {"label": "Rolling Real Cagr", "value": "real_cagr"},
+                                                {"label": "Rolling CAGR", "value": "cagr"},
+                                                {"label": "Rolling Real CAGR", "value": "real_cagr"},
                                                 {"label": "Drawdowns", "value": "drawdowns"},
                                                 {"label": "Distribution test", "value": "distribution"},
                                             ],

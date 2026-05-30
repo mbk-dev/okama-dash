@@ -27,6 +27,6 @@ benchmark_options_tooltip_type = dcc.Markdown(
 
 benchmark_options_tooltip_window_size = dcc.Markdown(
     """
-    Size of the moving window in years. Window size should be at least 1 year for CAGR.
+    Size of the moving window in years. Window size should be at least 1 year.
 """
 )

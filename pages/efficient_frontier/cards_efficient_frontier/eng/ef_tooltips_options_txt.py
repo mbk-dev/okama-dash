@@ -24,7 +24,7 @@ ef_options_tooltip_cml = dcc.Markdown(
     the risk-free asset (volatility is zero) to the point of tangency portfolio
     or Maximum Sharpe Ratio (MSR) point.  
 
-    The slope of the CML is the Sharpe ratio of the tangency portfolio."
+    The slope of the CML is the Sharpe ratio of the tangency portfolio.
     """
 )
 ef_options_tooltip_rf_rate = dcc.Markdown(
