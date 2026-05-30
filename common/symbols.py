@@ -1,4 +1,5 @@
 from bisect import bisect_left, bisect_right
+import os
 import re
 from typing import Optional
 
@@ -12,11 +13,30 @@ SEARCH_RESULTS_LIMIT = 100
 NAME_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]+")
 
 
-@cache.memoize(timeout=2592000)
+def _data_source_token() -> str:
+    """
+    Discriminator that keeps mocked and real symbol data in separate cache slots.
+
+    The symbol indices are memoized for 30 days. When the app runs with mocked
+    okama (``TESTING=1``, e.g. during E2E tests) it must not share a cache key
+    with the real app — otherwise the real app would serve an index built from
+    a handful of fixture tickers. The okama version also invalidates the cache
+    when the upstream dataset changes (parity with ``object_cache``'s ``okv``).
+    """
+    if os.environ.get("TESTING") == "1":
+        return "test"
+    return getattr(ok, "__version__", "unknown")
+
+
 def get_symbols() -> list:
     """
     Get all available symbols (tickers) from assets namespaces.
     """
+    return _build_symbols(_data_source_token())
+
+
+@cache.memoize(timeout=2592000)
+def _build_symbols(token: str) -> list:
     list_of_symbols = [ok.symbols_in_namespace(ns).symbol for ns in settings.get_namespaces()]
     classifier_df = pd.concat(list_of_symbols, axis=0, join="outer", ignore_index=True)
     return classifier_df.to_list()
@@ -33,21 +53,29 @@ def get_symbols_names() -> dict:
     return classifier_df.loc[:, ["long_name", "symbol"]].to_dict("records")
 
 
-@cache.memoize(timeout=2592000)
 def get_symbol_search_index() -> dict:
     """
     Prepare a sorted index for fast prefix lookup by ticker.
     """
+    return _build_symbol_search_index(_data_source_token())
+
+
+@cache.memoize(timeout=2592000)
+def _build_symbol_search_index(token: str) -> dict:
     symbols = sorted(set(get_symbols()), key=str.casefold)
     normalized_symbols = [symbol.casefold() for symbol in symbols]
     return {"symbols": symbols, "normalized_symbols": normalized_symbols}
 
 
-@cache.memoize(timeout=2592000)
 def get_symbol_options_index() -> dict:
     """
     Prepare a sorted index for fast dropdown lookup by ticker and asset-name tokens.
     """
+    return _build_symbol_options_index(_data_source_token())
+
+
+@cache.memoize(timeout=2592000)
+def _build_symbol_options_index(token: str) -> dict:
     symbol_rows = sorted(get_symbols_names(), key=lambda item: item["symbol"].casefold())
     options = [{"label": item["long_name"], "value": item["symbol"]} for item in symbol_rows]
     normalized_symbols = [item["symbol"].casefold() for item in symbol_rows]
@@ -164,7 +192,10 @@ def search_symbol_options(search_value: Optional[str], selected_values: Optional
         for symbol in search_index["name_token_symbols"][token_left:token_right]:
             if symbol in matched_symbols:
                 continue
-            option = _make_selected_option(symbol) if symbol in selected_values_set else search_index["by_symbol"][symbol]
+            if symbol in selected_values_set:
+                option = _make_selected_option(symbol)
+            else:
+                option = search_index["by_symbol"][symbol]
             matched_options.append(option)
             matched_symbols.add(symbol)
             remaining_limit -= 1

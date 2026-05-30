@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-274 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+278 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -121,6 +121,7 @@ tests/
 │   ├── test_math.py                 # round_list sum preservation
 │   ├── test_create_link.py          # URL builder, filename builder, list size check
 │   ├── test_symbols.py              # symbol search (prefix, name-token, case-insensitive)
+│   ├── test_symbols_cache_isolation.py  # mocked (TESTING) symbol index must not poison real cache (4 tests)
 │   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup (16 tests)
 │   └── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
@@ -151,11 +152,11 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 102 | ~4s |
+| `poetry run pytest -m unit` | Pure logic | 106 | ~4s |
 | `poetry run pytest -m component` | Dash callbacks | 152 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 20 | ~70s |
-| `poetry run pytest -q` | Everything | 274 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 254 | ~6s |
+| `poetry run pytest -q` | Everything | 278 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 258 | ~6s |
 
 ### What's covered per page
 
