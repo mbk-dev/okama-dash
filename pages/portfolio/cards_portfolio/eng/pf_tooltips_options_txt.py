@@ -45,7 +45,7 @@ pf_options_tooltip_inflation = dcc.Markdown(
 )
 pf_options_tooltip_cagr = dcc.Markdown(
     """
-    **Wealth index** (Cumulative Wealth Index) - chart of cumulative income for the Portfolio and each asset. 
+    **Wealth Index** (Cumulative Wealth Index) - chart of cumulative income for the Portfolio and each asset.
     Cumulative income depends on the price and dividend (coupon) yield reinvested every month. 
     The starting investment for the Portfolio and each asset is 1000 in the base currency.  
 
