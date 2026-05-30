@@ -267,3 +267,12 @@ planning cleanup or refactor work.
 - Use f-string formatting for all logging and print messages.
 - When editing Jupyter Notebook examples in the `/examples` directory, ensure that the code
   examples are up-to-date with the current codebase in the Git branch.
+
+## Git push policy (OpenClaw-агенты)
+
+Действует совместно с глобальным правилом `claw_agent_git_push`. Агент на claw
+коммитит и пушит автономно ТОЛЬКО в work/test-ветки; в прод-ветку — только после
+явного подтверждения пользователя в Matrix.
+
+- **Work/test (автономно):** `dev`, feature-ветки
+- **Прод (только с подтверждением):** `master` (default/release)
