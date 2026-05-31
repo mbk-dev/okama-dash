@@ -135,7 +135,9 @@ class TestUpdateGrafPortfolioOuter:
         assert toast_is_open is True
         assert "boom" in str(toast_children)
 
-    def test_exception_hides_graph_and_stats_rows(self):
+    def test_exception_returns_no_row_styles(self):
+        # Row visibility moved to its own callback, so the heavy callback no
+        # longer carries the two trailing row-style outputs.
         from pages.portfolio.portfolio import update_graf_portfolio
 
         with (
@@ -148,12 +150,9 @@ class TestUpdateGrafPortfolioOuter:
                 **_default_args(), n_clicks=1,
             )
 
-        graf_row_style = result[8]
-        stats_row_style = result[9]
-        assert graf_row_style == {"display": "none"}
-        assert stats_row_style == {"display": "none"}
+        assert len(result) == 8
 
-    def test_success_closes_toast_and_shows_rows(self, patched_pf_inner):
+    def test_success_closes_toast(self, patched_pf_inner):
         from pages.portfolio.portfolio import update_graf_portfolio
 
         with (
@@ -165,14 +164,10 @@ class TestUpdateGrafPortfolioOuter:
                 **_default_args(), n_clicks=1,
             )
 
-        toast_is_open = result[6]
-        graf_row_style = result[8]
-        stats_row_style = result[9]
-        assert toast_is_open is False
-        assert graf_row_style is None
-        assert stats_row_style is None
+        assert result[6] is False
+        assert len(result) == 8
 
-    def test_log_scale_toggle_no_update_toast_and_rows(self):
+    def test_log_scale_toggle_no_update_toast(self):
         import dash
         from pages.portfolio.portfolio import update_graf_portfolio
 
@@ -186,5 +181,23 @@ class TestUpdateGrafPortfolioOuter:
 
         assert result[6] is dash.no_update
         assert result[7] is dash.no_update
-        assert result[8] is dash.no_update
-        assert result[9] is dash.no_update
+
+
+class TestShowGrafAndStatisticsRows:
+    # Row visibility lives in its own fast callback (like compare/benchmark/EF)
+    # so the dcc.Loading spinner is visible while the slow chart callback runs.
+    def test_reveals_both_rows_on_submit(self):
+        from pages.portfolio.portfolio import show_graf_and_statistics_rows
+
+        graf_style, stats_style = show_graf_and_statistics_rows(1, {"display": "none"})
+
+        assert graf_style is None
+        assert stats_style is None
+
+    def test_keeps_rows_hidden_before_submit(self):
+        from pages.portfolio.portfolio import show_graf_and_statistics_rows
+
+        graf_style, stats_style = show_graf_and_statistics_rows(0, {"display": "none"})
+
+        assert graf_style == {"display": "none"}
+        assert stats_style == {"display": "none"}

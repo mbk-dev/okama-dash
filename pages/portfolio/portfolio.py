@@ -19,6 +19,7 @@ import okama as ok
 
 import common.create_link
 import common.settings as settings
+import common.update_style
 from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row
 from common.mobile_screens import adopt_small_screens
 from common.object_cache import get_or_create, TTL_PORTFOLIO
@@ -159,8 +160,6 @@ def layout(
     Output(component_id="pf-store-chart-data", component_property="data"),
     Output(component_id="pf-error-toast", component_property="is_open"),
     Output(component_id="pf-error-toast", component_property="children"),
-    Output(component_id="pf-graf-row", component_property="style"),
-    Output(component_id="pf-portfolio-statistics-row", component_property="style"),
     # user screen info
     Input(component_id="store", component_property="data"),
     # main Inputs
@@ -267,7 +266,7 @@ def update_graf_portfolio(
         return (
             patched_fig,
             dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update,
-            dash.no_update, dash.no_update, dash.no_update, dash.no_update,
+            dash.no_update, dash.no_update,
         )
 
     try:
@@ -283,14 +282,32 @@ def update_graf_portfolio(
             plot_type, inflation_on, rolling_window,
             n_monte_carlo, years_monte_carlo, distribution_monte_carlo, show_backtest,
         )
-        return (*result, False, "", None, None)
+        return (*result, False, "")
     except Exception as e:
         logging.exception("Callback error")
         empty_fig = go.Figure()
         return (
             empty_fig, {}, dash_table.DataTable(), dash_table.DataTable(), dash_table.DataTable(), None,
-            True, f"Error: {e}", {"display": "none"}, {"display": "none"},
+            True, f"Error: {e}",
         )
+
+
+@callback(
+    Output(component_id="pf-graf-row", component_property="style"),
+    Output(component_id="pf-portfolio-statistics-row", component_property="style"),
+    Input(component_id="pf-submit-button", component_property="n_clicks"),
+    State(component_id="pf-graf-row", component_property="style"),
+)
+def show_graf_and_statistics_rows(n_clicks, style):
+    """Reveal the chart and statistics rows on submit.
+
+    Kept separate from the slow ``update_graf_portfolio`` callback so the rows
+    (and the ``dcc.Loading`` spinner they contain) become visible immediately
+    on click, instead of only after the chart finishes computing. Mirrors the
+    show-row callbacks on the compare, benchmark and efficient-frontier pages.
+    """
+    style = common.update_style.change_style_for_hidden_row(n_clicks, style)
+    return style, style
 
 
 def _update_graf_portfolio_inner(
