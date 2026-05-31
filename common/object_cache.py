@@ -1,4 +1,5 @@
 import fcntl
+import hashlib
 import logging
 import os
 import pickle
@@ -15,6 +16,11 @@ T = TypeVar("T")
 logger = logging.getLogger("object_cache")
 
 CACHE_FORMAT_VERSION = "obj-v1"
+
+# A single path component must not exceed the filesystem limit (NAME_MAX,
+# 255 bytes on ext4/tmpfs). Long ticker lists plus cashflow params can push
+# the descriptive cache filename past it.
+_MAX_FILENAME_BYTES = 255
 
 TTL_ASSET_LIST = 7 * 24 * 3600
 TTL_PORTFOLIO = 7 * 24 * 3600
@@ -55,7 +61,15 @@ def _build_cache_key(obj_type: str, cache_key_params: dict[str, Any]) -> str:
 
     parts.append(f"okv={get_okama_version()}")
     parts.append(f"cv={CACHE_FORMAT_VERSION}")
-    return "-".join(parts) + ".pkl"
+    name = "-".join(parts) + ".pkl"
+
+    if len(name.encode("utf-8")) > _MAX_FILENAME_BYTES:
+        # Fall back to a hashed name so the cache still persists. Keep the
+        # obj_type prefix for debuggability and the cv marker so
+        # cleanup_expired_files() still sweeps the file.
+        digest = hashlib.sha256(name.encode("utf-8")).hexdigest()
+        name = f"{obj_type}-{digest}-cv={CACHE_FORMAT_VERSION}.pkl"
+    return name
 
 
 def _atomic_write(file_path: Path, obj: Any) -> None:

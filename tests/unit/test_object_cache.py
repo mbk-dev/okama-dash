@@ -71,6 +71,61 @@ class TestBuildCacheKey:
         assert key.endswith(".pkl")
 
 
+# Filesystem NAME_MAX: a single path component may not exceed 255 bytes.
+_LONG_PORTFOLIO_PARAMS = {
+    "symbols": ["OKID10.INDX", "MCFTR.INDX", "RUCBTRNS.INDX", "GC.COMM"],
+    "weights": [0.5, 0.2, 0.1, 0.2],
+    "ccy": "RUB",
+    "first_date": "2000-01",
+    "last_date": "2026-05",
+    "rebal": "year",
+    "abs_dev": 10,
+    "rel_dev": 50,
+    "cf_strategy": "percentage",
+    "cf_freq": "month",
+    "inflation": False,
+    "initial_amount": 1000,
+    "cashflow_hash": "1cfee93f5ae5",
+}
+
+
+class TestBuildCacheKeyLength:
+    def test_long_key_stays_within_filesystem_limit(self, cache_dir):
+        from common.object_cache import _build_cache_key
+
+        key = _build_cache_key("portfolio", _LONG_PORTFOLIO_PARAMS)
+        assert len(key.encode("utf-8")) <= 255
+
+    def test_long_key_is_deterministic(self, cache_dir):
+        from common.object_cache import _build_cache_key
+
+        key1 = _build_cache_key("portfolio", _LONG_PORTFOLIO_PARAMS)
+        key2 = _build_cache_key("portfolio", _LONG_PORTFOLIO_PARAMS)
+        assert key1 == key2
+
+    def test_long_keys_with_different_params_differ(self, cache_dir):
+        from common.object_cache import _build_cache_key
+
+        other = {**_LONG_PORTFOLIO_PARAMS, "ccy": "USD"}
+        key1 = _build_cache_key("portfolio", _LONG_PORTFOLIO_PARAMS)
+        key2 = _build_cache_key("portfolio", other)
+        assert key1 != key2
+
+    def test_long_key_keeps_pkl_and_version(self, cache_dir):
+        from common.object_cache import _build_cache_key, CACHE_FORMAT_VERSION
+
+        key = _build_cache_key("portfolio", _LONG_PORTFOLIO_PARAMS)
+        # cleanup_expired_files() only sweeps files carrying the cv marker
+        assert key.endswith(".pkl")
+        assert f"cv={CACHE_FORMAT_VERSION}" in key
+
+    def test_short_key_remains_human_readable(self, cache_dir):
+        from common.object_cache import _build_cache_key
+
+        key = _build_cache_key("assetlist", {"symbols": ["SPY.US"], "ccy": "USD"})
+        assert "SPY.US" in key
+
+
 class TestGetOrCreate:
     def test_cache_miss_calls_constructor(self, cache_dir, _no_cleanup):
         from common.object_cache import get_or_create
@@ -144,6 +199,27 @@ class TestGetOrCreate:
             ttl_seconds=3600,
         )
         assert obj == {"fresh": True}
+
+    def test_long_key_config_is_cached(self, cache_dir, _no_cleanup):
+        # Reproduces the ENAMETOOLONG bug: a portfolio with long ticker names
+        # plus cashflow params produced a >255-byte filename, so the cache
+        # write silently failed and every Submit recomputed the object.
+        from common.object_cache import get_or_create
+
+        calls = []
+
+        def constructor():
+            calls.append(1)
+            return {"data": "test"}
+
+        get_or_create("portfolio", constructor, _LONG_PORTFOLIO_PARAMS, ttl_seconds=3600)
+        obj, key = get_or_create(
+            "portfolio", constructor, _LONG_PORTFOLIO_PARAMS, ttl_seconds=3600
+        )
+
+        assert obj == {"data": "test"}
+        assert len(calls) == 1
+        assert (cache_dir / key).exists()
 
     def test_returns_cache_key_string(self, cache_dir, _no_cleanup):
         from common.object_cache import get_or_create
