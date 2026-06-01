@@ -368,6 +368,7 @@ def _update_graf_portfolio_inner(
             symbol=symbol,
         )
         pf.dcf.use_discounted_values = True
+        pf.dcf.discount_rate = _resolve_discount_rate(discount_rate)
         pf.dcf.cashflow_parameters = _build_cashflow_strategy(
             pf_object=pf,
             strategy_type=cf_strategy,
@@ -408,6 +409,7 @@ def _update_graf_portfolio_inner(
             "abs_dev": rebal_abs_deviation,
             "rel_dev": rebal_rel_deviation,
             "initial_amount": initial_amount,
+            "discount_rate": discount_rate,
             "cf_strategy": cf_strategy,
             "cf_freq": cf_frequency,
             "cashflow_hash": cf_hash,

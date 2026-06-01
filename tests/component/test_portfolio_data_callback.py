@@ -123,6 +123,22 @@ class TestUpdateGrafPortfolioInner:
             _update_graf_portfolio_inner(**_default_args())
             assert mock_cls.call_args[1]["symbol"] == "TestPF.PF"
 
+    def test_discount_rate_wired_to_dcf_as_decimal(self, patched_pf_inner):
+        from pages.portfolio.portfolio import _update_graf_portfolio_inner
+
+        args = _default_args()
+        args["discount_rate"] = 10  # entered as percent
+        _update_graf_portfolio_inner(**args)
+        assert patched_pf_inner.dcf.discount_rate == 0.10
+
+    def test_empty_discount_rate_passed_as_none(self, patched_pf_inner):
+        from pages.portfolio.portfolio import _update_graf_portfolio_inner
+
+        args = _default_args()
+        args["discount_rate"] = None
+        _update_graf_portfolio_inner(**args)
+        assert patched_pf_inner.dcf.discount_rate is None
+
 
 class TestGetPfFigureAnnualReturn:
     def test_annual_return_renders_bar_chart(self):
