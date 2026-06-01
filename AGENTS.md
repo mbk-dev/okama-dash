@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-298 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+305 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -128,7 +128,8 @@ tests/
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
 │   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
 │   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
-│   │                                # _resolve_indexation, survival stats visibility,
+│   │                                # _resolve_indexation + _resolve_discount_rate (percent ÷100),
+│   │                                # survival stats visibility,
 │   │                                # CWD threshold validation, disable Add button logic
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks
@@ -138,7 +139,7 @@ tests/
 │   ├── test_benchmark_data_callback.py  # update_graf_benchmark (10): 6 plot types, bar chart, errors
 │   ├── test_ef_data_callback.py       # update_ef_cards (8): figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution
 │   ├── test_ef_grid_callbacks.py     # sim-mode visibility, dynamic grid step options, grid↔pairwise exclusivity, submit gating (6 tests)
-│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (9): figure, y-titles (incl. annual_return), weights, errors; get_pf_figure annual_return bar chart (2: bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit)
+│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (11): figure, y-titles (incl. annual_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (2: bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types), rolling-window disabled for annual_return (compare + portfolio)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
@@ -154,16 +155,16 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 115 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 163 | ~5s |
+| `poetry run pytest -m component` | Dash callbacks | 170 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 20 | ~70s |
-| `poetry run pytest -q` | Everything | 298 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 278 | ~6s |
+| `poetry run pytest -q` | Everything | 305 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 285 | ~6s |
 
 ### What's covered per page
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio, annual_return bar chart, rolling-window gating | load, controls, mobile, shareable link, submit→traces |
+| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio, annual_return bar chart, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf | load, controls, mobile, shareable link, submit→traces |
 | **Efficient Frontier** | adaptive grid step (ef_grid) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards, simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace | load, mobile, shareable link, submit→chart |
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats), rolling-window gating | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
