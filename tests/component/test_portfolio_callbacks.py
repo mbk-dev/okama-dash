@@ -495,6 +495,19 @@ def _find_by_id(node, target_id):
     return None
 
 
+def _label_texts(node):
+    """Return the string children of every html.Label in the subtree."""
+    texts = []
+    for n in _walk_components(node):
+        if type(n).__name__ != "Label":
+            continue
+        children = n.children
+        if not isinstance(children, (list, tuple)):
+            children = [children]
+        texts.extend(c for c in children if isinstance(c, str))
+    return texts
+
+
 class TestCashflowPercentageInFrequencyRow:
     def test_percentage_input_lives_inside_frequency_row(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
@@ -506,3 +519,13 @@ class TestCashflowPercentageInFrequencyRow:
         assert _find_by_id(freq_row, "pf-cf-percentage") is not None, (
             "Withdrawal/Contribution percentage input must live in the cash flow frequency row"
         )
+
+    def test_percentage_label_omits_the_word_percentage(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        item = cashflow_accordion_item()
+        col = _find_by_id(item, "pf-cf-percentage-col")
+        assert col is not None, "percentage column not found"
+
+        assert "Withdrawal/Contribution" in _label_texts(col)
+        assert "Withdrawal/Contribution percentage" not in _label_texts(col)

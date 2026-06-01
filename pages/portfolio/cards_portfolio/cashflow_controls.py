@@ -224,12 +224,13 @@ def cashflow_accordion_item(
                         [
                             html.Label(
                                 [
-                                    "Withdrawal/Contribution percentage",
+                                    "Withdrawal/Contribution",
                                     html.I(
                                         className="bi bi-info-square ms-2",
                                         id="pf-info-cf-pct",
                                     ),
-                                ]
+                                ],
+                                className="text-nowrap",
                             ),
                             dbc.Input(
                                 id="pf-cf-percentage",

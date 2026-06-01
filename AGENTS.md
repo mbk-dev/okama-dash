@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-306 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+307 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -156,10 +156,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 115 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 171 | ~5s |
+| `poetry run pytest -m component` | Dash callbacks | 172 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 20 | ~70s |
-| `poetry run pytest -q` | Everything | 306 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 286 | ~6s |
+| `poetry run pytest -q` | Everything | 307 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 287 | ~6s |
 
 ### What's covered per page
 
