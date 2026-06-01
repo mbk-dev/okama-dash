@@ -39,6 +39,30 @@ class TestCompareShowHide:
         assert s2 == {"display": "none"}
 
 
+class TestCompareRollingInputDisabled:
+    def test_annual_return_disables_rolling_window(self):
+        from pages.compare.cards_compare.asset_list_controls import update_rolling_input
+
+        assert update_rolling_input("annual_return") is True
+
+    def test_cagr_enables_rolling_window(self):
+        from pages.compare.cards_compare.asset_list_controls import update_rolling_input
+
+        assert update_rolling_input("cagr") is False
+
+
+class TestPortfolioRollingInputDisabled:
+    def test_annual_return_disables_rolling_window(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import disable_rolling_input
+
+        assert disable_rolling_input("annual_return") is True
+
+    def test_cagr_enables_rolling_window(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import disable_rolling_input
+
+        assert disable_rolling_input("cagr") is False
+
+
 class TestBenchmarkShowHide:
     def test_show_after_click(self):
         from pages.benchmark.benchmark import show_graf_row

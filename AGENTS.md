@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-286 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+298 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -123,7 +123,8 @@ tests/
 │   ├── test_symbols.py              # symbol search (prefix, name-token, case-insensitive)
 │   ├── test_symbols_cache_isolation.py  # mocked (TESTING) symbol index must not poison real cache (4 tests)
 │   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup, filename-length guard (22 tests)
-│   └── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
+│   ├── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
+│   └── test_chart_helpers.py        # add_return_type_annotation: CAGR note, default, no-arrow (3 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
 │   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
 │   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
@@ -133,13 +134,13 @@ tests/
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks
 │   ├── test_ef_click_find.py        # display_click_data (5 tests), find_portfolio (8 tests)
 │   ├── test_database_callbacks.py   # db_search (6 tests): search results, empty, namespace routing
-│   ├── test_compare_data_callback.py  # update_graf_compare (7): wealth/cumulative_return/cagr/correlation, stats, errors
+│   ├── test_compare_data_callback.py  # update_graf_compare (9): wealth/cumulative_return/annual_return(bar, CAGR annotation)/cagr/correlation, stats, errors
 │   ├── test_benchmark_data_callback.py  # update_graf_benchmark (10): 6 plot types, bar chart, errors
 │   ├── test_ef_data_callback.py       # update_ef_cards (8): figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution
 │   ├── test_ef_grid_callbacks.py     # sim-mode visibility, dynamic grid step options, grid↔pairwise exclusivity, submit gating (6 tests)
-│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (8): figure, y-titles, weights, errors; update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit)
+│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (9): figure, y-titles (incl. annual_return), weights, errors; get_pf_figure annual_return bar chart (2: bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
-│                                            # get_y_title (6 plot types)
+│                                            # get_y_title (6 plot types), rolling-window disabled for annual_return (compare + portfolio)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
     ├── conftest.py                  # Gunicorn server (TESTING=1, 2 workers) + Playwright
     ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
@@ -152,22 +153,22 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 112 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 154 | ~5s |
+| `poetry run pytest -m unit` | Pure logic | 115 | ~4s |
+| `poetry run pytest -m component` | Dash callbacks | 163 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 20 | ~70s |
-| `poetry run pytest -q` | Everything | 286 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 266 | ~6s |
+| `poetry run pytest -q` | Everything | 298 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 278 | ~6s |
 
 ### What's covered per page
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio | load, controls, mobile, shareable link, submit→traces |
+| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio, annual_return bar chart, rolling-window gating | load, controls, mobile, shareable link, submit→traces |
 | **Efficient Frontier** | adaptive grid step (ef_grid) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards, simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace | load, mobile, shareable link, submit→chart |
-| **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/cagr/correlation, stats) | load, shareable link, submit→traces |
+| **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats), rolling-window gating | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) | load |
-| **common/** | validators, math, create_link, symbols, object_cache | change_style_for_hidden_row | — |
+| **common/** | validators, math, create_link, symbols, object_cache, chart_helpers (add_return_type_annotation) | change_style_for_hidden_row | — |
 
 ### okama mock strategy
 

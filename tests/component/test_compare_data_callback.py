@@ -69,6 +69,32 @@ class TestUpdateGrafCompareInner:
         assert isinstance(fig, go.Figure)
         assert fig.layout.yaxis.title.text == "Cumulative Return"
 
+    def test_annual_return_plot_type_renders_bar_chart(self, mock_al):
+        from pages.compare.compare import _update_graf_compare_inner
+
+        fig, _, _, _ = _update_graf_compare_inner(
+            screen=None, log_on=False,
+            selected_symbols=["AAPL.US", "MSFT.US"],
+            ccy="USD", fd_value="2020-01", ld_value="2024-12",
+            plot_type="annual_return", inflation_on=False, rolling_window=2,
+        )
+        assert isinstance(fig, go.Figure)
+        assert fig.layout.yaxis.title.text == "Annual Return, %"
+        assert len(fig.data) > 0
+        assert all(trace.type == "bar" for trace in fig.data)
+
+    def test_annual_return_chart_annotates_cagr_return_type(self, mock_al):
+        from pages.compare.compare import _update_graf_compare_inner
+
+        fig, *_ = _update_graf_compare_inner(
+            screen=None, log_on=False,
+            selected_symbols=["AAPL.US", "MSFT.US"],
+            ccy="USD", fd_value="2020-01", ld_value="2024-12",
+            plot_type="annual_return", inflation_on=False, rolling_window=2,
+        )
+        annotation_texts = [a.text for a in fig.layout.annotations]
+        assert any("CAGR" in t for t in annotation_texts)
+
     def test_statistics_table_has_data(self, mock_al):
         from pages.compare.compare import _update_graf_compare_inner
 

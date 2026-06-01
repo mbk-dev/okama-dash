@@ -20,7 +20,7 @@ import okama as ok
 import common.create_link
 import common.settings as settings
 import common.update_style
-from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row
+from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row, add_return_type_annotation
 from common.mobile_screens import adopt_small_screens
 from common.object_cache import get_or_create, TTL_PORTFOLIO
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
@@ -434,6 +434,8 @@ def _update_graf_portfolio_inner(
         fig.update_yaxes(title_text="CAGR")
     elif plot_type == "drawdowns":
         fig.update_yaxes(title_text="Drawdowns")
+    elif plot_type == "annual_return":
+        fig.update_yaxes(title_text="Annual Return, %")
     elif plot_type == "distribution":
         fig.update_yaxes(title_text="Probability")
     # Change layout for mobile screens
@@ -879,6 +881,15 @@ def get_pf_figure(
     if plot_type == "distribution":
         fig = _get_distribution_figure(pf_object)
         return fig, pd.DataFrame(), pd.DataFrame(), pf_object.ror.to_frame()
+
+    if plot_type == "annual_return":
+        df = pf_object.annual_return_ts(return_type="cagr").to_frame() * 100
+        ind = df.index.to_timestamp(freq="Y")
+        fig = px.bar(df, x=ind, y=df.columns, barmode="group", title="Portfolio Annual Return", height=800)
+        fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
+        fig.update_layout(xaxis_title=None, legend_title="Portfolio")
+        add_return_type_annotation(fig)
+        return fig, pd.DataFrame(), pd.DataFrame(), df
 
     titles = {
         "wealth": "Portfolio Wealth Index",

@@ -117,6 +117,12 @@ class PicklablePortfolio:
     def kstest(self, distribution: str = "norm") -> dict:
         return {"statistic": 0.05, "p-value": 0.80}
 
+    def annual_return_ts(self, return_type: str = "cagr") -> pd.Series:
+        # Portfolio.annual_return_ts is a method returning a Series (one value per year)
+        annual_idx = pd.period_range("2020", "2024", freq="Y")
+        rng = np.random.default_rng(7)
+        return pd.Series(rng.normal(0.05, 0.1, len(annual_idx)), index=annual_idx, name=self.symbol)
+
 
 class PicklableAssetList:
     def __init__(self, symbols: list[str] | None = None, **kwargs):
@@ -146,6 +152,11 @@ class PicklableAssetList:
         annual_dates = pd.period_range("2020", "2024", freq="Y")
         annual_data = rng.normal(0.0, 0.03, (len(annual_dates), max(n_assets - 1, 1)))
         self.tracking_difference_annual = pd.DataFrame(annual_data, index=annual_dates, columns=ts_cols)
+
+        # AssetList.annual_return_ts is a property returning a DataFrame (one column per asset)
+        self.annual_return_ts = pd.DataFrame(
+            rng.normal(0.05, 0.1, (len(annual_dates), n_assets)), index=annual_dates, columns=symbols,
+        )
 
         self._corr_data = pd.DataFrame(
             rng.uniform(0.8, 1.0, (n, max(n_assets - 1, 1))), index=dates, columns=ts_cols,
@@ -262,6 +273,11 @@ def make_mock_asset_list(symbols: list[str] | None = None) -> MagicMock:
     annual_data = rng.normal(0.0, 0.03, (len(annual_dates), max(n_assets - 1, 1)))
     mock.tracking_difference_annual = pd.DataFrame(annual_data, index=annual_dates, columns=ts_cols)
 
+    # AssetList.annual_return_ts is a property returning a DataFrame (one column per asset)
+    mock.annual_return_ts = pd.DataFrame(
+        rng.normal(0.05, 0.1, (len(annual_dates), n_assets)), index=annual_dates, columns=symbols,
+    )
+
     mock.tracking_error = MagicMock(
         return_value=pd.DataFrame(np.abs(ts_data), index=dates, columns=ts_cols)
     )
@@ -326,6 +342,12 @@ def make_mock_portfolio() -> MagicMock:
         columns=["TestPF.PF", "AAPL.US", "MSFT.US"],
     )
     mock.get_sharpe_ratio.return_value = 0.65
+
+    # Portfolio.annual_return_ts is a method returning a Series (one value per year)
+    annual_dates = pd.period_range("2020", "2024", freq="Y")
+    mock.annual_return_ts.return_value = pd.Series(
+        rng.normal(0.05, 0.1, len(annual_dates)), index=annual_dates, name="TestPF.PF",
+    )
 
     inflation_ts = pd.Series(rng.normal(0.002, 0.001, n), index=dates)
     mock.inflation_ts = inflation_ts

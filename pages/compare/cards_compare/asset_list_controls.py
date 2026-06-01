@@ -128,6 +128,7 @@ def card_controls(
                                             options=[
                                                 {"label": "Wealth Index", "value": "wealth"},
                                                 {"label": "Cumulative return", "value": "cumulative_return"},
+                                                {"label": "Annual Return", "value": "annual_return"},
                                                 {"label": "Rolling CAGR", "value": "cagr"},
                                                 {"label": "Rolling Real CAGR", "value": "real_cagr"},
                                                 {"label": "Correlation matrix", "value": "correlation"},
@@ -227,7 +228,7 @@ def card_controls(
     Input(component_id="al-plot-option", component_property="value"),
 )
 def update_rolling_input(plot_options: str):
-    return plot_options in {"wealth", "cumulative_return", "correlation"}
+    return plot_options in {"wealth", "cumulative_return", "annual_return", "correlation"}
 
 
 @callback(

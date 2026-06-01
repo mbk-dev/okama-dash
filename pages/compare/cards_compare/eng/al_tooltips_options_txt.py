@@ -12,10 +12,13 @@ al_options_tooltip_inflation = dcc.Markdown(
 al_options_tooltip_cagr = dcc.Markdown(
     """
     **Wealth Index** (Cumulative Wealth Index) - chart of cumulative income for each asset.
-    Cumulative income depends on the price and dividend (coupon) yield reinvested every month. 
-    The starting investment for each asset is 1000 in the base currency.  
+    Cumulative income depends on the price and dividend (coupon) yield reinvested every month.
+    The starting investment for each asset is 1000 in the base currency.
 
-    **Rolling CAGR** (rolling Compound Annual Growth Rate) - chart of rolling annualized returns calculated 
+    **Annual Return** - bar chart of the calendar-year rate of return for each asset.
+    Each year's value is calculated as CAGR (Compound Annual Growth Rate) from the monthly returns within the year.
+
+    **Rolling CAGR** (rolling Compound Annual Growth Rate) - chart of rolling annualized returns calculated
     for a moving window (at least 1 year).  
 
     **Rolling Real CAGR** - Inflation adjusted annualized returns (real CAGR) calculated 

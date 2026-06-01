@@ -16,7 +16,7 @@ import okama as ok
 import common.settings as settings
 from common.object_cache import get_or_create, TTL_ASSET_LIST
 import common.update_style
-from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row, make_error_alert
+from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row, add_return_type_annotation, make_error_alert
 import plotly.graph_objects as go
 
 from common.mobile_screens import adopt_small_screens
@@ -142,6 +142,8 @@ def _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, 
         fig.update_yaxes(title_text="Wealth Index")
     elif plot_type == "cumulative_return":
         fig.update_yaxes(title_text="Cumulative Return")
+    elif plot_type == "annual_return":
+        fig.update_yaxes(title_text="Annual Return, %")
     else:
         fig.update_yaxes(title_text="CAGR")
 
@@ -149,7 +151,7 @@ def _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, 
     fig, config = adopt_small_screens(fig, screen)
     fig.update_xaxes(
         # ticks='outside',
-        rangeslider_visible=False if plot_type == "correlation" else True,
+        rangeslider_visible=plot_type not in ("correlation", "annual_return"),
         showgrid=False,
         gridcolor="lightgrey",
         zeroline=False,
@@ -199,10 +201,19 @@ def get_al_figure(
         "cumulative_return": "Assets Cumulative return",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
         "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
+        "annual_return": "Assets Annual Return",
         "correlation": "Correlation Matrix",
     }
 
     # Select Plot Type
+    if plot_type == "annual_return":
+        df = al_object.annual_return_ts * 100
+        ind = df.index.to_timestamp(freq="Y")
+        fig = px.bar(df, x=ind, y=df.columns, barmode="group", title=titles[plot_type], height=800)
+        fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
+        fig.update_layout(xaxis_title=None, legend_title="Assets")
+        add_return_type_annotation(fig)
+        return fig, df
     if plot_type == "wealth":
         df = al_object.wealth_indexes
         return_series = al_object.get_cumulative_return(real=False).iloc[-1]

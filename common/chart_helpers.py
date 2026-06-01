@@ -53,6 +53,25 @@ def add_last_value_annotations(fig: go.Figure, annotations_xy, annotations_text)
         )
 
 
+def add_return_type_annotation(fig: go.Figure, return_type: str = "CAGR") -> None:
+    """Add a small note clarifying how the plotted return is calculated.
+
+    Used by the Annual Return bar charts so it is explicit that each yearly
+    value is a compound (CAGR) return rather than an arithmetic mean.
+    """
+    fig.add_annotation(
+        text=f"Return type: {return_type}",
+        xref="paper",
+        yref="paper",
+        x=0.0,
+        y=1.06,
+        xanchor="left",
+        yanchor="bottom",
+        showarrow=False,
+        font={"size": 12, "color": "grey"},
+    )
+
+
 def get_rf_rate(al_object) -> float:
     inflation_ts = al_object.inflation_ts if hasattr(al_object, "inflation") else pd.Series()
     inflation = ok.Frame.get_cagr(inflation_ts) if not inflation_ts.empty else None

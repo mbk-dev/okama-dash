@@ -89,6 +89,14 @@ class TestUpdateGrafPortfolioInner:
         fig = _update_graf_portfolio_inner(**args)[0]
         assert fig.layout.yaxis.title.text == "Drawdowns"
 
+    def test_annual_return_plot_sets_y_title(self, patched_pf_inner):
+        from pages.portfolio.portfolio import _update_graf_portfolio_inner
+
+        args = _default_args()
+        args["plot_type"] = "annual_return"
+        fig = _update_graf_portfolio_inner(**args)[0]
+        assert fig.layout.yaxis.title.text == "Annual Return, %"
+
     def test_no_monte_carlo_returns_empty_forecast_tables(self, patched_pf_inner):
         from pages.portfolio.portfolio import _update_graf_portfolio_inner
 
@@ -114,6 +122,36 @@ class TestUpdateGrafPortfolioInner:
             mock_cls.return_value = patched_pf_inner
             _update_graf_portfolio_inner(**_default_args())
             assert mock_cls.call_args[1]["symbol"] == "TestPF.PF"
+
+
+class TestGetPfFigureAnnualReturn:
+    def test_annual_return_renders_bar_chart(self):
+        from pages.portfolio.portfolio import get_pf_figure
+
+        pf = make_mock_portfolio()
+        fig, df_backtest, df_forecast, df_data = get_pf_figure(
+            pf, plot_type="annual_return", inflation_on=False, rolling_window=2,
+            n_monte_carlo=0, years_monte_carlo=0, distribution_monte_carlo="norm",
+            show_backtest="no", log_scale=False, cf_strategy="indexation",
+        )
+        assert isinstance(fig, go.Figure)
+        assert len(fig.data) > 0
+        assert all(trace.type == "bar" for trace in fig.data)
+        pf.annual_return_ts.assert_called_once()
+        assert not df_data.empty
+
+    def test_annual_return_uses_cagr_return_type_and_annotates(self):
+        from pages.portfolio.portfolio import get_pf_figure
+
+        pf = make_mock_portfolio()
+        fig, *_ = get_pf_figure(
+            pf, plot_type="annual_return", inflation_on=False, rolling_window=2,
+            n_monte_carlo=0, years_monte_carlo=0, distribution_monte_carlo="norm",
+            show_backtest="no", log_scale=False, cf_strategy="indexation",
+        )
+        pf.annual_return_ts.assert_called_once_with(return_type="cagr")
+        annotation_texts = [a.text for a in fig.layout.annotations]
+        assert any("CAGR" in t for t in annotation_texts)
 
 
 class TestUpdateGrafPortfolioOuter:
