@@ -94,10 +94,10 @@ class TestShowSurvivalStatistics:
 
 
 class TestResolveIndexation:
-    def test_value_returned_as_float(self):
+    def test_percent_value_divided_by_100(self):
         from pages.portfolio.portfolio import _resolve_indexation
 
-        assert _resolve_indexation(0.03) == 0.03
+        assert _resolve_indexation(3) == 0.03
 
     def test_none_with_inflation_returns_inflation_string(self):
         from pages.portfolio.portfolio import _resolve_indexation
@@ -109,15 +109,20 @@ class TestResolveIndexation:
 
         assert _resolve_indexation(None, has_inflation=False) == 0
 
-    def test_value_overrides_inflation(self):
+    def test_percent_value_overrides_inflation(self):
         from pages.portfolio.portfolio import _resolve_indexation
 
-        assert _resolve_indexation(0.05, has_inflation=True) == 0.05
+        assert _resolve_indexation(5, has_inflation=True) == 0.05
 
-    def test_string_value_converted_to_float(self):
+    def test_string_percent_value_converted_and_divided(self):
         from pages.portfolio.portfolio import _resolve_indexation
 
-        assert _resolve_indexation("0.03") == 0.03
+        assert _resolve_indexation("3") == 0.03
+
+    def test_zero_percent_returns_zero(self):
+        from pages.portfolio.portfolio import _resolve_indexation
+
+        assert _resolve_indexation(0) == 0.0
 
 
 CASHFLOW_DEFAULTS = {

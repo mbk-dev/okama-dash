@@ -459,7 +459,7 @@ def _update_graf_portfolio_inner(
 
 def _resolve_indexation(indexation_value, has_inflation=True):
     if indexation_value is not None:
-        return float(indexation_value)
+        return float(indexation_value) / 100
     return "inflation" if has_inflation else 0
 
 
