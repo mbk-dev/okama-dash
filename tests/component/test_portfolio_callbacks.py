@@ -183,7 +183,7 @@ class TestBuildCashflowStrategy:
             _build_cashflow_strategy(
                 pf_object=mock_pf,
                 strategy_type="indexation",
-                **{**CASHFLOW_DEFAULTS, "cf_amount": 100, "cf_indexation": 0.03},
+                **{**CASHFLOW_DEFAULTS, "cf_amount": 100, "cf_indexation": 3},
             )
 
             mock_cls.assert_called_once_with(mock_pf)
@@ -230,7 +230,7 @@ class TestBuildCashflowStrategy:
                     "vds_floor": 3,
                     "vds_ceiling": 5,
                     "vds_adjust_fc": False,
-                    "vds_indexation": 0.03,
+                    "vds_indexation": 3,
                 },
             )
 
@@ -257,7 +257,7 @@ class TestBuildCashflowStrategy:
                 **{
                     **CASHFLOW_DEFAULTS,
                     "cwd_amount": 200,
-                    "cwd_indexation": 0.02,
+                    "cwd_indexation": 2,
                     "cwd_thresholds": [20, 50],
                     "cwd_reductions": [40, 100],
                 },
@@ -266,6 +266,7 @@ class TestBuildCashflowStrategy:
             mock_cls.assert_called_once()
             kw = mock_cls.call_args[1]
             assert kw["amount"] == 200.0
+            assert kw["indexation"] == 0.02
             assert kw["crash_threshold_reduction"] == [(0.2, 0.4), (0.5, 1.0)]
 
     def test_cwd_raises_when_thresholds_empty(self, patched_okama_portfolio):
@@ -279,7 +280,7 @@ class TestBuildCashflowStrategy:
                 **{
                     **CASHFLOW_DEFAULTS,
                     "cwd_amount": 200,
-                    "cwd_indexation": 0.02,
+                    "cwd_indexation": 2,
                     "cwd_thresholds": [],
                     "cwd_reductions": [],
                 },
@@ -395,7 +396,7 @@ class TestCwdBuildRaisesOnInvalidThresholds:
                 **{
                     **CASHFLOW_DEFAULTS,
                     "cwd_amount": 200,
-                    "cwd_indexation": 0.02,
+                    "cwd_indexation": 2,
                     "cwd_thresholds": [None, None],
                     "cwd_reductions": [None, None],
                 },
@@ -412,7 +413,7 @@ class TestCwdBuildRaisesOnInvalidThresholds:
                 **{
                     **CASHFLOW_DEFAULTS,
                     "cwd_amount": 200,
-                    "cwd_indexation": 0.02,
+                    "cwd_indexation": 2,
                     "cwd_thresholds": [20, 30],
                     "cwd_reductions": [40, None],
                 },
