@@ -79,6 +79,7 @@ pf_options_tooltip_discount_rate = dcc.Markdown(
     """
     Cash flow discount rate required to calculate PV values. If not provided geometric mean of inflation is taken.
     For portfolios without inflation the default value from settings is used.
+    Enter as a percent, e.g. 5 = 5%.
     """
 )
 pf_options_tooltip_ticker = dcc.Markdown(

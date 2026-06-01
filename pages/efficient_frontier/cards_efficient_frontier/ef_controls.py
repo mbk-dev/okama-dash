@@ -282,7 +282,7 @@ def card_controls(
                                             value=0,
                                             id="risk-free-rate-option",
                                         ),
-                                        dbc.FormText("0 - 100 (Format: XX.XX)"),
+                                        dbc.FormText("0 - 100 % (Format: XX.XX)"),
                                         dbc.Tooltip(
                                             tl.ef_options_tooltip_rf_rate,
                                             target="info-rf-rate",
