@@ -463,6 +463,12 @@ def _resolve_indexation(indexation_value, has_inflation=True):
     return "inflation" if has_inflation else 0
 
 
+def _resolve_discount_rate(discount_rate):
+    if discount_rate is None:
+        return None
+    return float(discount_rate) / 100
+
+
 def validate_cwd_thresholds(
     cwd_thresholds: list | None,
     cwd_reductions: list | None,

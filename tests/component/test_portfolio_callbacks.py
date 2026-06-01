@@ -125,6 +125,28 @@ class TestResolveIndexation:
         assert _resolve_indexation(0) == 0.0
 
 
+class TestResolveDiscountRate:
+    def test_none_passes_through(self):
+        from pages.portfolio.portfolio import _resolve_discount_rate
+
+        assert _resolve_discount_rate(None) is None
+
+    def test_percent_value_divided_by_100(self):
+        from pages.portfolio.portfolio import _resolve_discount_rate
+
+        assert _resolve_discount_rate(5) == 0.05
+
+    def test_zero_returns_zero(self):
+        from pages.portfolio.portfolio import _resolve_discount_rate
+
+        assert _resolve_discount_rate(0) == 0.0
+
+    def test_string_value_converted_and_divided(self):
+        from pages.portfolio.portfolio import _resolve_discount_rate
+
+        assert _resolve_discount_rate("10") == 0.10
+
+
 CASHFLOW_DEFAULTS = {
     "frequency": "month",
     "initial_amount": 1000.0,
