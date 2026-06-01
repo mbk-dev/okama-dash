@@ -219,6 +219,38 @@ def cashflow_accordion_item(
                         sm=6,
                         id="pf-withdrawal-rate-col",
                     ),
+                    # ---- PercentageStrategy: percentage input (shown only for "percentage") ----
+                    dbc.Col(
+                        [
+                            html.Label(
+                                [
+                                    "Withdrawal/Contribution percentage",
+                                    html.I(
+                                        className="bi bi-info-square ms-2",
+                                        id="pf-info-cf-pct",
+                                    ),
+                                ]
+                            ),
+                            dbc.Input(
+                                id="pf-cf-percentage",
+                                type="number",
+                                min=-100,
+                                step=1,
+                                value=cf_pct if cf_pct else 0,
+                                placeholder="-12",
+                            ),
+                            dbc.FormText("% of portfolio balance per year. Negative = withdrawal"),
+                            dbc.Tooltip(
+                                tl.pf_cf_percentage,
+                                target="pf-info-cf-pct",
+                            ),
+                        ],
+                        lg=6,
+                        md=6,
+                        sm=12,
+                        id="pf-cf-percentage-col",
+                        style={"display": "none"},
+                    ),
                 ],
                 class_name="mt-2",
                 id="pf-cf-frequency-row",
@@ -277,47 +309,6 @@ def cashflow_accordion_item(
                     ),
                 ],
                 id="pf-cf-indexation-panel",
-            ),
-            # ---- PercentageStrategy panel ----
-            html.Div(
-                [
-                    dbc.Row(
-                        [
-                            dbc.Col(
-                                [
-                                    html.Label(
-                                        [
-                                            "Withdrawal/Contribution percentage",
-                                            html.I(
-                                                className="bi bi-info-square ms-2",
-                                                id="pf-info-cf-pct",
-                                            ),
-                                        ]
-                                    ),
-                                    dbc.Input(
-                                        id="pf-cf-percentage",
-                                        type="number",
-                                        min=-100,
-                                        step=1,
-                                        value=cf_pct if cf_pct else 0,
-                                        placeholder="-12",
-                                    ),
-                                    dbc.FormText("% of portfolio balance per year. Negative = withdrawal"),
-                                    dbc.Tooltip(
-                                        tl.pf_cf_percentage,
-                                        target="pf-info-cf-pct",
-                                    ),
-                                ],
-                                lg=6,
-                                md=6,
-                                sm=12,
-                            ),
-                        ],
-                        class_name="mt-2",
-                    ),
-                ],
-                id="pf-cf-percentage-panel",
-                style={"display": "none"},
             ),
             # ---- TimeSeriesStrategy panel ----
             html.Div(
@@ -654,7 +645,7 @@ def cashflow_accordion_item(
 @callback(
     Output("pf-cf-strategy-description", "children"),
     Output("pf-cf-indexation-panel", "style"),
-    Output("pf-cf-percentage-panel", "style"),
+    Output("pf-cf-percentage-col", "style"),
     Output("pf-cf-timeseries-panel", "style"),
     Output("pf-cf-vds-panel", "style"),
     Output("pf-cf-cwd-panel", "style"),

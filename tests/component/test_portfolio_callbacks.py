@@ -472,3 +472,37 @@ class TestNextCwdPlaceholder:
         from pages.portfolio.cards_portfolio.cashflow_controls import next_cwd_placeholder
 
         assert next_cwd_placeholder(50, 95) == (60, 100)
+
+
+def _walk_components(node):
+    """Yield every Dash component node in the tree rooted at node."""
+    yield node
+    children = getattr(node, "children", None)
+    if children is None or isinstance(children, (str, int, float, bool)):
+        return
+    if not isinstance(children, (list, tuple)):
+        children = [children]
+    for child in children:
+        if child is None or isinstance(child, (str, int, float, bool)):
+            continue
+        yield from _walk_components(child)
+
+
+def _find_by_id(node, target_id):
+    for n in _walk_components(node):
+        if getattr(n, "id", None) == target_id:
+            return n
+    return None
+
+
+class TestCashflowPercentageInFrequencyRow:
+    def test_percentage_input_lives_inside_frequency_row(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        item = cashflow_accordion_item()
+        freq_row = _find_by_id(item, "pf-cf-frequency-row")
+        assert freq_row is not None, "cash flow frequency row not found"
+
+        assert _find_by_id(freq_row, "pf-cf-percentage") is not None, (
+            "Withdrawal/Contribution percentage input must live in the cash flow frequency row"
+        )

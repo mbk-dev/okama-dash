@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-305 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+306 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -130,7 +130,8 @@ tests/
 │   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
 │   │                                # _resolve_indexation + _resolve_discount_rate (percent ÷100),
 │   │                                # survival stats visibility,
-│   │                                # CWD threshold validation, disable Add button logic
+│   │                                # CWD threshold validation, disable Add button logic,
+│   │                                # percentage input lives in cash-flow frequency row
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks
 │   ├── test_ef_click_find.py        # display_click_data (5 tests), find_portfolio (8 tests)
@@ -155,10 +156,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 115 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 170 | ~5s |
+| `poetry run pytest -m component` | Dash callbacks | 171 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 20 | ~70s |
-| `poetry run pytest -q` | Everything | 305 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 285 | ~6s |
+| `poetry run pytest -q` | Everything | 306 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 286 | ~6s |
 
 ### What's covered per page
 
