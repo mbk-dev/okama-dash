@@ -555,11 +555,6 @@ def cashflow_accordion_item(
                                 md=6,
                                 sm=12,
                             ),
-                        ],
-                        class_name="mt-2",
-                    ),
-                    dbc.Row(
-                        [
                             dbc.Col(
                                 [
                                     html.Label("Indexation rate"),
@@ -576,7 +571,7 @@ def cashflow_accordion_item(
                                 ],
                                 lg=6,
                                 md=6,
-                                sm=12,
+                                sm=6,
                             ),
                         ],
                         class_name="mt-2",
