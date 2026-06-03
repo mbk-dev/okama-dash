@@ -188,6 +188,23 @@ class TestFillDistributionParameters:
         assert result[1] == 0.04
         assert result[4] is dash.no_update
 
+    def test_estimate_fills_lognorm_group(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import fill_distribution_parameters
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (0.05, -1.0, 1.01)
+
+        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
+            mock_ctx.triggered_id = "pf-mc-estimate-btn"
+            result = fill_distribution_parameters(
+                1, 0, 5, **self._portfolio_states(), distribution="lognorm",
+            )
+
+        assert result[2] == 0.05  # shape
+        assert result[3] == 1.01  # scale_ln (okama's loc=-1 is discarded)
+        assert result[0] is dash.no_update  # mu not touched
+        assert result[4] is dash.no_update  # df not touched
+
     def test_optimize_writes_df(self, patched_okama_portfolio):
         from pages.portfolio.portfolio import fill_distribution_parameters
 

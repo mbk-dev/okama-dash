@@ -114,13 +114,15 @@ pf_mc_tooltip_distribution_parameters = dcc.Markdown(
     """
     Parameters of the selected distribution. Leave a field empty to let okama
     estimate it from the portfolio's historical returns.
-    For the lognormal distribution okama always fixes loc at -1.
+    For the lognormal distribution, okama always fixes the location parameter
+    (loc) at -1, so that field is shown but disabled.
     """
 )
 pf_mc_tooltip_estimate = dcc.Markdown(
     """
     Fit the selected distribution to the portfolio's historical returns and
-    fill the fields with the estimated values. You can edit them afterwards.
+    fill the fields with the estimated values. You can edit them afterwards,
+    or leave fields empty for okama to estimate them during the simulation.
     """
 )
 pf_mc_tooltip_optimize_df = dcc.Markdown(
