@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-307 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+332 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -117,6 +117,7 @@ tests/
 ├── mocks/okama_mock.py      # Picklable + MagicMock mocks for Portfolio, AssetList, symbols
 ├── fixtures/symbols_data.json
 ├── unit/                    # @pytest.mark.unit — pure logic, no Dash
+│   ├── conftest.py                  # session-scoped Dash app (for unit tests importing pages/ modules)
 │   ├── test_validators.py           # validate_integer bounds, types, error messages
 │   ├── test_math.py                 # round_list sum preservation
 │   ├── test_create_link.py          # URL builder, filename builder, list size check
@@ -124,7 +125,8 @@ tests/
 │   ├── test_symbols_cache_isolation.py  # mocked (TESTING) symbol index must not poison real cache (4 tests)
 │   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup, filename-length guard (22 tests)
 │   ├── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
-│   └── test_chart_helpers.py        # add_return_type_annotation: CAGR note, default, no-arrow (3 tests)
+│   ├── test_chart_helpers.py        # add_return_type_annotation: CAGR note, default, no-arrow (3 tests)
+│   └── test_mc_distribution_parameters.py  # build_distribution_parameters: norm/lognorm/t mapping, empty→None, lognorm loc=-1 (8 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
 │   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
 │   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
@@ -141,6 +143,7 @@ tests/
 │   ├── test_ef_data_callback.py       # update_ef_cards (8): figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution
 │   ├── test_ef_grid_callbacks.py     # sim-mode visibility, dynamic grid step options, grid↔pairwise exclusivity, submit gating (6 tests)
 │   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (11): figure, y-titles (incl. annual_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (2: bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit)
+│   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows), estimate/optimize_df callbacks, df>2 validation (17 tests)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types), rolling-window disabled for annual_return (compare + portfolio)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
@@ -155,17 +158,17 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 115 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 172 | ~5s |
+| `poetry run pytest -m unit` | Pure logic | 123 | ~4s |
+| `poetry run pytest -m component` | Dash callbacks | 189 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 20 | ~70s |
-| `poetry run pytest -q` | Everything | 307 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 287 | ~6s |
+| `poetry run pytest -q` | Everything | 332 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 312 | ~6s |
 
 ### What's covered per page
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link, symbols | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio, annual_return bar chart, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf | load, controls, mobile, shareable link, submit→traces |
+| **Portfolio** | create_link, symbols, build_distribution_parameters | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio, annual_return bar chart, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, MC distribution parameters (groups show/hide, collapse toggle, estimate/optimize df, df>2 validation, set_mc_parameters wiring) | load, controls, mobile, shareable link, submit→traces |
 | **Efficient Frontier** | adaptive grid step (ef_grid) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards, simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace | load, mobile, shareable link, submit→chart |
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats), rolling-window gating | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
