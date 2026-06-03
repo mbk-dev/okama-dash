@@ -153,7 +153,6 @@ def card_controls(
                                             initial_amount=initial_amount,
                                             cashflow=cashflow,
                                             discount_rate=discount_rate,
-                                            symbol=symbol,
                                             cf_strategy=cf_strategy,
                                             cf_freq=cf_freq,
                                             cf_amount=cf_amount,
@@ -183,6 +182,40 @@ def card_controls(
                                     always_open=True,
                                 )
                             ],
+                        ),
+                        # Portfolio ticker — a portfolio identity attribute (okama symbol),
+                        # not a cash-flow parameter; kept outside the accordion so it stays
+                        # visible even when the Cash Flow Strategy accordion is collapsed.
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        html.Label(
+                                            [
+                                                "Portfolio ticker",
+                                                html.I(
+                                                    className="bi bi-info-square ms-2",
+                                                    id="pf-info-ticker",
+                                                ),
+                                            ]
+                                        ),
+                                        dbc.Input(
+                                            id="pf-ticker",
+                                            type="text",
+                                            value=symbol if symbol else "PORTFOLIO",
+                                        ),
+                                        dbc.FormText("Symbols without spaces"),
+                                        dbc.Tooltip(
+                                            tl.pf_options_tooltip_ticker,
+                                            target="pf-info-ticker",
+                                        ),
+                                    ],
+                                    lg=6,
+                                    md=6,
+                                    sm=12,
+                                ),
+                            ],
+                            class_name="mt-2 mb-2",
                         ),
                         dbc.Row(
                             [

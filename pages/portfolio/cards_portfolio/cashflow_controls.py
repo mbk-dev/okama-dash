@@ -67,7 +67,6 @@ def cashflow_accordion_item(
     initial_amount=None,
     cashflow=None,
     discount_rate=None,
-    symbol=None,
     cf_strategy=None,
     cf_freq=None,
     cf_amount=None,
@@ -602,38 +601,6 @@ def cashflow_accordion_item(
                 ],
                 id="pf-cf-cwd-panel",
                 style={"display": "none"},
-            ),
-            # Portfolio ticker
-            dbc.Row(
-                [
-                    dbc.Col(
-                        [
-                            html.Label(
-                                [
-                                    "Portfolio ticker",
-                                    html.I(
-                                        className="bi bi-info-square ms-2",
-                                        id="pf-info-ticker",
-                                    ),
-                                ]
-                            ),
-                            dbc.Input(
-                                id="pf-ticker",
-                                type="text",
-                                value=symbol if symbol else "PORTFOLIO",
-                            ),
-                            dbc.FormText("Symbols without spaces"),
-                            dbc.Tooltip(
-                                tl.pf_options_tooltip_ticker,
-                                target="pf-info-ticker",
-                            ),
-                        ],
-                        lg=6,
-                        md=6,
-                        sm=12,
-                    ),
-                ],
-                class_name="mt-2",
             ),
         ],
         title="Cash Flow Strategy",
