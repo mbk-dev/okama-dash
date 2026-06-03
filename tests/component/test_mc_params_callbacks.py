@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import dash
 import pandas as pd
 import pytest
 
@@ -143,3 +144,77 @@ class TestHideMonteCarloRows:
         result = hide_monte_carlo_rows("wealth", 100)
         assert len(result) == 6
         assert all(style is None for style in result)
+
+
+class TestFillDistributionParameters:
+    def _portfolio_states(self):
+        return {
+            "assets": ["AAPL.US", "MSFT.US"], "weights": [50, 50], "ccy": "USD",
+            "fd": "2020-01", "ld": "2024-12", "rebal": "month",
+            "abs_dev": None, "rel_dev": None,
+        }
+
+    def test_estimate_fills_t_group(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import fill_distribution_parameters
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (3.4, 0.006, 0.038)
+
+        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
+            mock_ctx.triggered_id = "pf-mc-estimate-btn"
+            result = fill_distribution_parameters(
+                1, 0, 5, **self._portfolio_states(), distribution="t",
+            )
+
+        # outputs order: mu, sigma, shape, scale_ln, df, loc_t, scale_t, message
+        assert result[4] == 3.4
+        assert result[5] == 0.006
+        assert result[6] == 0.038
+        assert result[0] is dash.no_update
+
+    def test_estimate_fills_norm_group(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import fill_distribution_parameters
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (0.007, 0.04)
+
+        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
+            mock_ctx.triggered_id = "pf-mc-estimate-btn"
+            result = fill_distribution_parameters(
+                1, 0, 5, **self._portfolio_states(), distribution="norm",
+            )
+
+        assert result[0] == 0.007
+        assert result[1] == 0.04
+        assert result[4] is dash.no_update
+
+    def test_optimize_writes_df(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import fill_distribution_parameters
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        mock_pf.dcf.mc.optimize_df_for_students.return_value = 7.5
+
+        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
+            mock_ctx.triggered_id = "pf-mc-t-optimize-btn"
+            result = fill_distribution_parameters(
+                0, 1, 5, **self._portfolio_states(), distribution="t",
+            )
+
+        assert result[4] == 7.5
+        assert result[0] is dash.no_update
+        mock_pf.dcf.mc.optimize_df_for_students.assert_called_once_with(5)
+
+    def test_estimate_failure_returns_message(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import fill_distribution_parameters
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        mock_pf.dcf.mc.get_parameters_for_distribution.side_effect = ValueError("no data")
+
+        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
+            mock_ctx.triggered_id = "pf-mc-estimate-btn"
+            result = fill_distribution_parameters(
+                1, 0, 5, **self._portfolio_states(), distribution="norm",
+            )
+
+        assert result[0] is dash.no_update
+        assert "no data" in str(result[7])

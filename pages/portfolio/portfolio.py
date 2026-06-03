@@ -80,6 +80,38 @@ def build_distribution_parameters(
             return None
 
 
+def _build_ror_portfolio(assets, weights, ccy, first_date, last_date, rebal_period, abs_dev, rel_dev):
+    """Build a cached Portfolio sufficient for fitting MC distribution parameters.
+
+    Distribution fitting needs only ``pf.ror``, which depends on assets, weights,
+    dates, currency and rebalancing — not on cash flow or discount rate.
+    """
+    assets = [a for a in assets if a is not None]
+    weights = [w / 100.0 for w in weights if w is not None]
+    abs_dev_val = float(abs_dev) / 100 if abs_dev else None
+    rel_dev_val = float(rel_dev) / 100 if rel_dev else None
+
+    def _construct():
+        rebal_strategy = ok.Rebalance(period=rebal_period, abs_deviation=abs_dev_val, rel_deviation=rel_dev_val)
+        return ok.Portfolio(
+            assets=assets, weights=weights, first_date=first_date, last_date=last_date,
+            ccy=ccy, rebalancing_strategy=rebal_strategy,
+        )
+
+    pf_object, _ = get_or_create(
+        obj_type="portfolio",
+        constructor_fn=_construct,
+        cache_key_params={
+            "symbols": assets, "weights": weights, "ccy": ccy,
+            "first_date": first_date, "last_date": last_date,
+            "rebal": rebal_period, "abs_dev": abs_dev, "rel_dev": rel_dev,
+            "purpose": "mc_params",
+        },
+        ttl_seconds=TTL_PORTFOLIO,
+    )
+    return pf_object
+
+
 def layout(
     tickers=None,
     weights=None,
@@ -361,6 +393,68 @@ def show_graf_and_statistics_rows(n_clicks, style):
     """
     style = common.update_style.change_style_for_hidden_row(n_clicks, style)
     return style, style
+
+
+@callback(
+    Output(component_id="pf-mc-norm-mu", component_property="value"),
+    Output(component_id="pf-mc-norm-sigma", component_property="value"),
+    Output(component_id="pf-mc-lognorm-shape", component_property="value"),
+    Output(component_id="pf-mc-lognorm-scale", component_property="value"),
+    Output(component_id="pf-mc-t-df", component_property="value"),
+    Output(component_id="pf-mc-t-loc", component_property="value"),
+    Output(component_id="pf-mc-t-scale", component_property="value"),
+    Output(component_id="pf-mc-params-message", component_property="children"),
+    Input(component_id="pf-mc-estimate-btn", component_property="n_clicks"),
+    Input(component_id="pf-mc-t-optimize-btn", component_property="n_clicks"),
+    State(component_id="pf-mc-t-var-level", component_property="value"),
+    State({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
+    State({"type": "pf-dynamic-input", "index": ALL}, "value"),
+    State(component_id="pf-base-currency", component_property="value"),
+    State(component_id="pf-first-date", component_property="value"),
+    State(component_id="pf-last-date", component_property="value"),
+    State(component_id="pf-rebalancing-period", component_property="value"),
+    State(component_id="pf-rebal-abs-deviation", component_property="value"),
+    State(component_id="pf-rebal-rel-deviation", component_property="value"),
+    State(component_id="pf-monte-carlo-distribution", component_property="value"),
+    prevent_initial_call=True,
+)
+def fill_distribution_parameters(
+    estimate_clicks, optimize_clicks, var_level,
+    assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution,
+):
+    """Estimate distribution parameters or optimize df, depending on which button fired."""
+    nu = dash.no_update
+    trigger = dash.ctx.triggered_id
+
+    if trigger == "pf-mc-t-optimize-btn":
+        try:
+            pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
+            pf.dcf.mc.distribution = "t"
+            df = round(float(pf.dcf.mc.optimize_df_for_students(int(var_level))), 6)
+        except Exception as e:
+            logging.exception("Optimize df failed")
+            return nu, nu, nu, nu, nu, nu, nu, f"Could not optimize df: {e}"
+        return nu, nu, nu, nu, df, nu, nu, ""
+
+    if trigger == "pf-mc-estimate-btn":
+        try:
+            pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
+            pf.dcf.mc.distribution = distribution
+            params = tuple(round(float(p), 6) for p in pf.dcf.mc.get_parameters_for_distribution())
+        except Exception as e:
+            logging.exception("Estimate parameters failed")
+            return nu, nu, nu, nu, nu, nu, nu, f"Could not estimate: {e}"
+        if distribution == "norm":
+            mu, sigma = params
+            return mu, sigma, nu, nu, nu, nu, nu, ""
+        if distribution == "lognorm":
+            shape, _loc, scale = params
+            return nu, nu, shape, scale, nu, nu, nu, ""
+        if distribution == "t":
+            df, loc, scale = params
+            return nu, nu, nu, nu, df, loc, scale, ""
+
+    return nu, nu, nu, nu, nu, nu, nu, ""
 
 
 def _update_graf_portfolio_inner(
