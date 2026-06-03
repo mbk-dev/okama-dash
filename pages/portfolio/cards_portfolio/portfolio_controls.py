@@ -556,10 +556,20 @@ def card_controls(
                                                 style={"display": "none"},
                                             ),
                                             html.Div(
-                                                dbc.Button(
-                                                    "Estimate parameters", id="pf-mc-estimate-btn",
-                                                    n_clicks=0, color="secondary", outline=True,
-                                                ),
+                                                [
+                                                    dbc.Button(
+                                                        "Estimate parameters", id="pf-mc-estimate-btn",
+                                                        n_clicks=0, color="secondary", outline=True,
+                                                    ),
+                                                    html.I(
+                                                        className="bi bi-info-square ms-2",
+                                                        id="pf-mc-estimate-info-label",
+                                                    ),
+                                                    dbc.Tooltip(
+                                                        tl.pf_mc_tooltip_estimate,
+                                                        target="pf-mc-estimate-info-label",
+                                                    ),
+                                                ],
                                                 className="mt-2",
                                             ),
                                             html.Small(
