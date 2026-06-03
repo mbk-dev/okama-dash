@@ -110,6 +110,26 @@ pf_mc_tooltip_backtest = dcc.Markdown(
     """
 )
 
+pf_mc_tooltip_distribution_parameters = dcc.Markdown(
+    """
+    Parameters of the selected distribution. Leave a field empty to let okama
+    estimate it from the portfolio's historical returns.
+    For the lognormal distribution okama always fixes loc at -1.
+    """
+)
+pf_mc_tooltip_estimate = dcc.Markdown(
+    """
+    Fit the selected distribution to the portfolio's historical returns and
+    fill the fields with the estimated values. You can edit them afterwards.
+    """
+)
+pf_mc_tooltip_optimize_df = dcc.Markdown(
+    """
+    Find the degrees of freedom (df) for Student's t-distribution that best match
+    the empirical VaR and CVaR at the given level, then write it into the df field.
+    """
+)
+
 # Cash flow strategy tooltips
 pf_cf_strategy_type = dcc.Markdown(
     """

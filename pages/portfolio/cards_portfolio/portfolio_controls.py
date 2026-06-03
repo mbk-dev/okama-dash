@@ -48,6 +48,22 @@ def _accordion_active_items(abs_dev, rel_dev, cf_strategy, cf_amount, cf_pct, vd
     return active or []
 
 
+def _mc_param_row(label_text, input_id, *, value=None, disabled=False, help_text=None):
+    """One Label | numeric-Input row for a Monte Carlo distribution parameter."""
+    label_children = [label_text]
+    if help_text:
+        label_children.append(html.Small(f" ({help_text})", className="text-muted"))
+    return dbc.Row(
+        [
+            dbc.Label(label_children, width=6),
+            dbc.Col(
+                dbc.Input(type="number", value=value, disabled=disabled, id=input_id),
+                width=6,
+            ),
+        ],
+    )
+
+
 def card_controls(
     tickers: Optional[list],
     weights: Optional[list],
@@ -438,6 +454,126 @@ def card_controls(
                             ],
                             class_name="pt-2",
                             id="pf-monte-carlo-distribution-row"
+                        ),
+                        dbc.Row(
+                            [
+                                html.Div(
+                                    [
+                                        html.I(className="bi bi-chevron-right me-2", id="pf-mc-params-chevron"),
+                                        "Distribution parameters",
+                                        html.I(
+                                            className="bi bi-info-square ms-2",
+                                            id="pf-mc-params-info-label",
+                                        ),
+                                        dbc.Tooltip(
+                                            tl.pf_mc_tooltip_distribution_parameters,
+                                            target="pf-mc-params-info-label",
+                                        ),
+                                    ],
+                                    id="pf-mc-params-toggle",
+                                    n_clicks=0,
+                                    className="fw-bold",
+                                    style={"cursor": "pointer", "userSelect": "none"},
+                                ),
+                                dbc.Collapse(
+                                    html.Div(
+                                        [
+                                            html.Div(
+                                                [
+                                                    _mc_param_row("Mean (μ)", "pf-mc-norm-mu"),
+                                                    _mc_param_row("Std deviation (σ)", "pf-mc-norm-sigma"),
+                                                ],
+                                                id="pf-mc-norm-group",
+                                                className="vstack gap-2",
+                                            ),
+                                            html.Div(
+                                                [
+                                                    _mc_param_row("Shape", "pf-mc-lognorm-shape"),
+                                                    _mc_param_row(
+                                                        "Location (loc)", "pf-mc-lognorm-loc",
+                                                        value=-1, disabled=True, help_text="fixed at -1 by okama",
+                                                    ),
+                                                    _mc_param_row("Scale", "pf-mc-lognorm-scale"),
+                                                ],
+                                                id="pf-mc-lognorm-group",
+                                                className="vstack gap-2",
+                                                style={"display": "none"},
+                                            ),
+                                            html.Div(
+                                                [
+                                                    dbc.Row(
+                                                        [
+                                                            dbc.Label("Degrees of freedom (df)", width=6),
+                                                            dbc.Col(
+                                                                [
+                                                                    dbc.Input(type="number", id="pf-mc-t-df"),
+                                                                    dbc.FormFeedback(
+                                                                        "df must be > 2", type="invalid"
+                                                                    ),
+                                                                ],
+                                                                width=6,
+                                                            ),
+                                                        ],
+                                                    ),
+                                                    _mc_param_row("Location (loc)", "pf-mc-t-loc"),
+                                                    _mc_param_row("Scale (scale)", "pf-mc-t-scale"),
+                                                    dbc.Row(
+                                                        [
+                                                            dbc.Label(
+                                                                [
+                                                                    "VaR level, %",
+                                                                    html.I(
+                                                                        className="bi bi-info-square ms-2",
+                                                                        id="pf-mc-optimize-info-label",
+                                                                    ),
+                                                                    dbc.Tooltip(
+                                                                        tl.pf_mc_tooltip_optimize_df,
+                                                                        target="pf-mc-optimize-info-label",
+                                                                    ),
+                                                                ],
+                                                                width=6,
+                                                            ),
+                                                            dbc.Col(
+                                                                dbc.InputGroup(
+                                                                    [
+                                                                        dbc.Input(
+                                                                            type="number", min=1, max=99, value=5,
+                                                                            id="pf-mc-t-var-level",
+                                                                        ),
+                                                                        dbc.Button(
+                                                                            "Optimize df", id="pf-mc-t-optimize-btn",
+                                                                            n_clicks=0, color="secondary", outline=True,
+                                                                        ),
+                                                                    ]
+                                                                ),
+                                                                width=6,
+                                                            ),
+                                                        ],
+                                                    ),
+                                                ],
+                                                id="pf-mc-t-group",
+                                                className="vstack gap-2",
+                                                style={"display": "none"},
+                                            ),
+                                            html.Div(
+                                                dbc.Button(
+                                                    "Estimate parameters", id="pf-mc-estimate-btn",
+                                                    n_clicks=0, color="secondary", outline=True,
+                                                ),
+                                                className="mt-2",
+                                            ),
+                                            html.Small(
+                                                "", id="pf-mc-params-message", className="text-muted d-block mt-1"
+                                            ),
+                                        ],
+                                        className="vstack gap-2 p-2",
+                                    ),
+                                    id="pf-mc-params-collapse",
+                                    is_open=False,
+                                ),
+                            ],
+                            class_name="pt-2",
+                            id="pf-monte-carlo-params-row",
                         ),
                         dbc.Row(
                             [
