@@ -195,8 +195,9 @@ All tests are independent from external data. okama API is mocked at two levels:
 - E2E server runs via Gunicorn (2 workers) instead of the single-threaded Werkzeug dev
   server, which stalls after ~13 navigations per session.
 - E2E tests use `domcontentloaded` wait strategy (not `networkidle`).
-- Fixture data lives in `tests/fixtures/symbols_data.json` — 8 mock tickers across 2
-  namespaces (US, INDX). Extend this file when new tests need additional symbols.
+- Fixture data lives in `tests/fixtures/symbols_data.json` — 7 mock tickers across 2
+  namespaces (US, INDX), all verified to resolve in the real okama database. Extend this
+  file when new tests need additional symbols.
 
 ## Code change workflow
 
@@ -270,6 +271,25 @@ planning cleanup or refactor work.
 - Use f-string formatting for all logging and print messages.
 - When editing Jupyter Notebook examples in the `/examples` directory, ensure that the code
   examples are up-to-date with the current codebase in the Git branch.
+
+## Ticker symbols — verify against the database, never invent
+
+Every ticker symbol you use must be a **real, verified okama database symbol**. Do not
+make up plausible-looking tickers from memory or pattern-matching (e.g. assuming the S&P 500
+index is `SP500.INDX`). This is a concrete instance of the global "don't speculate" rule.
+
+- **Verify before use.** Confirm a symbol exists with `ok.Asset("<SYMBOL>")` (raises a 404
+  `HTTPError` if absent) or by scanning `ok.symbols_in_namespace("<NS>")`. Do this whenever you
+  introduce a symbol — in tests, fixtures, example notebooks, shareable-link defaults, or a
+  manual/local check.
+- **Especially in tests and fixtures.** The unit/component mocks accept any string, so an
+  invented ticker passes there silently — but e2e tests, any real-okama code path, and manual
+  page captures hit the **real** database and 404. Keep `tests/fixtures/symbols_data.json` (and
+  any other hard-coded symbols) limited to symbols that actually resolve in okama, so the mock
+  mirrors reality.
+- **Known pitfall.** `SP500.INDX` *looks* valid but 404s in the real okama DB; the S&P 500
+  total-return index is `SP500TR.INDX`. Verified safe examples: `AAPL.US`, `MSFT.US`, `GOOG.US`,
+  `SPY.US` (S&P 500 ETF), `SP500TR.INDX`, `MCFTR.INDX`.
 
 ## UI layout & form design conventions
 

@@ -6,8 +6,8 @@
       "name": ["Apple Inc", "Microsoft Corp", "Alphabet Inc", "Amazon.com Inc", "Tesla Inc"]
     },
     "INDX": {
-      "symbol": ["SP500.INDX", "SP500TR.INDX", "MCFTR.INDX"],
-      "name": ["S&P 500", "S&P 500 Total Return", "MOEX Total Return"]
+      "symbol": ["SP500TR.INDX", "MCFTR.INDX"],
+      "name": ["S&P 500 Total Return", "MOEX Total Return"]
     }
   }
 }

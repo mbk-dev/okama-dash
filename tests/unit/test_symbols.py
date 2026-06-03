@@ -25,7 +25,7 @@ class TestGetSymbols:
     def test_contains_known_symbols(self):
         result = get_symbols()
         assert "AAPL.US" in result
-        assert "SP500.INDX" in result
+        assert "SP500TR.INDX" in result
 
     def test_contains_all_fixture_symbols(self):
         result = get_symbols()
