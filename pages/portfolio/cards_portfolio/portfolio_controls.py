@@ -688,6 +688,20 @@ def show_hide_param_groups(distribution: str):
 
 
 @callback(
+    Output(component_id="pf-mc-params-collapse", component_property="is_open"),
+    Output(component_id="pf-mc-params-chevron", component_property="className"),
+    Input(component_id="pf-mc-params-toggle", component_property="n_clicks"),
+    State(component_id="pf-mc-params-collapse", component_property="is_open"),
+    prevent_initial_call=True,
+)
+def toggle_mc_params_collapse(n_clicks, is_open):
+    """Flip the distribution-parameters collapse and its chevron icon."""
+    new_open = not is_open
+    chevron = "bi bi-chevron-down me-2" if new_open else "bi bi-chevron-right me-2"
+    return new_open, chevron
+
+
+@callback(
     Output(component_id="pf-inflation-switch", component_property="value"),
     Output(component_id="pf-inflation-switch", component_property="disabled"),
     Input(component_id="pf-plot-option", component_property="value"),

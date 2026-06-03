@@ -103,3 +103,19 @@ class TestShowHideParamGroups:
         assert t is None
         assert norm == {"display": "none"}
         assert lognorm == {"display": "none"}
+
+
+class TestToggleMcParamsCollapse:
+    def test_opens_from_closed(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import toggle_mc_params_collapse
+
+        is_open, chevron = toggle_mc_params_collapse(1, False)
+        assert is_open is True
+        assert "chevron-down" in chevron
+
+    def test_closes_from_open(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import toggle_mc_params_collapse
+
+        is_open, chevron = toggle_mc_params_collapse(2, True)
+        assert is_open is False
+        assert "chevron-right" in chevron
