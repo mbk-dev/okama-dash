@@ -50,6 +50,36 @@ def _parse_pair_csv(csv_str):
     return pairs or None
 
 
+def build_distribution_parameters(
+    distribution: str,
+    mu, sigma,
+    shape, scale_ln,
+    df, loc_t, scale_t,
+) -> tuple | None:
+    """Build okama Monte Carlo ``distribution_parameters`` from raw form values.
+
+    Empty inputs become ``None`` so okama estimates them via ``.fit()``. For the
+    lognormal distribution okama always forces ``loc = -1.0``, so it is injected
+    here regardless of the form. Returns ``None`` when the user supplied no value
+    (let okama estimate everything).
+    """
+    def _f(x):
+        return float(x) if x not in (None, "") else None
+
+    match distribution:
+        case "norm":
+            vals = (_f(mu), _f(sigma))
+            return None if all(v is None for v in vals) else vals
+        case "lognorm":
+            shape_v, scale_v = _f(shape), _f(scale_ln)
+            return None if (shape_v is None and scale_v is None) else (shape_v, -1.0, scale_v)
+        case "t":
+            vals = (_f(df), _f(loc_t), _f(scale_t))
+            return None if all(v is None for v in vals) else vals
+        case _:
+            return None
+
+
 def layout(
     tickers=None,
     weights=None,
