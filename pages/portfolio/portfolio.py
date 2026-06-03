@@ -239,6 +239,14 @@ def layout(
     State(component_id="pf-monte-carlo-years", component_property="value"),
     State(component_id="pf-monte-carlo-distribution", component_property="value"),
     State(component_id="pf-monte-carlo-backtest", component_property="value"),
+    # monte carlo distribution parameters
+    State(component_id="pf-mc-norm-mu", component_property="value"),
+    State(component_id="pf-mc-norm-sigma", component_property="value"),
+    State(component_id="pf-mc-lognorm-shape", component_property="value"),
+    State(component_id="pf-mc-lognorm-scale", component_property="value"),
+    State(component_id="pf-mc-t-df", component_property="value"),
+    State(component_id="pf-mc-t-loc", component_property="value"),
+    State(component_id="pf-mc-t-scale", component_property="value"),
     prevent_initial_call=True,
 )
 def update_graf_portfolio(
@@ -288,6 +296,13 @@ def update_graf_portfolio(
     years_monte_carlo: int,
     distribution_monte_carlo: str,
     show_backtest: str,
+    mc_norm_mu=None,
+    mc_norm_sigma=None,
+    mc_lognorm_shape=None,
+    mc_lognorm_scale=None,
+    mc_t_df=None,
+    mc_t_loc=None,
+    mc_t_scale=None,
 ):
     trigger = dash.ctx.triggered_id
     if trigger == "pf-logarithmic-scale-switch":
@@ -298,6 +313,13 @@ def update_graf_portfolio(
             dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update,
             dash.no_update, dash.no_update,
         )
+
+    distribution_parameters_monte_carlo = build_distribution_parameters(
+        distribution_monte_carlo,
+        mc_norm_mu, mc_norm_sigma,
+        mc_lognorm_shape, mc_lognorm_scale,
+        mc_t_df, mc_t_loc, mc_t_scale,
+    )
 
     try:
         result = _update_graf_portfolio_inner(
@@ -311,6 +333,7 @@ def update_graf_portfolio(
             ts_dates, ts_amounts,
             plot_type, inflation_on, rolling_window,
             n_monte_carlo, years_monte_carlo, distribution_monte_carlo, show_backtest,
+            distribution_parameters_monte_carlo=distribution_parameters_monte_carlo,
         )
         return (*result, False, "")
     except Exception as e:
