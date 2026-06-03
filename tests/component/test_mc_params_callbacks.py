@@ -119,3 +119,27 @@ class TestToggleMcParamsCollapse:
         is_open, chevron = toggle_mc_params_collapse(2, True)
         assert is_open is False
         assert "chevron-right" in chevron
+
+
+class TestHideMonteCarloRows:
+    def test_non_wealth_hides_all_six(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import hide_monte_carlo_rows
+
+        result = hide_monte_carlo_rows("drawdowns", 100)
+        assert len(result) == 6
+        assert all(style == {"display": "none"} for style in result)
+
+    def test_wealth_zero_mc_hides_params_row(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import hide_monte_carlo_rows
+
+        header, number, period, distribution, params, backtest = hide_monte_carlo_rows("wealth", 0)
+        assert header is None
+        assert number is None
+        assert params == {"display": "none"}
+
+    def test_wealth_with_mc_shows_params_row(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import hide_monte_carlo_rows
+
+        result = hide_monte_carlo_rows("wealth", 100)
+        assert len(result) == 6
+        assert all(style is None for style in result)

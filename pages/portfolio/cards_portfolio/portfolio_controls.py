@@ -655,6 +655,7 @@ def disable_rolling_input(plot_options: str) -> bool:
     Output(component_id="pf-monte-carlo-number-row", component_property="style"),
     Output(component_id="pf-monte-carlo-period-row", component_property="style"),
     Output(component_id="pf-monte-carlo-distribution-row", component_property="style"),
+    Output(component_id="pf-monte-carlo-params-row", component_property="style"),
     Output(component_id="pf-monte-carlo-backtest-row", component_property="style"),
     Input(component_id="pf-plot-option", component_property="value"),
     Input(component_id="pf-monte-carlo-number", component_property="value"),
@@ -663,12 +664,13 @@ def hide_monte_carlo_rows(plot_options: str, random_simulations_number):
     if plot_options != "wealth":
         # don't show rows
         style = {"display": "none"}
-        return (style,) * 5
+        return (style,) * 6
     else:
         if random_simulations_number in [0, None]:
-            return None, None, {"display": "none"}, {"display": "none"}, {"display": "none"}
+            hidden = {"display": "none"}
+            return None, None, hidden, hidden, hidden, hidden
         else:
-            return (None,) * 5
+            return (None,) * 6
 
 
 @callback(
