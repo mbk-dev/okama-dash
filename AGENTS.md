@@ -271,6 +271,34 @@ planning cleanup or refactor work.
 - When editing Jupyter Notebook examples in the `/examples` directory, ensure that the code
   examples are up-to-date with the current codebase in the Git branch.
 
+## UI layout & form design conventions
+
+Form controls across the widgets must stay visually consistent. The rules below
+are enforced globally in `assets/forms.css` (Dash auto-serves any CSS in `assets/`),
+so prefer fixing the shared stylesheet/convention over per-component patches.
+
+- **Equal height in a row.** Every interactive control is **38px** tall. `dbc.Input`/
+  `dbc.Select` are 38px by default; `dcc.Dropdown` (34px) and `dmc.Select` (36px) are
+  normalized up to 38px in `assets/forms.css`. When you place a dropdown/select next to
+  an input in the same `dbc.Row`, you don't need extra styling — they already line up.
+- **Vertical rhythm — rows never touch.** A container that stacks form rows must own the
+  vertical gap, not the rows. Use Bootstrap's **`vstack gap-2`** (0.5rem) on the container
+  (`html.Div(..., className="vstack gap-2")`), or `class_name="mb-2"` on each row. This
+  guarantees a consistent gap even for rows added dynamically. The wrapper owns the rhythm
+  at *every* level — e.g. the Tickers/Weights block applies `vstack gap-2` both to the inner
+  `#dynamic-container` (asset rows) **and** to the outer block `Div` so the header and the
+  "Add Asset" button get the same gap. Reference implementation:
+  `pages/portfolio/cards_portfolio/portfolio_controls.py`.
+- **Buttons never sit flush against the control above them.** Two button roles:
+  - *Primary action* (Submit / Compare / Search / Find portfolio / Backtest): centered and
+    wrapped in `html.Div([button], className="p-3", style={"text-align": "center"})` for
+    breathing room. This is the existing convention on every page except where noted — keep it.
+  - *Inline / list action* (Add Asset / Add Entry / Add Threshold): left-aligned inside its
+    form block and spaced by the block's vertical rhythm (`vstack gap-2`, or `mt-2` on its
+    row) — at minimum a `0.5rem` gap, never `0`.
+- These are visual/markup changes — verify by eye (screenshot / page view), no unit test
+  per the TDD-skip rule for non-logic changes.
+
 ## Git push policy (OpenClaw-агенты)
 
 Действует совместно с глобальным правилом `claw_agent_git_push`. Агент на claw

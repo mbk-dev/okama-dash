@@ -97,7 +97,7 @@ def card_controls(
                                 dbc.Col(html.Label("Weights"), width=6),
                             ],
                         ),
-                        html.Div(id="dynamic-container", children=[]),
+                        html.Div(id="dynamic-container", children=[], className="vstack gap-2"),
                         dbc.Row(
                             [
                                 dbc.Col(dbc.Button("Add Asset", id="dynamic-add-filter", n_clicks=0)),
@@ -105,6 +105,7 @@ def card_controls(
                             ]
                         ),
                     ],
+                    className="vstack gap-2",
                 ),
                 dbc.Row(
                     [
