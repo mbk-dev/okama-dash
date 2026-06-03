@@ -316,8 +316,25 @@ so prefer fixing the shared stylesheet/convention over per-component patches.
   - *Inline / list action* (Add Asset / Add Entry / Add Threshold): left-aligned inside its
     form block and spaced by the block's vertical rhythm (`vstack gap-2`, or `mt-2` on its
     row) — at minimum a `0.5rem` gap, never `0`.
-- These are visual/markup changes — verify by eye (screenshot / page view), no unit test
-  per the TDD-skip rule for non-logic changes.
+- These are visual/markup changes — verify by eye on the live local site (see below), no
+  unit test per the TDD-skip rule for non-logic changes.
+
+### Live local review before committing (visual/design tasks)
+
+When a task touches **visual design elements** (layout, CSS, markup, component styling,
+spacing, ordering, wrappers — anything whose effect is *seen* rather than computed), the
+user reviews the result on the running site **before** it is committed. Before reporting
+such work as done:
+
+- **Check whether the local dev server is running** (default `http://localhost:8050`). If
+  it is not up, start it (`poetry run python app.py`, debug=True) so the user can open the
+  page and see the change live.
+- **Point the user to where to look** — the route/page and which control or panel changed —
+  so they can review it on the live site.
+- **Don't commit a visual change until the user has had the chance to see it live** (commit
+  only when they ask, per the Git push policy below).
+- **No screenshots by default.** Do not capture or attach screenshots unless the user
+  explicitly asks for them — the live local site is the review surface, not an image.
 
 ## Git push policy (OpenClaw-агенты)
 
