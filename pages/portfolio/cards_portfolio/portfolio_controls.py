@@ -327,7 +327,7 @@ def card_controls(
                             ]
                         ),
                         dbc.Row(
-                            html.H6(children="Monte Carlo simulation for portfolio future wealth indexes"),
+                            html.H6(children="Monte Carlo simulation"),
                             className="p-1",
                             id="pf-monte-carlo-header-row"
                         ),
