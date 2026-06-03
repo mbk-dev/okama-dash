@@ -49,8 +49,15 @@ class _DCF:
     def wealth_index(self, discounting: str = "fv", include_negative_values: bool = True) -> pd.DataFrame:
         return self._wealth_index_df.copy()
 
-    def set_mc_parameters(self, distribution: str = "norm", period: int = 0, mc_number: int = 0):
-        self._mc_params = {"distribution": distribution, "period": period, "mc_number": mc_number}
+    def set_mc_parameters(
+        self, distribution: str = "norm", distribution_parameters=None, period: int = 0, mc_number: int = 0
+    ):
+        self._mc_params = {
+            "distribution": distribution,
+            "distribution_parameters": distribution_parameters,
+            "period": period,
+            "mc_number": mc_number,
+        }
 
     def monte_carlo_wealth(self, discounting: str = "fv") -> pd.DataFrame:
         return pd.DataFrame()

@@ -351,6 +351,7 @@ def _update_graf_portfolio_inner(
     ts_dates, ts_amounts,
     plot_type, inflation_on, rolling_window,
     n_monte_carlo, years_monte_carlo, distribution_monte_carlo, show_backtest,
+    distribution_parameters_monte_carlo=None,
 ):
     assets = [i for i in assets if i is not None]
     weights = [i / 100.0 for i in weights if i is not None]
@@ -458,6 +459,7 @@ def _update_graf_portfolio_inner(
         show_backtest,
         log_on,
         cf_strategy,
+        distribution_parameters_monte_carlo=distribution_parameters_monte_carlo,
     )
     json_data = df_data.to_json(orient="split", default_handler=str)
     if plot_type == "wealth":
@@ -847,7 +849,10 @@ def _get_distribution_figure(pf_object: ok.Portfolio) -> go.Figure:
     return fig
 
 
-def _get_wealth_data(pf_object, has_cashflow, n_monte_carlo, show_backtest_bool, distribution_mc, years_mc):
+def _get_wealth_data(
+    pf_object, has_cashflow, n_monte_carlo, show_backtest_bool, distribution_mc, years_mc,
+    distribution_parameters_mc=None,
+):
     df_backtest = pd.DataFrame()
     df_forecast = pd.DataFrame()
     if n_monte_carlo == 0:
@@ -864,7 +869,12 @@ def _get_wealth_data(pf_object, has_cashflow, n_monte_carlo, show_backtest_bool,
     last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
     if last_backtest_value > 0:
         pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
-        pf_object.dcf.set_mc_parameters(distribution=distribution_mc, period=years_mc, mc_number=n_monte_carlo)
+        pf_object.dcf.set_mc_parameters(
+            distribution=distribution_mc,
+            distribution_parameters=distribution_parameters_mc,
+            period=years_mc,
+            mc_number=n_monte_carlo,
+        )
         df_forecast = pf_object.dcf.monte_carlo_wealth()
         df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", ignore_index=False)
     else:
@@ -915,6 +925,7 @@ def get_pf_figure(
     show_backtest: str,
     log_scale: bool,
     cf_strategy: str = "indexation",
+    distribution_parameters_monte_carlo=None,
 ) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if plot_type == "distribution":
         fig = _get_distribution_figure(pf_object)
@@ -949,6 +960,7 @@ def get_pf_figure(
     if plot_type == "wealth":
         df, df_backtest, df_forecast, return_series = _get_wealth_data(
             pf_object, has_cashflow, n_monte_carlo, show_backtest_bool, distribution_monte_carlo, years_monte_carlo,
+            distribution_parameters_monte_carlo,
         )
     elif plot_type in {"cagr", "real_cagr"}:
         df = pf_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=plot_type != "cagr")
