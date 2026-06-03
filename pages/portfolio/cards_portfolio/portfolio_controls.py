@@ -672,6 +672,22 @@ def hide_monte_carlo_rows(plot_options: str, random_simulations_number):
 
 
 @callback(
+    Output(component_id="pf-mc-norm-group", component_property="style"),
+    Output(component_id="pf-mc-lognorm-group", component_property="style"),
+    Output(component_id="pf-mc-t-group", component_property="style"),
+    Input(component_id="pf-monte-carlo-distribution", component_property="value"),
+)
+def show_hide_param_groups(distribution: str):
+    """Show only the field group for the selected distribution."""
+    hidden = {"display": "none"}
+    return (
+        None if distribution == "norm" else hidden,
+        None if distribution == "lognorm" else hidden,
+        None if distribution == "t" else hidden,
+    )
+
+
+@callback(
     Output(component_id="pf-inflation-switch", component_property="value"),
     Output(component_id="pf-inflation-switch", component_property="disabled"),
     Input(component_id="pf-plot-option", component_property="value"),

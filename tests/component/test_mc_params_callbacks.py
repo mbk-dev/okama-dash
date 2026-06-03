@@ -77,3 +77,29 @@ class TestSubmitBuildsParameters:
 
         passed = mock_inner.call_args.kwargs["distribution_parameters_monte_carlo"]
         assert passed == (3.4, 0.006, 0.038)
+
+
+class TestShowHideParamGroups:
+    def test_norm_shows_only_norm(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import show_hide_param_groups
+
+        norm, lognorm, t = show_hide_param_groups("norm")
+        assert norm is None
+        assert lognorm == {"display": "none"}
+        assert t == {"display": "none"}
+
+    def test_lognorm_shows_only_lognorm(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import show_hide_param_groups
+
+        norm, lognorm, t = show_hide_param_groups("lognorm")
+        assert lognorm is None
+        assert norm == {"display": "none"}
+        assert t == {"display": "none"}
+
+    def test_t_shows_only_t(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import show_hide_param_groups
+
+        norm, lognorm, t = show_hide_param_groups("t")
+        assert t is None
+        assert norm == {"display": "none"}
+        assert lognorm == {"display": "none"}
