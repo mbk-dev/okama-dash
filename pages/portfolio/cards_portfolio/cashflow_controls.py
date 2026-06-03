@@ -311,15 +311,17 @@ def cashflow_accordion_item(
                 id="pf-cf-indexation-panel",
             ),
             # ---- TimeSeriesStrategy panel ----
+            # Bordered block visually separates the user date-amount entries from
+            # the settings above (strategy type, initial amount, discount rate).
             html.Div(
                 [
+                    html.Div("Custom cash flows", className="fw-semibold mb-2"),
                     dbc.Row(
                         [
                             dbc.Col(html.Label("Date (YYYY-MM)"), width=5),
                             dbc.Col(html.Label("Amount"), width=5),
                             dbc.Col(width=2),
                         ],
-                        class_name="mt-2",
                     ),
                     html.Div(
                         id="pf-cf-ts-container",
@@ -334,6 +336,7 @@ def cashflow_accordion_item(
                     dbc.FormText(f"Negative amounts = withdrawals, positive = contributions (max {MAX_TIMESERIES_ENTRIES} entries)"),
                 ],
                 id="pf-cf-timeseries-panel",
+                className="border rounded p-3 bg-body-tertiary mt-3",
                 style={"display": "none"},
             ),
             # ---- VanguardDynamicSpending panel ----
@@ -578,26 +581,45 @@ def cashflow_accordion_item(
                         ],
                         class_name="mt-2",
                     ),
-                    dbc.Row(
-                        [
-                            dbc.Col(html.Label("Drawdown threshold (%)"), width=5),
-                            dbc.Col(html.Label("Reduction (%)"), width=5),
-                            dbc.Col(width=2),
-                        ],
-                        class_name="mt-2",
-                    ),
+                    # Bordered block visually separates the drawdown-threshold table
+                    # from the settings above (withdrawal amount, indexation rate).
                     html.Div(
-                        id="pf-cf-cwd-container",
-                        children=[_cwd_row(r["index"], r["threshold"], r["reduction"]) for r in cwd_initial_rows]
-                        if cwd_initial_rows else [],
+                        [
+                            html.Div("Drawdown thresholds", className="fw-semibold mb-2"),
+                            dbc.Row(
+                                [
+                                    dbc.Col(html.Label("Drawdown threshold (%)"), width=5),
+                                    dbc.Col(html.Label("Reduction (%)"), width=5),
+                                    dbc.Col(width=2),
+                                ],
+                            ),
+                            html.Div(
+                                id="pf-cf-cwd-container",
+                                children=(
+                                    [_cwd_row(r["index"], r["threshold"], r["reduction"]) for r in cwd_initial_rows]
+                                    if cwd_initial_rows
+                                    else []
+                                ),
+                            ),
+                            dbc.Row(
+                                dbc.Col(
+                                    dbc.Button(
+                                        "Add Threshold",
+                                        id="pf-cf-cwd-add",
+                                        n_clicks=0,
+                                        size="sm",
+                                        color="secondary",
+                                    ),
+                                ),
+                                class_name="mt-1",
+                            ),
+                            dbc.FormText(
+                                "e.g. 20% threshold, 40% reduction = "
+                                "if drawdown > 20%, reduce withdrawal by 40%"
+                            ),
+                        ],
+                        className="border rounded p-3 bg-body-tertiary mt-3",
                     ),
-                    dbc.Row(
-                        dbc.Col(
-                            dbc.Button("Add Threshold", id="pf-cf-cwd-add", n_clicks=0, size="sm", color="secondary"),
-                        ),
-                        class_name="mt-1",
-                    ),
-                    dbc.FormText("e.g. 20% threshold, 40% reduction = if drawdown > 20%, reduce withdrawal by 40%"),
                 ],
                 id="pf-cf-cwd-panel",
                 style={"display": "none"},
