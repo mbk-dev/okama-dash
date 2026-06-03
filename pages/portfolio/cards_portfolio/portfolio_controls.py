@@ -704,6 +704,18 @@ def toggle_mc_params_collapse(n_clicks, is_open):
 
 
 @callback(
+    Output(component_id="pf-mc-t-df", component_property="invalid"),
+    Input(component_id="pf-mc-t-df", component_property="value"),
+    prevent_initial_call=True,
+)
+def validate_df(value):
+    """Student's t requires df > 2 (okama validator)."""
+    if value in (None, ""):
+        return False
+    return float(value) <= 2
+
+
+@callback(
     Output(component_id="pf-inflation-switch", component_property="value"),
     Output(component_id="pf-inflation-switch", component_property="disabled"),
     Input(component_id="pf-plot-option", component_property="value"),

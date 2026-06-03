@@ -218,3 +218,22 @@ class TestFillDistributionParameters:
 
         assert result[0] is dash.no_update
         assert "no data" in str(result[7])
+
+
+class TestValidateDf:
+    def test_df_below_threshold_is_invalid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import validate_df
+
+        assert validate_df(2) is True
+        assert validate_df(1.5) is True
+
+    def test_df_above_threshold_is_valid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import validate_df
+
+        assert validate_df(3) is False
+
+    def test_empty_df_is_not_invalid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import validate_df
+
+        assert validate_df(None) is False
+        assert validate_df("") is False
