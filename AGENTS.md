@@ -165,6 +165,12 @@ tests/
 | `poetry run pytest -q` | Everything | 384 | ~80s |
 | `poetry run pytest -m "not e2e"` | Fast suite | 362 | ~6s |
 
+**E2E test status (as of 2026-06-04):** 5 of 22 E2E tests intermittently timeout on page.goto
+(30s, waiting for 'domcontentloaded'). Affected tests: portfolio URL params, submit→traces
+(portfolio/compare/benchmark), ef submit→chart. This is a Gunicorn/Playwright infrastructure
+issue, not a logic bug. Unit/component suites are stable. Use the fast suite (`-m "not e2e"`)
+for CI/local verification until E2E server startup is hardened.
+
 ### What's covered per page
 
 | Page | Unit | Component | E2E |

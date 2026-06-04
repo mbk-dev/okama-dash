@@ -39,6 +39,7 @@ pandas = "^3.0.0"
 #scipy = "1.12"  # https://github.com/numpy/numpy/issues/27135
 redis = "*"
 xlsxwriter = "*"
+dash-ag-grid = "^35.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

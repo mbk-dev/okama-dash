@@ -6,7 +6,7 @@ from dash.exceptions import PreventUpdate
 
 import okama as ok
 
-from common.html_elements.info_dash_table import get_assets_names, get_info
+from common.html_elements.info_ag_grid import get_assets_names, get_info
 
 card_ef_info = dbc.Card(
     dbc.CardBody(

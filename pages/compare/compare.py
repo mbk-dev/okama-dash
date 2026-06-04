@@ -181,8 +181,8 @@ def _update_graf_compare_inner(
         gridcolor="lightgrey",
     )
     # Asset List describe() risk-return statistics
-    statistics_dash_table = get_al_statistics_table(al_object)
-    return fig, config, statistics_dash_table, json_data
+    statistics_ag_grid = get_al_statistics_table(al_object)
+    return fig, config, statistics_ag_grid, json_data
 
 
 def get_al_statistics_table(al_object):

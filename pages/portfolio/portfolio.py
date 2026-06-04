@@ -741,9 +741,9 @@ def _update_graf_portfolio_inner(
     fig, config = adopt_small_screens(fig, screen)
     # PF statistics
     if plot_type == "distribution":
-        statistics_dash_table = get_statistics_for_distribution(pf_object)
+        statistics_ag_grid = get_statistics_for_distribution(pf_object)
     else:
-        statistics_dash_table = get_pf_statistics_table(pf_object)
+        statistics_ag_grid = get_pf_statistics_table(pf_object)
     # Monte Carlo statistics
     if n_monte_carlo != 0 and plot_type == "wealth":
         forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
@@ -758,7 +758,7 @@ def _update_graf_portfolio_inner(
     return (
         fig,
         config,
-        statistics_dash_table,
+        statistics_ag_grid,
         forecast_survival_statistics_datatable,
         forecast_wealth_statistics_datatable,
         json_data,
@@ -1208,7 +1208,7 @@ def get_pf_statistics_table(al_object):
         for col in statistics_df.columns
     ]
 
-    grid = dag.AgGrid(
+    return dag.AgGrid(
         id="pf-describe-table-grid",
         rowData=statistics_dict,
         columnDefs=column_defs,
@@ -1217,12 +1217,6 @@ def get_pf_statistics_table(al_object):
         style={"height": None},
         csvExportParams={"fileName": "portfolio_statistics.csv"},
     )
-
-    from common.html_elements.grid_export import create_csv_export_button
-    return html.Div([
-        create_csv_export_button("pf-statistics-export-btn"),
-        grid,
-    ], className="vstack gap-2")
 
 
 
