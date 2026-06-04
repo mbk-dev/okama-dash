@@ -312,7 +312,8 @@ def _to_position_list(textposition, size: int) -> list[str]:
     return [str(position) for position in positions[:size]]
 
 
-def _estimate_horizontal_text_padding(fig: go.Figure, compact: bool = False) -> tuple[float, float]:
+def _collect_x_values(fig: go.Figure) -> list[float]:
+    """Extract all numeric x-axis values from figure traces."""
     x_values = []
     for trace in fig.data:
         trace_x = getattr(trace, "x", None)
@@ -321,19 +322,13 @@ def _estimate_horizontal_text_padding(fig: go.Figure, compact: bool = False) -> 
         for value in np.asarray(trace_x, dtype=object).ravel():
             if pd.notna(value):
                 x_values.append(float(value))
+    return x_values
 
-    if not x_values:
-        return 0.0, 0.0
 
-    x_min = min(x_values)
-    x_max = max(x_values)
-    x_span = max(x_max - x_min, max(abs(x_min), abs(x_max), 1.0) * 0.1)
-
+def _accumulate_label_padding(fig: go.Figure, base_padding: float, char_padding: float) -> tuple[float, float]:
+    """Accumulate left/right padding based on text labels and their positions."""
     left_padding = 0.0
     right_padding = 0.0
-    base_padding = x_span * (0.01 if compact else 0.02)
-    char_padding = x_span * (0.004 if compact else 0.009)
-
     for trace in fig.data:
         texts = _to_string_list(getattr(trace, "text", None))
         if not texts:
@@ -345,8 +340,22 @@ def _estimate_horizontal_text_padding(fig: go.Figure, compact: bool = False) -> 
                 left_padding = max(left_padding, label_padding)
             if "right" in position:
                 right_padding = max(right_padding, label_padding)
-
     return left_padding, right_padding
+
+
+def _estimate_horizontal_text_padding(fig: go.Figure, compact: bool = False) -> tuple[float, float]:
+    x_values = _collect_x_values(fig)
+    if not x_values:
+        return 0.0, 0.0
+
+    x_min = min(x_values)
+    x_max = max(x_values)
+    x_span = max(x_max - x_min, max(abs(x_min), abs(x_max), 1.0) * 0.1)
+
+    base_padding = x_span * (0.01 if compact else 0.02)
+    char_padding = x_span * (0.004 if compact else 0.009)
+
+    return _accumulate_label_padding(fig, base_padding, char_padding)
 
 
 def _update_xaxis_range_for_labels(fig: go.Figure, compact: bool = False) -> go.Figure:

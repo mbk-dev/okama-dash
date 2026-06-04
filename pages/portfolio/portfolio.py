@@ -533,6 +533,35 @@ def export_pf_wealth_statistics_csv(n_clicks):
     State(component_id="pf-mc-url-params", component_property="data"),
     prevent_initial_call=True,
 )
+def _fit_distribution_params(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution):
+    """Fit distribution parameters for the active distribution. Returns (params tuple, message)."""
+    start = time.perf_counter()
+    pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
+    pf.dcf.mc.distribution = distribution
+    params = tuple(round(float(p), 6) for p in pf.dcf.mc.get_parameters_for_distribution())
+    elapsed = time.perf_counter() - start
+    logging.info(f"MC parameter estimation took {elapsed:.3f} s")
+    return params, f"estimated in {elapsed:.2f} s"
+
+
+def _format_params_output_by_distribution(distribution, params, message):
+    """Format params tuple into the 9-output contract.
+
+    Outputs: (mu, sigma, ln_shape, ln_scale, t_df, t_loc, t_scale, message, store).
+    """
+    nu = dash.no_update
+    if distribution == "norm":
+        mu, sigma = params
+        return mu, sigma, nu, nu, nu, nu, nu, message, nu
+    if distribution == "lognorm":
+        shape, _loc, scale = params
+        return nu, nu, shape, scale, nu, nu, nu, message, nu
+    if distribution == "t":
+        df, loc, scale = params
+        return nu, nu, nu, nu, df, loc, scale, message, nu
+    return (nu,) * 9
+
+
 def auto_estimate_distribution_parameters(
     assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution, var_level, url_params,
 ):
@@ -567,27 +596,13 @@ def auto_estimate_distribution_parameters(
             return nu, nu, nu, nu, nu, nu, nu, f"Could not recompute df: {e}", nu
         return nu, nu, nu, nu, df, nu, nu, message, nu
 
-    start = time.perf_counter()
     try:
-        pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
-        pf.dcf.mc.distribution = distribution
-        params = tuple(round(float(p), 6) for p in pf.dcf.mc.get_parameters_for_distribution())
+        params, message = _fit_distribution_params(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution)
     except Exception as e:
         logging.exception("Estimate parameters failed")
         return nu, nu, nu, nu, nu, nu, nu, f"Could not estimate: {e}", nu
-    elapsed = time.perf_counter() - start
-    logging.info(f"MC parameter estimation took {elapsed:.3f} s")
-    message = f"estimated in {elapsed:.2f} s"
-    if distribution == "norm":
-        mu, sigma = params
-        return mu, sigma, nu, nu, nu, nu, nu, message, nu
-    if distribution == "lognorm":
-        shape, _loc, scale = params
-        return nu, nu, shape, scale, nu, nu, nu, message, nu
-    if distribution == "t":
-        df, loc, scale = params
-        return nu, nu, nu, nu, df, loc, scale, message, nu
-    return no_op
+
+    return _format_params_output_by_distribution(distribution, params, message)
 
 
 def _update_graf_portfolio_inner(
@@ -789,6 +804,87 @@ def validate_cwd_thresholds(
     return None
 
 
+def _build_percentage_strategy(pf_object, initial_amount, frequency, cf_percentage):
+    s = ok.PercentageStrategy(pf_object)
+    s.initial_investment = initial_amount
+    s.frequency = frequency
+    s.percentage = float(cf_percentage) / 100 if cf_percentage else 0.0
+    return s
+
+
+def _build_time_series_strategy(pf_object, initial_amount, ts_dates, ts_amounts):
+    ts_dict = {}
+    if ts_dates and ts_amounts:
+        for d, a in zip(ts_dates, ts_amounts, strict=True):
+            if d and a is not None:
+                try:
+                    pd.to_datetime(str(d), format="%Y-%m")
+                    ts_dict[str(d)] = float(a)
+                except (ValueError, TypeError):
+                    pass
+    s = ok.TimeSeriesStrategy(pf_object)
+    s.initial_investment = initial_amount
+    if ts_dict:
+        s.time_series_dic = ts_dict
+    return s
+
+
+def _build_vds_strategy(
+    pf_object, initial_amount, vds_percentage, vds_min_withdrawal, vds_max_withdrawal,
+    vds_adjust_minmax, vds_floor, vds_ceiling, vds_adjust_fc, vds_indexation, has_inflation
+):
+    indexation = _resolve_indexation(vds_indexation, has_inflation)
+    min_max = None
+    if vds_min_withdrawal is not None and vds_max_withdrawal is not None:
+        min_max = (float(vds_min_withdrawal), float(vds_max_withdrawal))
+    fc = None
+    if vds_floor is not None and vds_ceiling is not None:
+        fc = (float(vds_floor) / 100, float(vds_ceiling) / 100)
+    return ok.VanguardDynamicSpending(
+        parent=pf_object,
+        initial_investment=initial_amount,
+        percentage=float(vds_percentage) / 100 if vds_percentage else 0.0,
+        min_max_annual_withdrawals=min_max,
+        adjust_min_max=bool(vds_adjust_minmax),
+        floor_ceiling=fc,
+        adjust_floor_ceiling=bool(vds_adjust_fc),
+        indexation=indexation,
+    )
+
+
+def _build_cwd_strategy(
+    pf_object, initial_amount, frequency, cwd_amount, cwd_indexation,
+    cwd_thresholds, cwd_reductions, has_inflation
+):
+    error = validate_cwd_thresholds(cwd_thresholds, cwd_reductions)
+    if error:
+        raise ValueError(error)
+    indexation = _resolve_indexation(cwd_indexation, has_inflation)
+    thresholds = [
+        (float(thresh) / 100, float(reduc) / 100)
+        for thresh, reduc in zip(cwd_thresholds, cwd_reductions, strict=False)
+        if thresh is not None and reduc is not None
+    ]
+    return ok.CutWithdrawalsIfDrawdown(
+        parent=pf_object,
+        initial_investment=initial_amount,
+        frequency=frequency,
+        amount=float(cwd_amount) if cwd_amount else 0.0,
+        indexation=indexation,
+        crash_threshold_reduction=thresholds,
+    )
+
+
+def _build_indexation_strategy(pf_object, initial_amount, frequency, cf_amount, cf_indexation, has_inflation):
+    indexation = _resolve_indexation(cf_indexation, has_inflation)
+    s = ok.IndexationStrategy(pf_object)
+    s.initial_investment = initial_amount
+    s.amount = float(cf_amount) if cf_amount else 0.0
+    s.frequency = frequency
+    s.indexation = indexation
+    return s
+
+
 def _build_cashflow_strategy(
     pf_object,
     strategy_type,
@@ -814,76 +910,20 @@ def _build_cashflow_strategy(
     has_inflation=True,
 ):
     if strategy_type == "percentage":
-        s = ok.PercentageStrategy(pf_object)
-        s.initial_investment = initial_amount
-        s.frequency = frequency
-        s.percentage = float(cf_percentage) / 100 if cf_percentage else 0.0
-        return s
-
+        return _build_percentage_strategy(pf_object, initial_amount, frequency, cf_percentage)
     if strategy_type == "time_series":
-        ts_dict = {}
-        if ts_dates and ts_amounts:
-            for d, a in zip(ts_dates, ts_amounts, strict=True):
-                if d and a is not None:
-                    try:
-                        pd.to_datetime(str(d), format="%Y-%m")
-                        ts_dict[str(d)] = float(a)
-                    except (ValueError, TypeError):
-                        pass
-        s = ok.TimeSeriesStrategy(pf_object)
-        s.initial_investment = initial_amount
-        if ts_dict:
-            s.time_series_dic = ts_dict
-        return s
-
+        return _build_time_series_strategy(pf_object, initial_amount, ts_dates, ts_amounts)
     if strategy_type == "vds":
-        indexation = _resolve_indexation(vds_indexation, has_inflation)
-        min_max = None
-        if vds_min_withdrawal is not None and vds_max_withdrawal is not None:
-            min_max = (float(vds_min_withdrawal), float(vds_max_withdrawal))
-        fc = None
-        if vds_floor is not None and vds_ceiling is not None:
-            fc = (float(vds_floor) / 100, float(vds_ceiling) / 100)
-        s = ok.VanguardDynamicSpending(
-            parent=pf_object,
-            initial_investment=initial_amount,
-            percentage=float(vds_percentage) / 100 if vds_percentage else 0.0,
-            min_max_annual_withdrawals=min_max,
-            adjust_min_max=bool(vds_adjust_minmax),
-            floor_ceiling=fc,
-            adjust_floor_ceiling=bool(vds_adjust_fc),
-            indexation=indexation,
+        return _build_vds_strategy(
+            pf_object, initial_amount, vds_percentage, vds_min_withdrawal, vds_max_withdrawal,
+            vds_adjust_minmax, vds_floor, vds_ceiling, vds_adjust_fc, vds_indexation, has_inflation
         )
-        return s
-
     if strategy_type == "cwd":
-        error = validate_cwd_thresholds(cwd_thresholds, cwd_reductions)
-        if error:
-            raise ValueError(error)
-        indexation = _resolve_indexation(cwd_indexation, has_inflation)
-        thresholds = [
-            (float(thresh) / 100, float(reduc) / 100)
-            for thresh, reduc in zip(cwd_thresholds, cwd_reductions, strict=False)
-            if thresh is not None and reduc is not None
-        ]
-        s = ok.CutWithdrawalsIfDrawdown(
-            parent=pf_object,
-            initial_investment=initial_amount,
-            frequency=frequency,
-            amount=float(cwd_amount) if cwd_amount else 0.0,
-            indexation=indexation,
-            crash_threshold_reduction=thresholds,
+        return _build_cwd_strategy(
+            pf_object, initial_amount, frequency, cwd_amount, cwd_indexation,
+            cwd_thresholds, cwd_reductions, has_inflation
         )
-        return s
-
-    # Default: IndexationStrategy
-    indexation = _resolve_indexation(cf_indexation, has_inflation)
-    s = ok.IndexationStrategy(pf_object)
-    s.initial_investment = initial_amount
-    s.amount = float(cf_amount) if cf_amount else 0.0
-    s.frequency = frequency
-    s.indexation = indexation
-    return s
+    return _build_indexation_strategy(pf_object, initial_amount, frequency, cf_amount, cf_indexation, has_inflation)
 
 
 def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
