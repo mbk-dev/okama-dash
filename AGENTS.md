@@ -319,6 +319,12 @@ so prefer fixing the shared stylesheet/convention over per-component patches.
   - *Inline / list action* (Add Asset / Add Entry / Add Threshold): left-aligned inside its
     form block and spaced by the block's vertical rhythm (`vstack gap-2`, or `mt-2` on its
     row) — at minimum a `0.5rem` gap, never `0`.
+- **Tooltips describe the financial parameter, not the front-end mechanics.** A control's
+  tooltip explains what the parameter means financially (what it measures, its units, how it
+  affects the calculation) — not when or how the UI fills, recomputes, enables, disables or
+  hides it. Keep tooltips short. Example: "VaR confidence level (1-99) at which the degrees
+  of freedom (df) of Student's t-distribution are optimized..." — good; "Enter a value to
+  recompute the field; clear it to reset..." — bad.
 - These are visual/markup changes — verify by eye on the live local site (see below), no
   unit test per the TDD-skip rule for non-logic changes.
 
