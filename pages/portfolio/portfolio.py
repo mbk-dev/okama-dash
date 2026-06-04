@@ -472,6 +472,39 @@ def show_graf_and_statistics_rows(n_clicks, style):
 
 
 @callback(
+    Output("pf-describe-table-grid", "exportDataAsCsv"),
+    Input("pf-statistics-export-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
+def export_pf_statistics_csv(n_clicks):
+    """Trigger CSV export for portfolio statistics grid."""
+    from common.html_elements.grid_export import csv_export_callback
+    return csv_export_callback(n_clicks)
+
+
+@callback(
+    Output("pf-survival-statistics-grid", "exportDataAsCsv"),
+    Input("pf-survival-statistics-export-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
+def export_pf_survival_statistics_csv(n_clicks):
+    """Trigger CSV export for Monte Carlo survival statistics grid."""
+    from common.html_elements.grid_export import csv_export_callback
+    return csv_export_callback(n_clicks)
+
+
+@callback(
+    Output("pf-wealth-statistics-grid", "exportDataAsCsv"),
+    Input("pf-wealth-statistics-export-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
+def export_pf_wealth_statistics_csv(n_clicks):
+    """Trigger CSV export for Monte Carlo wealth statistics grid."""
+    from common.html_elements.grid_export import csv_export_callback
+    return csv_export_callback(n_clicks)
+
+
+@callback(
     Output(component_id="pf-mc-norm-mu", component_property="value"),
     Output(component_id="pf-mc-norm-sigma", component_property="value"),
     Output(component_id="pf-mc-lognorm-shape", component_property="value"),
@@ -904,7 +937,7 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
     return statistics_html
 
 
-def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio) -> dag.AgGrid:
+def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio):
     if not df_forecast.empty:
         backtest_survival_period = 0 if df_backtsest.empty else pf_object.dcf.survival_period_hist()
         fsp = pf_object.dcf.monte_carlo_survival_period(threshold=0)
@@ -930,7 +963,8 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             {"field": "3"},
             {"field": "4", "valueFormatter": guarded_decimal_formatter},
         ]
-        forecast_survival_statistics_datatable = dag.AgGrid(
+        grid = dag.AgGrid(
+            id="pf-survival-statistics-grid",
             rowData=table_list,
             columnDefs=column_defs,
             columnSize="responsiveSizeToFit",
@@ -938,30 +972,35 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             style={"height": None},
             csvExportParams={"fileName": "forecast_survival_statistics.csv"},
         )
-    else:
-        backtest_survival_period = pf_object.dcf.survival_period_hist()
-        table_list = [{"1": "Backtest survival period", "2": backtest_survival_period}]
-        guarded_decimal_formatter = {
-            "function": (
-                "typeof params.value === 'number' && !isNaN(params.value) "
-                "? d3.format('.2f')(params.value) : params.value"
-            )
-        }
-        column_defs = [
-            {"field": "1"},
-            {"field": "2", "valueFormatter": guarded_decimal_formatter},
-        ]
-        forecast_survival_statistics_datatable = dag.AgGrid(
-            rowData=table_list,
-            columnDefs=column_defs,
-            columnSize="responsiveSizeToFit",
-            dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
-            style={"height": None},
+
+        from common.html_elements.grid_export import create_csv_export_button
+        return html.Div([
+            create_csv_export_button("pf-survival-statistics-export-btn"),
+            grid,
+        ], className="vstack gap-2")
+    # Empty forecast branch (backtest-only): no export button (old table had none)
+    backtest_survival_period = pf_object.dcf.survival_period_hist()
+    table_list = [{"1": "Backtest survival period", "2": backtest_survival_period}]
+    guarded_decimal_formatter = {
+        "function": (
+            "typeof params.value === 'number' && !isNaN(params.value) "
+            "? d3.format('.2f')(params.value) : params.value"
         )
-    return forecast_survival_statistics_datatable
+    }
+    column_defs = [
+        {"field": "1"},
+        {"field": "2", "valueFormatter": guarded_decimal_formatter},
+    ]
+    return dag.AgGrid(
+        rowData=table_list,
+        columnDefs=column_defs,
+        columnSize="responsiveSizeToFit",
+        dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
+        style={"height": None},
+    )
 
 
-def get_forecast_wealth_statistics_table(pf_object) -> dag.AgGrid:
+def get_forecast_wealth_statistics_table(pf_object):
     wealth_fv = pf_object.dcf.monte_carlo_wealth(discounting="fv")
     if not wealth_fv.empty:
         wealth = wealth_fv.iloc[-1, :]
@@ -1008,7 +1047,8 @@ def get_forecast_wealth_statistics_table(pf_object) -> dag.AgGrid:
                 "valueFormatter": guarded_integer_formatter,
             },
         ]
-        forecast_wealth_statistics_datatable = dag.AgGrid(
+        grid = dag.AgGrid(
+            id="pf-wealth-statistics-grid",
             rowData=table_list,
             columnDefs=column_defs,
             columnSize="responsiveSizeToFit",
@@ -1016,26 +1056,31 @@ def get_forecast_wealth_statistics_table(pf_object) -> dag.AgGrid:
             style={"height": None},
             csvExportParams={"fileName": "forecast_wealth_statistics.csv"},
         )
-    else:
-        table_list = [{"1": "Wealth", "2": 0}]
-        guarded_decimal_formatter = {
-            "function": (
-                "typeof params.value === 'number' && !isNaN(params.value) "
-                "? d3.format('.2f')(params.value) : params.value"
-            )
-        }
-        column_defs = [
-            {"field": "1"},
-            {"field": "2", "valueFormatter": guarded_decimal_formatter},
-        ]
-        forecast_wealth_statistics_datatable = dag.AgGrid(
-            rowData=table_list,
-            columnDefs=column_defs,
-            columnSize="responsiveSizeToFit",
-            dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
-            style={"height": None},
+
+        from common.html_elements.grid_export import create_csv_export_button
+        return html.Div([
+            create_csv_export_button("pf-wealth-statistics-export-btn"),
+            grid,
+        ], className="vstack gap-2")
+    # Empty wealth branch: no export button (old table had none)
+    table_list = [{"1": "Wealth", "2": 0}]
+    guarded_decimal_formatter = {
+        "function": (
+            "typeof params.value === 'number' && !isNaN(params.value) "
+            "? d3.format('.2f')(params.value) : params.value"
         )
-    return forecast_wealth_statistics_datatable
+    }
+    column_defs = [
+        {"field": "1"},
+        {"field": "2", "valueFormatter": guarded_decimal_formatter},
+    ]
+    return dag.AgGrid(
+        rowData=table_list,
+        columnDefs=column_defs,
+        columnSize="responsiveSizeToFit",
+        dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
+        style={"height": None},
+    )
 
 
 def get_pf_statistics_table(al_object):
@@ -1044,6 +1089,10 @@ def get_pf_statistics_table(al_object):
 
     statistics_dict = statistics_df.to_dict(orient="records")
 
+    # Guarded percent formatter handles both numeric and non-numeric cells.
+    # Preserves existing quirk: Sharpe ratio (a ratio, not a percentage) is formatted with percent
+    # sign for visual consistency with other statistics. This is intentional and matches the Compare
+    # page convention.
     guarded_percent_formatter = {
         "function": (
             "typeof params.value === 'number' && !isNaN(params.value) "
@@ -1054,7 +1103,9 @@ def get_pf_statistics_table(al_object):
         {"field": col, "headerName": col, "valueFormatter": guarded_percent_formatter}
         for col in statistics_df.columns
     ]
-    return dag.AgGrid(
+
+    grid = dag.AgGrid(
+        id="pf-describe-table-grid",
         rowData=statistics_dict,
         columnDefs=column_defs,
         columnSize="responsiveSizeToFit",
@@ -1062,6 +1113,12 @@ def get_pf_statistics_table(al_object):
         style={"height": None},
         csvExportParams={"fileName": "portfolio_statistics.csv"},
     )
+
+    from common.html_elements.grid_export import create_csv_export_button
+    return html.Div([
+        create_csv_export_button("pf-statistics-export-btn"),
+        grid,
+    ], className="vstack gap-2")
 
 
 

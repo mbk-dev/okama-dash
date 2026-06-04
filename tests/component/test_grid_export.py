@@ -34,3 +34,29 @@ class TestCsvExportCallback:
         # Invoke with n_clicks = 0 or None
         assert csv_export_callback(0) is False
         assert csv_export_callback(None) is False
+
+
+class TestPortfolioGridExportCallbacks:
+    """
+    Portfolio page has three grids with CSV export: describe statistics,
+    survival statistics (MC forecast branch), and wealth statistics (MC forecast branch).
+    Each has its own export callback wired to the grid_export helper.
+    """
+
+    def test_statistics_export_triggers_on_button_click(self):
+        from pages.portfolio.portfolio import export_pf_statistics_csv
+
+        result = export_pf_statistics_csv(1)
+        assert result is True
+
+    def test_survival_statistics_export_triggers_on_button_click(self):
+        from pages.portfolio.portfolio import export_pf_survival_statistics_csv
+
+        result = export_pf_survival_statistics_csv(1)
+        assert result is True
+
+    def test_wealth_statistics_export_triggers_on_button_click(self):
+        from pages.portfolio.portfolio import export_pf_wealth_statistics_csv
+
+        result = export_pf_wealth_statistics_csv(1)
+        assert result is True
