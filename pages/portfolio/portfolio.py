@@ -67,10 +67,12 @@ def _valid_mc_date(date_str) -> bool:
 
 
 def _portfolio_is_complete(assets, weights) -> bool:
-    """True when every constructor row has a ticker and a weight, and weights sum to 100%."""
+    """True when every row has a ticker and a 0-100 weight, and weights sum to 100%."""
     if not assets or not weights:
         return False
     if any(not a for a in assets) or any(w is None for w in weights):
+        return False
+    if any(not 0 <= w <= 100 for w in weights):
         return False
     return abs(sum(weights) - 100.0) < 1e-6
 

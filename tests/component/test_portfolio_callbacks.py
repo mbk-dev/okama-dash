@@ -529,3 +529,45 @@ class TestCashflowPercentageInFrequencyRow:
 
         assert "Withdrawal/Contribution" in _label_texts(col)
         assert "Withdrawal/Contribution percentage" not in _label_texts(col)
+
+
+class TestWeightRangeValidation:
+    def test_negative_weight_is_invalid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import validate_weight_input
+
+        assert validate_weight_input(-5) is True
+
+    def test_weight_above_100_is_invalid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import validate_weight_input
+
+        assert validate_weight_input(150) is True
+
+    def test_boundary_and_inner_weights_are_valid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import validate_weight_input
+
+        assert validate_weight_input(0) is False
+        assert validate_weight_input(100) is False
+        assert validate_weight_input(50.5) is False
+
+    def test_empty_weight_is_not_flagged(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import validate_weight_input
+
+        assert validate_weight_input(None) is False
+        assert validate_weight_input("") is False
+
+    def test_submit_disabled_when_weights_out_of_range_but_sum_100(self):
+        """150 + -50 sums to 100 and must still be rejected."""
+        from pages.portfolio.cards_portfolio.portfolio_controls import disable_submit_add_link_buttons
+
+        submit_disabled, _, _ = disable_submit_add_link_buttons(
+            ["AAPL.US", "MSFT.US"], [150, -50], 2, True
+        )
+        assert submit_disabled is True
+
+    def test_submit_enabled_for_valid_weights(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import disable_submit_add_link_buttons
+
+        submit_disabled, _, _ = disable_submit_add_link_buttons(
+            ["AAPL.US", "MSFT.US"], [60, 40], 2, True
+        )
+        assert submit_disabled is False

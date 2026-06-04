@@ -293,6 +293,58 @@ class TestCreateLink:
         assert "%2C" not in url
 
 
+class TestUrlParamGrouping:
+    """Related params must sit together in the URL (rebalancing group, cash-flow group)."""
+
+    def test_rebalancing_params_grouped(self):
+        url = create_link(**BASE_PARAMS, symbol="PORTFOLIO1", rebal="year", abs_dev=20, rel_dev=50)
+        assert "rebal=year&abs_dev=20&rel_dev=50" in url
+
+    def test_symbol_precedes_rebalancing_group(self):
+        url = create_link(**BASE_PARAMS, symbol="PORTFOLIO1", rebal="year", abs_dev=20)
+        assert url.index("symbol=") < url.index("rebal=")
+
+    def test_cashflow_params_grouped(self):
+        url = create_link(
+            **BASE_PARAMS, initial_amount=5000, cf_strategy="percentage", cf_freq="year", cf_pct=-12,
+        )
+        assert "initial_amount=5000&cf_strategy=percentage&cf_freq=year&cf_pct=-12" in url
+
+
+class TestInactiveStrategyOmitted:
+    """A strategy whose primary flow value is 0/None produces no cash flow → nothing emitted."""
+
+    def _base(self):
+        return {
+            "cf_freq": "month", "cf_amount": None, "cf_indexation": None, "cf_pct": None,
+            "vds_pct": None, "vds_min": None, "vds_max": None, "vds_adj_mm": None,
+            "vds_floor": None, "vds_ceil": None, "vds_adj_fc": None, "vds_indexation": None,
+            "cwd_amount": None, "cwd_tr": None, "cf_ts": None,
+        }
+
+    def test_percentage_with_zero_pct_returns_all_none(self):
+        result = scope_cashflow_params(cf_strategy="percentage", **{**self._base(), "cf_pct": 0})
+        assert all(v is None for v in result.values())
+
+    def test_cwd_with_zero_amount_returns_all_none(self):
+        result = scope_cashflow_params(
+            cf_strategy="cwd", **{**self._base(), "cwd_amount": 0, "cwd_tr": "20:40"}
+        )
+        assert all(v is None for v in result.values())
+
+    def test_vds_with_zero_pct_returns_all_none(self):
+        result = scope_cashflow_params(cf_strategy="vds", **{**self._base(), "vds_pct": 0})
+        assert all(v is None for v in result.values())
+
+    def test_active_strategy_keeps_cf_strategy(self):
+        result = scope_cashflow_params(cf_strategy="percentage", **{**self._base(), "cf_pct": -12})
+        assert result["cf_strategy"] == "percentage"
+
+    def test_inactive_strategy_nulls_cf_strategy(self):
+        result = scope_cashflow_params(cf_strategy="percentage", **{**self._base(), "cf_pct": 0})
+        assert result["cf_strategy"] is None
+
+
 class TestScopeCashflowParams:
     """Test scope_cashflow_params: only active strategy's params are returned, rest are None."""
 

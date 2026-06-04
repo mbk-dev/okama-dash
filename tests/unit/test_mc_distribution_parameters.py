@@ -80,6 +80,13 @@ class TestPortfolioIsComplete:
 
         assert _portfolio_is_complete([], []) is False
 
+    def test_out_of_range_weights_are_false(self):
+        """Weights outside 0-100 are invalid even when they sum to 100 (e.g. 150 + -50)."""
+        from pages.portfolio.portfolio import _portfolio_is_complete
+
+        assert _portfolio_is_complete(["AAPL.US", "MSFT.US"], [150, -50]) is False
+        assert _portfolio_is_complete(["AAPL.US", "MSFT.US"], [-10, 110]) is False
+
 
 class TestValidMcDate:
     def test_empty_and_none_are_valid(self):

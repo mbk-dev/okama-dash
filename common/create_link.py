@@ -6,6 +6,19 @@ import pandas as pd
 from common import settings as settings
 
 
+# Strategy table: (primary flow value - zero/empty means "inactive", owned param names).
+_STRATEGY_PARAMS = {
+    "indexation": ("cf_amount", ("cf_freq", "cf_amount", "cf_indexation")),
+    "percentage": ("cf_pct", ("cf_freq", "cf_pct")),
+    "vds": (
+        "vds_pct",
+        ("vds_pct", "vds_min", "vds_max", "vds_adj_mm", "vds_floor", "vds_ceil", "vds_adj_fc", "vds_indexation"),
+    ),
+    "cwd": ("cwd_amount", ("cf_freq", "cwd_amount", "cwd_tr")),
+    "time_series": ("cf_ts", ("cf_ts",)),
+}
+
+
 def scope_cashflow_params(
     cf_strategy: str,
     *,
@@ -29,10 +42,13 @@ def scope_cashflow_params(
     Return cashflow params scoped to the active strategy only.
 
     Only the active strategy's params are preserved; all others are set to None.
-    Special case: indexation with cf_amount in (None, 0) is treated as "no strategy",
-    returning all None values.
+    A strategy whose primary flow value is 0/None produces no cash flow and is
+    treated as "no strategy" (everything None, including the returned
+    "cf_strategy" key): indexation/cwd with zero amount, percentage/vds with
+    zero percent, time_series with no entries.
     """
     result = {
+        "cf_strategy": None,
         "cf_freq": None,
         "cf_amount": None,
         "cf_indexation": None,
@@ -50,31 +66,32 @@ def scope_cashflow_params(
         "cf_ts": None,
     }
 
-    if cf_strategy == "indexation":
-        if cf_amount in (None, 0):
-            return result
-        result["cf_freq"] = cf_freq
-        result["cf_amount"] = cf_amount
-        result["cf_indexation"] = cf_indexation
-    elif cf_strategy == "percentage":
-        result["cf_freq"] = cf_freq
-        result["cf_pct"] = cf_pct
-    elif cf_strategy == "vds":
-        result["vds_pct"] = vds_pct
-        result["vds_min"] = vds_min
-        result["vds_max"] = vds_max
-        result["vds_adj_mm"] = vds_adj_mm
-        result["vds_floor"] = vds_floor
-        result["vds_ceil"] = vds_ceil
-        result["vds_adj_fc"] = vds_adj_fc
-        result["vds_indexation"] = vds_indexation
-    elif cf_strategy == "cwd":
-        result["cf_freq"] = cf_freq
-        result["cwd_amount"] = cwd_amount
-        result["cwd_tr"] = cwd_tr
-    elif cf_strategy == "time_series":
-        result["cf_ts"] = cf_ts
-
+    values = {
+        "cf_freq": cf_freq,
+        "cf_amount": cf_amount,
+        "cf_indexation": cf_indexation,
+        "cf_pct": cf_pct,
+        "vds_pct": vds_pct,
+        "vds_min": vds_min,
+        "vds_max": vds_max,
+        "vds_adj_mm": vds_adj_mm,
+        "vds_floor": vds_floor,
+        "vds_ceil": vds_ceil,
+        "vds_adj_fc": vds_adj_fc,
+        "vds_indexation": vds_indexation,
+        "cwd_amount": cwd_amount,
+        "cwd_tr": cwd_tr,
+        "cf_ts": cf_ts,
+    }
+    spec = _STRATEGY_PARAMS.get(cf_strategy)
+    if spec is None:
+        return result
+    primary, owned = spec
+    if values[primary] in (None, 0, ""):
+        return result
+    result["cf_strategy"] = cf_strategy
+    for key in owned:
+        result[key] = values[key]
     return result
 
 
@@ -151,19 +168,22 @@ def create_link(
 
     # Data-driven builder: (name, value, emit_rule)
     # emit_rule: "if_not_none" | ("skip_if_default", default_value) | ("skip_if_zero")
+    # Params are emitted in GROUPS so related settings sit together in the URL:
+    # base (ccy/dates) -> portfolio identity (weights/symbol/benchmark) ->
+    # rebalancing (rebal/abs_dev/rel_dev) -> cash flow (everything else).
     params = [
         ("ccy", ccy, ("skip_if_default", "USD")),
         ("first_date", first_date, ("skip_if_default", "2000-01")),
         ("last_date", last_date, ("skip_if_default", today_str)),
-        ("benchmark", benchmark, "if_not_none"),
         ("weights", ",".join(str(w) for w in weights_list) if weights_list else None, "if_not_none"),
+        ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
+        ("benchmark", benchmark, "if_not_none"),
         ("rebal", rebal, ("skip_if_default", "month")),
+        ("abs_dev", abs_dev, "if_not_none"),
+        ("rel_dev", rel_dev, "if_not_none"),
         ("initial_amount", initial_amount, ("skip_if_default", settings.INITIAL_INVESTMENT_DEFAULT)),
         ("cashflow", cashflow, "if_not_none"),
         ("discount_rate", discount_rate, "if_not_none"),
-        ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
-        ("abs_dev", abs_dev, "if_not_none"),
-        ("rel_dev", rel_dev, "if_not_none"),
         ("cf_strategy", cf_strategy, ("skip_if_default", "indexation")),
         ("cf_freq", cf_freq, ("skip_if_default", "month")),
         ("cf_amount", cf_amount, "skip_if_zero"),

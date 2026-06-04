@@ -852,9 +852,21 @@ def update_link_pf(
         symbol=symbol,
         abs_dev=abs_dev,
         rel_dev=rel_dev,
-        cf_strategy=cf_strategy,
+        # scoped_cf carries cf_strategy too: None (omitted) when the selected
+        # strategy has a zero primary flow value, i.e. is effectively inactive.
         **scoped_cf,
     )
+
+
+@callback(
+    Output({"type": "pf-dynamic-input", "index": MATCH}, "invalid"),
+    Input({"type": "pf-dynamic-input", "index": MATCH}, "value"),
+)
+def validate_weight_input(value) -> bool:
+    """Flag a portfolio weight as invalid when it is outside 0-100."""
+    if value in (None, ""):
+        return False
+    return not 0 <= float(value) <= 100
 
 
 # ----------------------- Ticker | Weight constructor -------------------------------------------
@@ -1049,6 +1061,8 @@ def disable_submit_add_link_buttons(
 
     weights_sum = sum(float(x) for x in weights_list if x)
     weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.0
+    # 150 + -50 sums to 100 but each weight must itself stay within 0-100
+    weights_out_of_range = any(not 0 <= float(w) <= 100 for w in weights_list if w != "")
 
     weights_and_tickers_has_different_length = len(set(tickers_list)) != len(weights_list)
     rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
@@ -1057,6 +1071,7 @@ def disable_submit_add_link_buttons(
 
     submit_result = (
         weights_sum_is_not_100
+        or weights_out_of_range
         or weights_and_tickers_has_different_length
         or rolling_not_natural
         or mc_number_is_incorrect
