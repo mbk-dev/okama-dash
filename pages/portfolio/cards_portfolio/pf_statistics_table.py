@@ -1,7 +1,7 @@
 import dash_bootstrap_components as dbc
-from dash import html
+from dash import dcc, html
 
-from common.html_elements.grid_export import create_csv_export_button
+from common.html_elements.grid_export import create_xlsx_export_button
 
 card_table = dbc.Card(
     dbc.CardBody(
@@ -11,7 +11,7 @@ card_table = dbc.Card(
                     [
                         dbc.Col(html.H4(children="Statistics table"), width="auto"),
                         dbc.Col(
-                            create_csv_export_button("pf-statistics-export-btn"),
+                            create_xlsx_export_button("pf-statistics-export-btn"),
                             width="auto",
                         ),
                     ],
@@ -19,6 +19,7 @@ card_table = dbc.Card(
                     justify="between",
                     class_name="mb-2",
                 ),
+                dcc.Download(id="pf-statistics-download"),
                 html.P("Portfolio statistics without cash flows:"),
                 html.Div(id="pf-describe-table"),
             ]

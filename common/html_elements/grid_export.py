@@ -1,24 +1,27 @@
 """
-CSV export helper for dash-ag-grid components.
+Xlsx export helper for dash-ag-grid components.
 
-Provides a reusable export button and callback function.
+Provides a reusable export button and conversion function for server-side xlsx export.
 """
 
+import dash.exceptions
 import dash_bootstrap_components as dbc
+import pandas as pd
+from dash import dcc
 
 
-def create_csv_export_button(button_id: str) -> dbc.Button:
+def create_xlsx_export_button(button_id: str) -> dbc.Button:
     """
-    Create a CSV export button styled per AGENTS.md conventions (inline action).
+    Create an xlsx export button styled per AGENTS.md conventions (inline action).
 
     Args:
         button_id: Unique ID for the button element.
 
     Returns:
-        dbc.Button configured for CSV export trigger.
+        dbc.Button configured for xlsx export trigger.
     """
     return dbc.Button(
-        "Export CSV",
+        "Export xlsx",
         id=button_id,
         color="secondary",
         outline=True,
@@ -26,19 +29,27 @@ def create_csv_export_button(button_id: str) -> dbc.Button:
     )
 
 
-def csv_export_callback(n_clicks):
+def rowdata_to_xlsx_download(
+    row_data: list[dict] | None,
+    filename: str,
+    sheet_name: str = "okama_data",
+):
     """
-    Callback function that triggers CSV export when clicked.
-
-    Use this as a callback body with Output(<grid_id>, "exportDataAsCsv")
-    and Input(<button_id>, "n_clicks").
+    Convert AG Grid rowData to xlsx download object for dcc.Download.
 
     Args:
-        n_clicks: Button click count.
+        row_data: List of dicts from AG Grid's rowData prop.
+        filename: Output filename (must end with .xlsx).
+        sheet_name: Excel sheet name.
 
     Returns:
-        True to trigger export, False otherwise.
+        dcc.send_data_frame result for dcc.Download.
+
+    Raises:
+        dash.exceptions.PreventUpdate: If row_data is empty or None.
     """
-    if n_clicks:
-        return True
-    return False
+    if not row_data:
+        raise dash.exceptions.PreventUpdate
+
+    df = pd.DataFrame(row_data)
+    return dcc.send_data_frame(df.to_excel, filename, sheet_name=sheet_name, index=False)

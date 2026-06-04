@@ -7,8 +7,8 @@ import dash
 import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
 import plotly
-from dash import callback, ALL, html, dcc
-from dash.dependencies import Input, Output, State
+from dash import State, callback, ALL, html, dcc
+from dash.dependencies import Input, Output
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -478,36 +478,39 @@ def show_graf_and_statistics_rows(n_clicks, style):
 
 
 @callback(
-    Output("pf-describe-table-grid", "exportDataAsCsv"),
+    Output("pf-statistics-download", "data"),
     Input("pf-statistics-export-btn", "n_clicks"),
+    State("pf-describe-table-grid", "rowData"),
     prevent_initial_call=True,
 )
-def export_pf_statistics_csv(n_clicks):
-    """Trigger CSV export for portfolio statistics grid."""
-    from common.html_elements.grid_export import csv_export_callback
-    return csv_export_callback(n_clicks)
+def export_pf_statistics_xlsx(n_clicks, row_data):
+    """Trigger xlsx export for portfolio statistics grid."""
+    from common.html_elements.grid_export import rowdata_to_xlsx_download
+    return rowdata_to_xlsx_download(row_data, "portfolio_statistics.xlsx")
 
 
 @callback(
-    Output("pf-survival-statistics-grid", "exportDataAsCsv"),
+    Output("pf-survival-statistics-download", "data"),
     Input("pf-survival-statistics-export-btn", "n_clicks"),
+    State("pf-survival-statistics-grid", "rowData"),
     prevent_initial_call=True,
 )
-def export_pf_survival_statistics_csv(n_clicks):
-    """Trigger CSV export for Monte Carlo survival statistics grid."""
-    from common.html_elements.grid_export import csv_export_callback
-    return csv_export_callback(n_clicks)
+def export_pf_survival_statistics_xlsx(n_clicks, row_data):
+    """Trigger xlsx export for Monte Carlo survival statistics grid."""
+    from common.html_elements.grid_export import rowdata_to_xlsx_download
+    return rowdata_to_xlsx_download(row_data, "survival_statistics.xlsx")
 
 
 @callback(
-    Output("pf-wealth-statistics-grid", "exportDataAsCsv"),
+    Output("pf-wealth-statistics-download", "data"),
     Input("pf-wealth-statistics-export-btn", "n_clicks"),
+    State("pf-wealth-statistics-grid", "rowData"),
     prevent_initial_call=True,
 )
-def export_pf_wealth_statistics_csv(n_clicks):
-    """Trigger CSV export for Monte Carlo wealth statistics grid."""
-    from common.html_elements.grid_export import csv_export_callback
-    return csv_export_callback(n_clicks)
+def export_pf_wealth_statistics_xlsx(n_clicks, row_data):
+    """Trigger xlsx export for Monte Carlo wealth statistics grid."""
+    from common.html_elements.grid_export import rowdata_to_xlsx_download
+    return rowdata_to_xlsx_download(row_data, "wealth_statistics.xlsx")
 
 
 @callback(
@@ -1025,12 +1028,12 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             columnSize="responsiveSizeToFit",
             dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
             style={"height": None},
-            csvExportParams={"fileName": "forecast_survival_statistics.csv"},
         )
 
-        from common.html_elements.grid_export import create_csv_export_button
+        from common.html_elements.grid_export import create_xlsx_export_button
         return html.Div([
-            create_csv_export_button("pf-survival-statistics-export-btn"),
+            dcc.Download(id="pf-survival-statistics-download"),
+            create_xlsx_export_button("pf-survival-statistics-export-btn"),
             grid,
         ], className="vstack gap-2")
     # Empty forecast branch (backtest-only): no export button (old table had none)
@@ -1158,12 +1161,12 @@ def get_forecast_wealth_statistics_table(pf_object):
             columnSize="responsiveSizeToFit",
             dashGridOptions={"domLayout": "autoHeight"},
             style={"height": None},
-            csvExportParams={"fileName": "forecast_wealth_statistics.csv"},
         )
 
-        from common.html_elements.grid_export import create_csv_export_button
+        from common.html_elements.grid_export import create_xlsx_export_button
         return html.Div([
-            create_csv_export_button("pf-wealth-statistics-export-btn"),
+            dcc.Download(id="pf-wealth-statistics-download"),
+            create_xlsx_export_button("pf-wealth-statistics-export-btn"),
             grid,
         ], className="vstack gap-2")
     # Empty wealth branch: no export button (old table had none)
@@ -1215,7 +1218,6 @@ def get_pf_statistics_table(al_object):
         columnSize="responsiveSizeToFit",
         dashGridOptions={"domLayout": "autoHeight"},
         style={"height": None},
-        csvExportParams={"fileName": "portfolio_statistics.csv"},
     )
 
 

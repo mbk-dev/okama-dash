@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-384 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+386 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -144,7 +144,7 @@ tests/
 │   ├── test_ef_grid_callbacks.py     # sim-mode visibility, dynamic grid step options, grid↔pairwise exclusivity, submit gating (6 tests)
 │   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner: figure, y-titles (incl. annual_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit); MC forecast scenarios end at zero then break; statistics_table returns dag.AgGrid (20 tests)
 │   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows), reactive auto_estimate_distribution_parameters (gates, norm/lognorm/t fit, VaR-level df optimize + reset-on-clear, errors), df>2 validation; URL params prefill and survive reactive auto-estimate, dcc.Store round-trip (29 tests)
-│   ├── test_grid_export.py           # CSV export button callback: outputs CSV string from dag.AgGrid rowData; columnDefs→filename (6 tests)
+│   ├── test_grid_export.py           # xlsx export: button, rowdata_to_xlsx_download (PreventUpdate on empty), page callbacks return dcc.send_data_frame dict (8 tests)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types), rolling-window disabled for annual_return (compare + portfolio) (10 tests)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
@@ -160,10 +160,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 153 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 209 | ~5s |
+| `poetry run pytest -m component` | Dash callbacks | 211 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 22 | ~70s |
-| `poetry run pytest -q` | Everything | 384 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 362 | ~6s |
+| `poetry run pytest -q` | Everything | 386 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 364 | ~6s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -181,7 +181,7 @@ to a file in `tmp/` instead of `PIPE`.
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid), rolling-window gating | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
-| **common/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_annotation) | change_style_for_hidden_row, grid_export (CSV string from rowData) | — |
+| **common/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_annotation) | change_style_for_hidden_row, grid_export (xlsx via dcc.Download + rowdata_to_xlsx_download) | — |
 
 ### okama mock strategy
 

@@ -4,8 +4,8 @@ import dash
 import dash.exceptions
 import dash_ag_grid as dag
 import plotly
-from dash import callback
-from dash.dependencies import Input, Output, State
+from dash import State, callback
+from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 
 import pandas as pd
@@ -210,7 +210,6 @@ def get_al_statistics_table(al_object):
         columnSize="responsiveSizeToFit",
         dashGridOptions={"domLayout": "autoHeight"},
         style={"height": None},
-        csvExportParams={"fileName": "compare_statistics.csv"},
     )
 
 
@@ -300,10 +299,11 @@ def show_graf_and_statistics_table_rows(n_clicks, style):
 
 
 @callback(
-    Output("al-describe-table-grid", "exportDataAsCsv"),
+    Output("al-statistics-download", "data"),
     Input("al-statistics-export-btn", "n_clicks"),
+    State("al-describe-table-grid", "rowData"),
     prevent_initial_call=True,
 )
-def export_statistics_csv(n_clicks):
-    from common.html_elements.grid_export import csv_export_callback
-    return csv_export_callback(n_clicks)
+def export_statistics_xlsx(n_clicks, row_data):
+    from common.html_elements.grid_export import rowdata_to_xlsx_download
+    return rowdata_to_xlsx_download(row_data, "compare_statistics.xlsx")
