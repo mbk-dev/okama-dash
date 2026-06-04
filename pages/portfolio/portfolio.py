@@ -1,4 +1,6 @@
 import logging
+import re
+import time
 import typing
 
 import dash
@@ -48,6 +50,23 @@ def _parse_pair_csv(csv_str):
         if len(parts) == 2:
             pairs.append((parts[0].strip(), parts[1].strip()))
     return pairs or None
+
+
+_MC_DATE_RE = re.compile(r"^\d{4}-\d{2}$")
+
+
+def _valid_mc_date(date_str) -> bool:
+    """Empty is OK (okama defaults apply); otherwise require the app's YYYY-MM format."""
+    return date_str in (None, "") or bool(_MC_DATE_RE.match(date_str))
+
+
+def _portfolio_is_complete(assets, weights) -> bool:
+    """True when every constructor row has a ticker and a weight, and weights sum to 100%."""
+    if not assets or not weights:
+        return False
+    if any(not a for a in assets) or any(w is None for w in weights):
+        return False
+    return abs(sum(weights) - 100.0) < 1e-6
 
 
 def build_distribution_parameters(
@@ -404,29 +423,41 @@ def show_graf_and_statistics_rows(n_clicks, style):
     Output(component_id="pf-mc-t-loc", component_property="value"),
     Output(component_id="pf-mc-t-scale", component_property="value"),
     Output(component_id="pf-mc-params-message", component_property="children"),
-    Input(component_id="pf-mc-estimate-btn", component_property="n_clicks"),
-    Input(component_id="pf-mc-t-optimize-btn", component_property="n_clicks"),
-    State(component_id="pf-mc-t-var-level", component_property="value"),
-    State({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
-    State({"type": "pf-dynamic-input", "index": ALL}, "value"),
-    State(component_id="pf-base-currency", component_property="value"),
-    State(component_id="pf-first-date", component_property="value"),
-    State(component_id="pf-last-date", component_property="value"),
-    State(component_id="pf-rebalancing-period", component_property="value"),
-    State(component_id="pf-rebal-abs-deviation", component_property="value"),
-    State(component_id="pf-rebal-rel-deviation", component_property="value"),
-    State(component_id="pf-monte-carlo-distribution", component_property="value"),
+    Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
+    Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
+    Input(component_id="pf-base-currency", component_property="value"),
+    Input(component_id="pf-first-date", component_property="value"),
+    Input(component_id="pf-last-date", component_property="value"),
+    Input(component_id="pf-rebalancing-period", component_property="value"),
+    Input(component_id="pf-rebal-abs-deviation", component_property="value"),
+    Input(component_id="pf-rebal-rel-deviation", component_property="value"),
+    Input(component_id="pf-monte-carlo-distribution", component_property="value"),
+    Input(component_id="pf-mc-t-var-level", component_property="value"),
     prevent_initial_call=True,
 )
-def fill_distribution_parameters(
-    estimate_clicks, optimize_clicks, var_level,
-    assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution,
+def auto_estimate_distribution_parameters(
+    assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution, var_level,
 ):
-    """Estimate distribution parameters or optimize df, depending on which button fired."""
-    nu = dash.no_update
-    trigger = dash.ctx.triggered_id
+    """Recompute Monte Carlo distribution parameters in the background.
 
-    if trigger == "pf-mc-t-optimize-btn":
+    Fires when the portfolio definition changes (tickers, weights, dates,
+    currency, rebalancing) or the distribution type is switched — re-fits the
+    active distribution's parameters. A VaR-level change (Student's t only,
+    non-empty level) re-optimizes df instead. No-op until the portfolio is
+    complete: all constructor rows filled and weights summing to 100%.
+    """
+    nu = dash.no_update
+    no_op = (nu,) * 8
+    if not _portfolio_is_complete(assets, weights):
+        return no_op
+    if not (_valid_mc_date(fd) and _valid_mc_date(ld)):
+        return no_op
+
+    trigger = dash.ctx.triggered_id
+    if trigger == "pf-mc-t-var-level":
+        if distribution != "t" or var_level in (None, ""):
+            return no_op
+        start = time.perf_counter()
         try:
             pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
             pf.dcf.mc.distribution = "t"
@@ -434,27 +465,31 @@ def fill_distribution_parameters(
         except Exception as e:
             logging.exception("Optimize df failed")
             return nu, nu, nu, nu, nu, nu, nu, f"Could not optimize df: {e}"
-        return nu, nu, nu, nu, df, nu, nu, ""
+        elapsed = time.perf_counter() - start
+        logging.info(f"MC df optimization took {elapsed:.3f} s")
+        return nu, nu, nu, nu, df, nu, nu, f"df optimized in {elapsed:.2f} s"
 
-    if trigger == "pf-mc-estimate-btn":
-        try:
-            pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
-            pf.dcf.mc.distribution = distribution
-            params = tuple(round(float(p), 6) for p in pf.dcf.mc.get_parameters_for_distribution())
-        except Exception as e:
-            logging.exception("Estimate parameters failed")
-            return nu, nu, nu, nu, nu, nu, nu, f"Could not estimate: {e}"
-        if distribution == "norm":
-            mu, sigma = params
-            return mu, sigma, nu, nu, nu, nu, nu, ""
-        if distribution == "lognorm":
-            shape, _loc, scale = params
-            return nu, nu, shape, scale, nu, nu, nu, ""
-        if distribution == "t":
-            df, loc, scale = params
-            return nu, nu, nu, nu, df, loc, scale, ""
-
-    return nu, nu, nu, nu, nu, nu, nu, ""
+    start = time.perf_counter()
+    try:
+        pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
+        pf.dcf.mc.distribution = distribution
+        params = tuple(round(float(p), 6) for p in pf.dcf.mc.get_parameters_for_distribution())
+    except Exception as e:
+        logging.exception("Estimate parameters failed")
+        return nu, nu, nu, nu, nu, nu, nu, f"Could not estimate: {e}"
+    elapsed = time.perf_counter() - start
+    logging.info(f"MC parameter estimation took {elapsed:.3f} s")
+    message = f"estimated in {elapsed:.2f} s"
+    if distribution == "norm":
+        mu, sigma = params
+        return mu, sigma, nu, nu, nu, nu, nu, message
+    if distribution == "lognorm":
+        shape, _loc, scale = params
+        return nu, nu, shape, scale, nu, nu, nu, message
+    if distribution == "t":
+        df, loc, scale = params
+        return nu, nu, nu, nu, df, loc, scale, message
+    return no_op
 
 
 def _update_graf_portfolio_inner(

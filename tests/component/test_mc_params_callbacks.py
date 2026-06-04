@@ -146,92 +146,105 @@ class TestHideMonteCarloRows:
         assert all(style is None for style in result)
 
 
-class TestFillDistributionParameters:
-    def _portfolio_states(self):
-        return {
+class TestAutoEstimateDistributionParameters:
+    def _form_state(self, **overrides):
+        state = {
             "assets": ["AAPL.US", "MSFT.US"], "weights": [50, 50], "ccy": "USD",
             "fd": "2020-01", "ld": "2024-12", "rebal": "month",
             "abs_dev": None, "rel_dev": None,
+            "distribution": "norm", "var_level": None,
         }
+        state.update(overrides)
+        return state
 
-    def test_estimate_fills_t_group(self, patched_okama_portfolio):
-        from pages.portfolio.portfolio import fill_distribution_parameters
-
-        mock_pf = patched_okama_portfolio["portfolio_instance"]
-        mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (3.4, 0.006, 0.038)
+    def _call(self, trigger, **overrides):
+        from pages.portfolio.portfolio import auto_estimate_distribution_parameters
 
         with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
-            mock_ctx.triggered_id = "pf-mc-estimate-btn"
-            result = fill_distribution_parameters(
-                1, 0, 5, **self._portfolio_states(), distribution="t",
-            )
+            mock_ctx.triggered_id = trigger
+            return auto_estimate_distribution_parameters(**self._form_state(**overrides))
 
-        # outputs order: mu, sigma, shape, scale_ln, df, loc_t, scale_t, message
-        assert result[4] == 3.4
-        assert result[5] == 0.006
-        assert result[6] == 0.038
-        assert result[0] is dash.no_update
+    def test_incomplete_weights_no_recompute(self, patched_okama_portfolio):
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        result = self._call("pf-base-currency", weights=[50, 40])
 
-    def test_estimate_fills_norm_group(self, patched_okama_portfolio):
-        from pages.portfolio.portfolio import fill_distribution_parameters
+        assert all(r is dash.no_update for r in result)
+        mock_pf.dcf.mc.get_parameters_for_distribution.assert_not_called()
 
+    def test_missing_ticker_no_recompute(self, patched_okama_portfolio):
+        result = self._call("pf-base-currency", assets=[None, "MSFT.US"])
+
+        assert all(r is dash.no_update for r in result)
+
+    def test_partial_date_no_recompute(self, patched_okama_portfolio):
+        result = self._call("pf-first-date", fd="202")
+
+        assert all(r is dash.no_update for r in result)
+
+    def test_fit_fills_norm_group_with_timing_message(self, patched_okama_portfolio):
         mock_pf = patched_okama_portfolio["portfolio_instance"]
         mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (0.007, 0.04)
 
-        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
-            mock_ctx.triggered_id = "pf-mc-estimate-btn"
-            result = fill_distribution_parameters(
-                1, 0, 5, **self._portfolio_states(), distribution="norm",
-            )
+        result = self._call("pf-base-currency", distribution="norm")
 
         assert result[0] == 0.007
         assert result[1] == 0.04
         assert result[4] is dash.no_update
+        assert "estimated in" in str(result[7])
 
-    def test_estimate_fills_lognorm_group(self, patched_okama_portfolio):
-        from pages.portfolio.portfolio import fill_distribution_parameters
-
+    def test_fit_fills_lognorm_group(self, patched_okama_portfolio):
         mock_pf = patched_okama_portfolio["portfolio_instance"]
         mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (0.05, -1.0, 1.01)
 
-        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
-            mock_ctx.triggered_id = "pf-mc-estimate-btn"
-            result = fill_distribution_parameters(
-                1, 0, 5, **self._portfolio_states(), distribution="lognorm",
-            )
+        result = self._call("pf-base-currency", distribution="lognorm")
 
-        assert result[2] == 0.05  # shape
-        assert result[3] == 1.01  # scale_ln (okama's loc=-1 is discarded)
-        assert result[0] is dash.no_update  # mu not touched
-        assert result[4] is dash.no_update  # df not touched
+        assert result[2] == 0.05
+        assert result[3] == 1.01
+        assert result[0] is dash.no_update
 
-    def test_optimize_writes_df(self, patched_okama_portfolio):
-        from pages.portfolio.portfolio import fill_distribution_parameters
+    def test_portfolio_trigger_fills_fitted_df_for_t(self, patched_okama_portfolio):
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (3.4, 0.006, 0.038)
 
+        result = self._call("pf-base-currency", distribution="t", var_level=5)
+
+        assert result[4] == 3.4
+        assert result[5] == 0.006
+        assert result[6] == 0.038
+        mock_pf.dcf.mc.optimize_df_for_students.assert_not_called()
+
+    def test_var_level_change_optimizes_df(self, patched_okama_portfolio):
         mock_pf = patched_okama_portfolio["portfolio_instance"]
         mock_pf.dcf.mc.optimize_df_for_students.return_value = 7.5
 
-        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
-            mock_ctx.triggered_id = "pf-mc-t-optimize-btn"
-            result = fill_distribution_parameters(
-                0, 1, 5, **self._portfolio_states(), distribution="t",
-            )
+        result = self._call("pf-mc-t-var-level", distribution="t", var_level=5)
 
         assert result[4] == 7.5
         assert result[0] is dash.no_update
+        assert result[5] is dash.no_update
+        assert "df optimized in" in str(result[7])
         mock_pf.dcf.mc.optimize_df_for_students.assert_called_once_with(5)
+        mock_pf.dcf.mc.get_parameters_for_distribution.assert_not_called()
+
+    def test_var_level_ignored_for_non_t(self, patched_okama_portfolio):
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        result = self._call("pf-mc-t-var-level", distribution="norm", var_level=5)
+
+        assert all(r is dash.no_update for r in result)
+        mock_pf.dcf.mc.optimize_df_for_students.assert_not_called()
+
+    def test_empty_var_level_does_not_optimize(self, patched_okama_portfolio):
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        result = self._call("pf-mc-t-var-level", distribution="t", var_level=None)
+
+        assert all(r is dash.no_update for r in result)
+        mock_pf.dcf.mc.optimize_df_for_students.assert_not_called()
 
     def test_estimate_failure_returns_message(self, patched_okama_portfolio):
-        from pages.portfolio.portfolio import fill_distribution_parameters
-
         mock_pf = patched_okama_portfolio["portfolio_instance"]
         mock_pf.dcf.mc.get_parameters_for_distribution.side_effect = ValueError("no data")
 
-        with patch(f"{PF_MODULE}.dash.ctx") as mock_ctx:
-            mock_ctx.triggered_id = "pf-mc-estimate-btn"
-            result = fill_distribution_parameters(
-                1, 0, 5, **self._portfolio_states(), distribution="norm",
-            )
+        result = self._call("pf-base-currency", distribution="norm")
 
         assert result[0] is dash.no_update
         assert "no data" in str(result[7])
