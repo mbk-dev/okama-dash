@@ -31,6 +31,21 @@ _CLEANUP_INTERVAL_SECONDS = 24 * 3600
 _cache_dir = Path(__file__).parent.parent / "cache-directory"
 
 
+def _data_source_token() -> str:
+    """
+    Discriminator that keeps mocked and real object data in separate cache slots.
+
+    Portfolio and AssetList pickles are cached for up to 30 days. When the app
+    runs with mocked okama (``TESTING=1``, e.g. during E2E tests) it must not
+    share a cache key with the real app — otherwise the real app would serve
+    pickles built from mock data. The okama version also invalidates the cache
+    when the upstream dataset changes.
+    """
+    if os.environ.get("TESTING") == "1":
+        return "test"
+    return getattr(okama, "__version__", "unknown")
+
+
 def get_okama_version() -> str:
     return okama.__version__
 
@@ -59,7 +74,7 @@ def _build_cache_key(obj_type: str, cache_key_params: dict[str, Any]) -> str:
     if weights:
         parts.append(f"w={','.join(str(w) for w in weights)}")
 
-    parts.append(f"okv={get_okama_version()}")
+    parts.append(f"okv={_data_source_token()}")
     parts.append(f"cv={CACHE_FORMAT_VERSION}")
     name = "-".join(parts) + ".pkl"
 

@@ -288,3 +288,49 @@ class TestCleanup:
         cleanup_expired_files(max_ttl_seconds=30 * 24 * 3600, _force=True)
 
         assert legacy.exists()
+
+
+class TestCacheIsolation:
+    """
+    Cache-isolation tests for object_cache pickles.
+
+    When the app runs with mocked okama (TESTING=1, e.g. during E2E tests)
+    it must NOT write mock pickles into the same cache slots the real app
+    reads from — otherwise the production app could serve mock data.
+    """
+
+    def test_testing_key_differs_from_production_key(self, cache_dir, monkeypatch):
+        from common.object_cache import _build_cache_key
+
+        params = {"symbols": ["SPY.US", "TLT.US"], "ccy": "USD"}
+
+        # Production key (no TESTING env var)
+        monkeypatch.delenv("TESTING", raising=False)
+        prod_key = _build_cache_key("assetlist", params)
+
+        # Test key (TESTING=1)
+        monkeypatch.setenv("TESTING", "1")
+        test_key = _build_cache_key("assetlist", params)
+
+        assert test_key != prod_key
+
+    def test_testing_key_contains_test_discriminator(self, cache_dir, monkeypatch):
+        from common.object_cache import _build_cache_key
+
+        monkeypatch.setenv("TESTING", "1")
+        key = _build_cache_key("assetlist", {"symbols": ["SPY.US"]})
+
+        # Should contain a test discriminator, not okama version
+        assert "test" in key
+        assert "okv=" not in key or "okv=test" in key
+
+    def test_production_key_unchanged(self, cache_dir, monkeypatch):
+        from common.object_cache import _build_cache_key
+
+        monkeypatch.delenv("TESTING", raising=False)
+        params = {"symbols": ["SPY.US"], "ccy": "USD"}
+        key = _build_cache_key("assetlist", params)
+
+        # Should contain okama version, same as before
+        assert "okv=" in key
+        assert "test" not in key or "latest" in key  # "test" might appear in okv if okama.__version__ contains it
