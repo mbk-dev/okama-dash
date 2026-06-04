@@ -965,8 +965,9 @@ def append_row(row_index, symbol, weight, weight_placeholder):
                     min=0,
                     max=100,
                 ),
-                width=5,
             ),
+            # "auto" + ps-1 keeps the remove icon snug against the input
+            # (same compact style as the CWD threshold rows)
             dbc.Col(
                 dbc.Button(
                     html.I(className="bi bi-x-lg"),
@@ -976,8 +977,8 @@ def append_row(row_index, symbol, weight, weight_placeholder):
                     size="sm",
                     title="Remove asset",
                 ),
-                width=1,
-                class_name="d-flex justify-content-center",
+                width="auto",
+                class_name="ps-1 d-flex align-items-center",
             ),
         ],
     )

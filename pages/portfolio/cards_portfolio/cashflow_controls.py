@@ -585,9 +585,8 @@ def cashflow_accordion_item(
                             html.Div("Drawdown thresholds", className="fw-semibold mb-2"),
                             dbc.Row(
                                 [
-                                    dbc.Col(html.Label("Drawdown threshold (%)"), width=5),
-                                    dbc.Col(html.Label("Reduction (%)"), width=5),
-                                    dbc.Col(width=2),
+                                    dbc.Col(html.Label("Drawdown threshold (%)", className="text-nowrap"), width=6),
+                                    dbc.Col(html.Label("Reduction (%)")),
                                 ],
                             ),
                             html.Div(
@@ -781,7 +780,7 @@ def _cwd_row(index, threshold_val=None, reduction_val=None, threshold_ph="20", r
                     placeholder=threshold_ph,
                     value=threshold_val,
                 ),
-                width=5,
+                width=6,
             ),
             dbc.Col(
                 dbc.Input(
@@ -793,8 +792,9 @@ def _cwd_row(index, threshold_val=None, reduction_val=None, threshold_ph="20", r
                     placeholder=reduction_ph,
                     value=reduction_val,
                 ),
-                width=5,
             ),
+            # "auto" + ps-1 keeps the remove icon snug against the input
+            # (a fixed grid column left it floating in empty space)
             dbc.Col(
                 dbc.Button(
                     html.I(className="bi bi-x-lg"),
@@ -803,8 +803,8 @@ def _cwd_row(index, threshold_val=None, reduction_val=None, threshold_ph="20", r
                     class_name="p-0 text-secondary",
                     size="sm",
                 ),
-                width=2,
-                class_name="d-flex justify-content-center",
+                width="auto",
+                class_name="ps-1 d-flex align-items-center",
             ),
         ],
         class_name="mb-1",
