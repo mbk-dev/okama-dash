@@ -112,8 +112,8 @@ pf_mc_tooltip_backtest = dcc.Markdown(
 
 pf_mc_tooltip_distribution_parameters = dcc.Markdown(
     """
-    Parameters of the selected distribution, estimated automatically from the
-    portfolio's historical returns.
+    Parameters of the selected distribution of monthly rates of return,
+    estimated automatically from the portfolio's return history.
     """
 )
 pf_mc_tooltip_var_level = dcc.Markdown(
