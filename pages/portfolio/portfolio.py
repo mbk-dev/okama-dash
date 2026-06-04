@@ -513,29 +513,6 @@ def export_pf_wealth_statistics_xlsx(n_clicks, row_data):
     return rowdata_to_xlsx_download(row_data, "wealth_statistics.xlsx")
 
 
-@callback(
-    Output(component_id="pf-mc-norm-mu", component_property="value"),
-    Output(component_id="pf-mc-norm-sigma", component_property="value"),
-    Output(component_id="pf-mc-lognorm-shape", component_property="value"),
-    Output(component_id="pf-mc-lognorm-scale", component_property="value"),
-    Output(component_id="pf-mc-t-df", component_property="value"),
-    Output(component_id="pf-mc-t-loc", component_property="value"),
-    Output(component_id="pf-mc-t-scale", component_property="value"),
-    Output(component_id="pf-mc-params-message", component_property="children"),
-    Output(component_id="pf-mc-url-params", component_property="data"),
-    Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
-    Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
-    Input(component_id="pf-base-currency", component_property="value"),
-    Input(component_id="pf-first-date", component_property="value"),
-    Input(component_id="pf-last-date", component_property="value"),
-    Input(component_id="pf-rebalancing-period", component_property="value"),
-    Input(component_id="pf-rebal-abs-deviation", component_property="value"),
-    Input(component_id="pf-rebal-rel-deviation", component_property="value"),
-    Input(component_id="pf-monte-carlo-distribution", component_property="value"),
-    Input(component_id="pf-mc-t-var-level", component_property="value"),
-    State(component_id="pf-mc-url-params", component_property="data"),
-    prevent_initial_call=True,
-)
 def _fit_distribution_params(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution):
     """Fit distribution parameters for the active distribution. Returns (params tuple, message)."""
     start = time.perf_counter()
@@ -565,6 +542,29 @@ def _format_params_output_by_distribution(distribution, params, message):
     return (nu,) * 9
 
 
+@callback(
+    Output(component_id="pf-mc-norm-mu", component_property="value"),
+    Output(component_id="pf-mc-norm-sigma", component_property="value"),
+    Output(component_id="pf-mc-lognorm-shape", component_property="value"),
+    Output(component_id="pf-mc-lognorm-scale", component_property="value"),
+    Output(component_id="pf-mc-t-df", component_property="value"),
+    Output(component_id="pf-mc-t-loc", component_property="value"),
+    Output(component_id="pf-mc-t-scale", component_property="value"),
+    Output(component_id="pf-mc-params-message", component_property="children"),
+    Output(component_id="pf-mc-url-params", component_property="data"),
+    Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
+    Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
+    Input(component_id="pf-base-currency", component_property="value"),
+    Input(component_id="pf-first-date", component_property="value"),
+    Input(component_id="pf-last-date", component_property="value"),
+    Input(component_id="pf-rebalancing-period", component_property="value"),
+    Input(component_id="pf-rebal-abs-deviation", component_property="value"),
+    Input(component_id="pf-rebal-rel-deviation", component_property="value"),
+    Input(component_id="pf-monte-carlo-distribution", component_property="value"),
+    Input(component_id="pf-mc-t-var-level", component_property="value"),
+    State(component_id="pf-mc-url-params", component_property="data"),
+    prevent_initial_call=True,
+)
 def auto_estimate_distribution_parameters(
     assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution, var_level, url_params,
 ):
@@ -1031,8 +1031,8 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
         )
 
         from common.html_elements.grid_export import create_xlsx_export_button
+        # The matching dcc.Download lives statically in pf_statistics_table.py
         return html.Div([
-            dcc.Download(id="pf-survival-statistics-download"),
             create_xlsx_export_button("pf-survival-statistics-export-btn"),
             grid,
         ], className="vstack gap-2")
@@ -1164,8 +1164,8 @@ def get_forecast_wealth_statistics_table(pf_object):
         )
 
         from common.html_elements.grid_export import create_xlsx_export_button
+        # The matching dcc.Download lives statically in pf_statistics_table.py
         return html.Div([
-            dcc.Download(id="pf-wealth-statistics-download"),
             create_xlsx_export_button("pf-wealth-statistics-export-btn"),
             grid,
         ], className="vstack gap-2")

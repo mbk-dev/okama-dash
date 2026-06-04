@@ -146,6 +146,23 @@ class TestHideMonteCarloRows:
         assert all(style is None for style in result)
 
 
+class TestCallbackRegistration:
+    def test_mc_params_outputs_bound_to_auto_estimate(self):
+        """The @callback decorator must be attached to auto_estimate_distribution_parameters.
+
+        Regression guard: a refactor once inserted helper defs between the decorator
+        and the function, silently registering the helper as the Dash callback
+        (TypeError 500 in the browser while direct-call tests stayed green).
+        """
+        from dash._callback import GLOBAL_CALLBACK_MAP
+
+        import pages.portfolio.portfolio  # noqa: F401  # ensures callbacks are registered
+
+        key = next(k for k in GLOBAL_CALLBACK_MAP if "pf-mc-norm-mu.value" in k)
+        bound = GLOBAL_CALLBACK_MAP[key]["callback"]
+        assert bound.__name__ == "auto_estimate_distribution_parameters"
+
+
 class TestMcUrlParamsStoreCreation:
     def _extract_store_data(self, component):
         """Extract pf-mc-url-params store data from the card_controls layout."""

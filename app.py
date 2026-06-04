@@ -44,7 +44,9 @@ app = dash.Dash(
     use_pages=True,
     update_title="Loading okama ...",
     external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP],
-    # suppress_callback_exceptions=True
+    # Required: pages create components dynamically (grids, export buttons/downloads,
+    # constructor rows), so callbacks legitimately reference ids absent at load time.
+    suppress_callback_exceptions=True,
 )
 server = app.server
 

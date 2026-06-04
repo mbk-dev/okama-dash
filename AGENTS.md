@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-386 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+388 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -160,10 +160,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 153 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 211 | ~5s |
-| `poetry run pytest -m e2e` | Playwright browser | 22 | ~70s |
-| `poetry run pytest -q` | Everything | 386 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 364 | ~6s |
+| `poetry run pytest -m component` | Dash callbacks | 212 | ~5s |
+| `poetry run pytest -m e2e` | Playwright browser | 23 | ~70s |
+| `poetry run pytest -q` | Everything | 388 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 365 | ~6s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the

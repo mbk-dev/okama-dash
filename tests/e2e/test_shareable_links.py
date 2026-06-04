@@ -1,4 +1,5 @@
 import pytest
+from playwright.sync_api import expect
 
 pytestmark = pytest.mark.e2e
 
@@ -70,6 +71,23 @@ class TestShareableLinks:
         # Regression guard: would be "3.4" if auto-estimate overwrites
         assert page.locator("#pf-mc-t-df").input_value() == "9.9"
         assert page.locator("#pf-mc-t-var-level").input_value() == "5"
+
+    def test_portfolio_fresh_link_auto_estimates_mc_params(self, page, dash_server_url):
+        """Without MC URL params, reactive estimation must FILL the fields on load.
+
+        Regression guard for the dead-callback bug (decorator misattached to a
+        helper function): direct-call component tests stay green when the Dash
+        registration is broken, so the positive auto-fill behavior must be
+        asserted through the real Dash dispatch. Mock fit for norm: (0.007, 0.04).
+        """
+        page.goto(
+            f"{dash_server_url}/portfolio?tickers=AAPL.US,MSFT.US&weights=50,50",
+            wait_until="domcontentloaded",
+        )
+        page.locator("#pf-first-date").wait_for(state="visible", timeout=10_000)
+        # expect() polls until the reactive callback round-trip fills the field
+        expect(page.locator("#pf-mc-norm-mu")).to_have_value("0.007", timeout=10_000)
+        assert page.locator("#pf-mc-norm-sigma").input_value() == "0.04"
 
     def test_portfolio_url_params_not_overwritten_by_reactive_change(self, page, dash_server_url):
         """URL MC params must survive reactive triggers like weight change (guard against auto-fit)."""
