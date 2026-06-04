@@ -36,7 +36,7 @@ okama-dash/
 │   ├── inflation.py         # Inflation data helpers
 │   ├── xlsx.py              # Excel export utilities
 │   ├── crisis/              # Crisis period data (shaded chart regions)
-│   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables)
+│   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export)
 │
 ├── assets/                  # Static files served by Dash (CSS, JS, images)
 ├── cache-directory/         # Runtime file-system cache (Flask-Caching fallback)
@@ -47,7 +47,7 @@ okama-dash/
 Each page follows the pattern: `pages/<name>/<name>.py` (layout + callbacks) with a
 `cards_<name>/` subfolder for card components and `eng/` for English description text.
 
-**Stack:** Dash + Flask, Plotly charts, okama library (financial data & analytics),
+**Stack:** Dash + Flask, Plotly charts, Dash AG Grid, okama library (financial data & analytics),
 Flask-Caching + Redis, Dash Bootstrap + Dash Mantine, Gunicorn (production).
 
 ## Running locally
@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-370 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+384 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -118,12 +118,12 @@ tests/
 ├── fixtures/symbols_data.json
 ├── unit/                    # @pytest.mark.unit — pure logic, no Dash
 │   ├── conftest.py                  # session-scoped Dash app (for unit tests importing pages/ modules)
-│   ├── test_validators.py           # validate_integer bounds, types, error messages
-│   ├── test_math.py                 # round_list sum preservation
-│   ├── test_create_link.py          # URL builder, filename builder, list size check
-│   ├── test_symbols.py              # symbol search (prefix, name-token, case-insensitive)
+│   ├── test_validators.py           # validate_integer bounds, types, error messages (8 tests)
+│   ├── test_math.py                 # round_list sum preservation (4 tests)
+│   ├── test_create_link.py          # URL builder, filename builder, list size check; MC params in Portfolio link (tickers+weights+MC 11 params); zero-valued MC params (t_loc=0) preserved in URL (45 tests)
+│   ├── test_symbols.py              # symbol search (prefix, name-token, case-insensitive) (9 tests)
 │   ├── test_symbols_cache_isolation.py  # mocked (TESTING) symbol index must not poison real cache (4 tests)
-│   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup, filename-length guard (22 tests)
+│   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup, filename-length guard; TESTING flag isolation (env poisoning guard) (25 tests)
 │   ├── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
 │   ├── test_chart_helpers.py        # add_return_type_annotation: CAGR note, default, no-arrow (3 tests)
 │   └── test_mc_distribution_parameters.py  # build_distribution_parameters: norm/lognorm/t mapping, empty→None, lognorm loc=-1; reactive-estimation gates: _portfolio_is_complete (sum=100, tolerance), _valid_mc_date (17 tests)
@@ -133,25 +133,26 @@ tests/
 │   │                                # _resolve_indexation + _resolve_discount_rate (percent ÷100),
 │   │                                # survival stats visibility,
 │   │                                # CWD threshold validation, disable Add button logic,
-│   │                                # percentage input lives in cash-flow frequency row
+│   │                                # percentage input lives in cash-flow frequency row (71 tests)
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
-│   │                                # portfolio_weights, expand_weights, show/hide callbacks
+│   │                                # portfolio_weights, expand_weights, show/hide callbacks (13 tests)
 │   ├── test_ef_click_find.py        # display_click_data (5 tests), find_portfolio (8 tests)
-│   ├── test_database_callbacks.py   # db_search (6 tests): search results, empty, namespace routing
-│   ├── test_compare_data_callback.py  # update_graf_compare (9): wealth/cumulative_return/annual_return(bar, CAGR annotation)/cagr/correlation, stats, errors
-│   ├── test_benchmark_data_callback.py  # update_graf_benchmark (10): 6 plot types, bar chart, errors
-│   ├── test_ef_data_callback.py       # update_ef_cards (8): figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution
+│   ├── test_database_callbacks.py   # db_search: search results, empty, namespace routing; dag.AgGrid assertions (6 tests)
+│   ├── test_compare_data_callback.py  # update_graf_compare: wealth/cumulative_return/annual_return(bar, CAGR annotation)/cagr/correlation, stats (dag.AgGrid), errors (9 tests)
+│   ├── test_benchmark_data_callback.py  # update_graf_benchmark: 6 plot types, bar chart, errors (10 tests)
+│   ├── test_ef_data_callback.py       # update_ef_cards: figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution (8 tests)
 │   ├── test_ef_grid_callbacks.py     # sim-mode visibility, dynamic grid step options, grid↔pairwise exclusivity, submit gating (6 tests)
-│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (11): figure, y-titles (incl. annual_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (2: bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit); MC forecast scenarios end at zero then break (2)
-│   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows), reactive auto_estimate_distribution_parameters (gates, norm/lognorm/t fit, VaR-level df optimize + reset-on-clear, errors), df>2 validation (23 tests)
+│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner: figure, y-titles (incl. annual_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit); MC forecast scenarios end at zero then break; statistics_table returns dag.AgGrid (20 tests)
+│   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows), reactive auto_estimate_distribution_parameters (gates, norm/lognorm/t fit, VaR-level df optimize + reset-on-clear, errors), df>2 validation; URL params prefill and survive reactive auto-estimate, dcc.Store round-trip (29 tests)
+│   ├── test_grid_export.py           # CSV export button callback: outputs CSV string from dag.AgGrid rowData; columnDefs→filename (6 tests)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
-│                                            # get_y_title (6 plot types), rolling-window disabled for annual_return (compare + portfolio)
+│                                            # get_y_title (6 plot types), rolling-window disabled for annual_return (compare + portfolio) (10 tests)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
     ├── conftest.py                  # Gunicorn server (TESTING=1, 2 workers) + Playwright
     ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
-    │                                # mobile viewport 375px (Portfolio + EF)
-    ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages
-    └── test_submit_interaction.py   # Submit → chart with real traces for all 4 pages
+    │                                # mobile viewport 375px (Portfolio + EF) (8 tests)
+    ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages; Portfolio MC params prefill; URL params survive reactive auto-estimate (6 tests)
+    └── test_submit_interaction.py   # Submit → chart with real traces for all 4 pages (4 tests)
 ```
 
 ### Run commands
@@ -159,21 +160,21 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 153 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 197 | ~5s |
-| `poetry run pytest -m e2e` | Playwright browser | 20 | ~70s |
-| `poetry run pytest -q` | Everything | 370 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 350 | ~6s |
+| `poetry run pytest -m component` | Dash callbacks | 209 | ~5s |
+| `poetry run pytest -m e2e` | Playwright browser | 22 | ~70s |
+| `poetry run pytest -q` | Everything | 384 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 362 | ~6s |
 
 ### What's covered per page
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link, symbols, build_distribution_parameters, reactive-estimation gates | callbacks (pie chart, cashflow×6, rebalancing, stats), update_graf_portfolio, annual_return bar chart, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring) | load, controls, mobile, shareable link, submit→traces |
+| **Portfolio** | create_link (incl. MC params in URL, zero-preservation), symbols, build_distribution_parameters, reactive-estimation gates | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid), update_graf_portfolio, annual_return bar chart, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip) | load, controls, mobile, shareable link (incl. MC params round-trip), submit→traces |
 | **Efficient Frontier** | adaptive grid step (ef_grid) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards, simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace | load, mobile, shareable link, submit→chart |
-| **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats), rolling-window gating | load, shareable link, submit→traces |
+| **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid), rolling-window gating | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
-| **Database** | — | db_search (results, empty, namespace routing, ticker drop) | load |
-| **common/** | validators, math, create_link, symbols, object_cache, chart_helpers (add_return_type_annotation) | change_style_for_hidden_row | — |
+| **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
+| **common/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_annotation) | change_style_for_hidden_row, grid_export (CSV string from rowData) | — |
 
 ### okama mock strategy
 
