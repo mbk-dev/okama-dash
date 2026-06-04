@@ -10,7 +10,6 @@ import common
 import common.create_link
 import common.math
 import common.update_style
-from common.chart_helpers import make_error_alert
 from common.parse_query import make_list_from_string
 from common.ef_grid import parse_grid_step_value
 

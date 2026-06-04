@@ -30,11 +30,12 @@ if os.environ.get("TESTING") == "1":
 import dash
 from dash import html, dcc
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 
 import plotly.io as pio
 
-import navigation, footer
+import navigation
+import footer
 
 pio.templates.default = "plotly_white"
 

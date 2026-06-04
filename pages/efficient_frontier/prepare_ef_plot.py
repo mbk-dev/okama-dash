@@ -593,7 +593,7 @@ def _prepare_single_ef(
                 hovertemplate=hovertemplate,
                 # text=[],
                 mode="lines",
-                name=f"Most diversified portfolios",
+                name="Most diversified portfolios",
             )
         )
         # MPD portfolio
