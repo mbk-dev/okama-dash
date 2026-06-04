@@ -40,6 +40,20 @@ def create_link(
     cwd_amount=None,
     cwd_tr=None,
     cf_ts=None,
+    # Monte Carlo settings
+    mc_number=None,
+    mc_years=None,
+    mc_dist=None,
+    mc_backtest=None,
+    # Monte Carlo distribution parameters
+    mc_mu=None,
+    mc_sigma=None,
+    mc_ln_shape=None,
+    mc_ln_scale=None,
+    mc_t_df=None,
+    mc_t_loc=None,
+    mc_t_scale=None,
+    mc_var=None,
 ) -> str:
     def _q(val) -> str:
         return quote(str(val), safe="")
@@ -100,6 +114,30 @@ def create_link(
         new_url += f"&cwd_tr={_q(cwd_tr)}"
     if cf_ts:
         new_url += f"&cf_ts={_q(cf_ts)}"
+    if mc_number is not None and mc_number != 0:
+        new_url += f"&mc_number={mc_number}"
+    if mc_years is not None and mc_years != 10:
+        new_url += f"&mc_years={mc_years}"
+    if mc_dist is not None and mc_dist != "norm":
+        new_url += f"&mc_dist={_q(mc_dist)}"
+    if mc_backtest is not None and mc_backtest != "yes":
+        new_url += f"&mc_backtest={_q(mc_backtest)}"
+    if mc_mu is not None and mc_mu != "":
+        new_url += f"&mc_mu={mc_mu}"
+    if mc_sigma is not None and mc_sigma != "":
+        new_url += f"&mc_sigma={mc_sigma}"
+    if mc_ln_shape is not None and mc_ln_shape != "":
+        new_url += f"&mc_ln_shape={mc_ln_shape}"
+    if mc_ln_scale is not None and mc_ln_scale != "":
+        new_url += f"&mc_ln_scale={mc_ln_scale}"
+    if mc_t_df is not None and mc_t_df != "":
+        new_url += f"&mc_t_df={mc_t_df}"
+    if mc_t_loc is not None and mc_t_loc != "":
+        new_url += f"&mc_t_loc={mc_t_loc}"
+    if mc_t_scale is not None and mc_t_scale != "":
+        new_url += f"&mc_t_scale={mc_t_scale}"
+    if mc_var is not None and mc_var != "":
+        new_url += f"&mc_var={mc_var}"
     return new_url
 
 

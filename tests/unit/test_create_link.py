@@ -99,6 +99,90 @@ class TestCreateLink:
         assert "&cwd_amount=200" in url
         assert "&cwd_tr=50" in url
 
+    def test_mc_number_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_number=500)
+        assert "&mc_number=500" in url
+
+    def test_mc_number_zero_omitted(self):
+        url = create_link(**BASE_PARAMS, mc_number=0)
+        assert "&mc_number=" not in url
+
+    def test_mc_years_default_omitted(self):
+        url = create_link(**BASE_PARAMS, mc_years=10)
+        assert "&mc_years=" not in url
+
+    def test_mc_years_non_default_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_years=20)
+        assert "&mc_years=20" in url
+
+    def test_mc_dist_default_omitted(self):
+        url = create_link(**BASE_PARAMS, mc_dist="norm")
+        assert "&mc_dist=" not in url
+
+    def test_mc_dist_non_default_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_dist="t")
+        assert "&mc_dist=t" in url
+
+    def test_mc_backtest_default_omitted(self):
+        url = create_link(**BASE_PARAMS, mc_backtest="yes")
+        assert "&mc_backtest=" not in url
+
+    def test_mc_backtest_non_default_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_backtest="no")
+        assert "&mc_backtest=no" in url
+
+    def test_mc_mu_non_zero_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_mu=0.007)
+        assert "&mc_mu=0.007" in url
+
+    def test_mc_mu_zero_emitted(self):
+        """Critical: 0 is a legitimate value and must be emitted."""
+        url = create_link(**BASE_PARAMS, mc_mu=0)
+        assert "&mc_mu=0" in url
+
+    def test_mc_t_loc_zero_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_t_loc=0.0)
+        assert "&mc_t_loc=0.0" in url
+
+    def test_mc_var_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_var=5)
+        assert "&mc_var=5" in url
+
+    def test_mc_sigma_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_sigma=0.15)
+        assert "&mc_sigma=0.15" in url
+
+    def test_mc_ln_shape_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_ln_shape=1.2)
+        assert "&mc_ln_shape=1.2" in url
+
+    def test_mc_ln_scale_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_ln_scale=0.8)
+        assert "&mc_ln_scale=0.8" in url
+
+    def test_mc_t_df_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_t_df=10)
+        assert "&mc_t_df=10" in url
+
+    def test_mc_t_scale_emitted(self):
+        url = create_link(**BASE_PARAMS, mc_t_scale=0.05)
+        assert "&mc_t_scale=0.05" in url
+
+    def test_mc_params_omitted_when_not_passed(self):
+        url = create_link(**BASE_PARAMS)
+        assert "&mc_number=" not in url
+        assert "&mc_years=" not in url
+        assert "&mc_dist=" not in url
+        assert "&mc_backtest=" not in url
+        assert "&mc_mu=" not in url
+        assert "&mc_sigma=" not in url
+        assert "&mc_ln_shape=" not in url
+        assert "&mc_ln_scale=" not in url
+        assert "&mc_t_df=" not in url
+        assert "&mc_t_loc=" not in url
+        assert "&mc_t_scale=" not in url
+        assert "&mc_var=" not in url
+
 
 class TestCreateFilename:
     def test_basic_filename(self):
