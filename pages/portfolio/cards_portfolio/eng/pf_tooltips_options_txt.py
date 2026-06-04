@@ -66,21 +66,26 @@ pf_options_window = dcc.Markdown(
 )
 pf_options_tooltip_initial_amount = dcc.Markdown(
     """
-    Portfolio initial investment FV (at "Last Date").
+    Initial investment (FV) amount at the start of the calculation period.
+    For historical backtesting, this is the investment at the first date.
+    For Monte Carlo simulations, this is the investment at the last date.
+    Initial investment must be positive.
     """
 )
 pf_options_tooltip_cash_flow = dcc.Markdown(
     """
-    Portfolio regular cash flow FV (at last_date). Negative value corresponds to withdrawals.
-    Positive value corresponds to contributions. The amount is indexed each period by the indexation rate.
-    The discount rate is used only to convert future values to present values.
+    Portfolio regular withdrawal or contribution size.
+    Negative value corresponds to withdrawals. Positive value corresponds to contributions.
+    Cash flow value is indexed each period by the indexation rate.
+    The frequency of withdrawals or contributions is determined by the frequency parameter.
     """
 )
 pf_options_tooltip_discount_rate = dcc.Markdown(
     """
-    Cash flow discount rate required to calculate PV values. If not provided geometric mean of inflation is taken.
-    For portfolios without inflation the default value from settings is used.
-    Enter as a percent, e.g. 5 = 5%.
+    Annual effective discount rate for portfolio cash flow, used to convert
+    future values to present values. If not provided, the geometric mean (CAGR)
+    of inflation is taken; for portfolios without inflation a default value is
+    used. Enter as a percent, e.g. 5 = 5%.
     """
 )
 pf_options_tooltip_ticker = dcc.Markdown(
@@ -135,32 +140,34 @@ pf_cf_strategy_type = dcc.Markdown(
 
 pf_cf_percentage = dcc.Markdown(
     """
-    Fixed percentage of portfolio balance withdrawn or contributed per year.
-    Negative = withdrawal, positive = contribution.
-    Example: -12 means withdraw 12% of balance annually.
+    The percentage of withdrawals or contributions. The size of withdrawals
+    or contributions is defined as a percentage of portfolio balance per year.
+    Negative value corresponds to withdrawals, positive to contributions.
+    Enter as a percent, e.g. -12 = -12% per year.
     """
 )
 
 pf_cf_vds_percentage = dcc.Markdown(
     """
-    Base withdrawal percentage of portfolio balance per year.
-    Must be negative or zero (withdrawals only).
+    The percentage of withdrawals (no contributions are allowed in the VDS
+    strategy); the value must be negative. The size of withdrawals is defined
+    as a percentage of portfolio balance per year.
     """
 )
 
 pf_cf_vds_floor_ceiling = dcc.Markdown(
     """
-    Year-to-year withdrawal change limits relative to previous year.
-    Floor: maximum allowed decrease (negative %).
-    Ceiling: maximum allowed increase (positive %).
-    Example: Floor=-2.5, Ceiling=5 means the next withdrawal
-    cannot drop more than 2.5% or rise more than 5% vs last year.
+    Year-to-year withdrawal change limits relative to the previous year's
+    withdrawal. Example: Floor=-2.5, Ceiling=5 means the next withdrawal
+    cannot be more than 2.5% lower or 5% higher than the previous year's
+    withdrawal.
     """
 )
 
 pf_cf_cwd_amount = dcc.Markdown(
     """
-    Regular withdrawal amount before any drawdown-based reduction.
-    Must be negative or zero (withdrawals only).
+    Portfolio regular withdrawal size before any drawdown-based reduction;
+    must be negative. Cash flow value is indexed each period by the indexation
+    rate. The frequency of withdrawals is determined by the frequency parameter.
     """
 )
