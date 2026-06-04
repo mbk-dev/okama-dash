@@ -45,8 +45,12 @@ def dash_server_url():
         ],
         env=env,
         cwd=PROJECT_ROOT,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        # DEVNULL, not PIPE: nobody drains these pipes, so once the app's logging
+        # fills the 64 KiB pipe buffer (~17 navigations since reactive MC estimation
+        # logs per page load), gunicorn blocks on write and every later request
+        # times out. See the 2026-06-04 E2E stall incident.
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
     try:

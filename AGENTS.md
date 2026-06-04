@@ -165,11 +165,12 @@ tests/
 | `poetry run pytest -q` | Everything | 384 | ~80s |
 | `poetry run pytest -m "not e2e"` | Fast suite | 362 | ~6s |
 
-**E2E test status (as of 2026-06-04):** 5 of 22 E2E tests intermittently timeout on page.goto
-(30s, waiting for 'domcontentloaded'). Affected tests: portfolio URL params, submit→traces
-(portfolio/compare/benchmark), ef submit→chart. This is a Gunicorn/Playwright infrastructure
-issue, not a logic bug. Unit/component suites are stable. Use the fast suite (`-m "not e2e"`)
-for CI/local verification until E2E server startup is hardened.
+**E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
+redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
+pipes, so once app logging fills the 64 KiB buffer (~17 navigations, since reactive MC
+estimation logs per page load) gunicorn blocks on write and every later request times out
+(the 2026-06-04 "5 e2e timeouts" incident). If you need server logs for debugging, redirect
+to a file in `tmp/` instead of `PIPE`.
 
 ### What's covered per page
 
