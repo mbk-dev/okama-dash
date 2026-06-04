@@ -59,7 +59,8 @@ class TestDisplayClickData:
         assert "/portfolio/" in link
         assert "SPY.US" in link
         assert "BND.US" in link
-        assert "ccy=USD" in link
+        # ccy=USD is default, should be omitted
+        assert "ccy=" not in link
         assert "first_date=2020-01" in link
         assert "last_date=2024-12" in link
 
@@ -137,7 +138,8 @@ class TestFindPortfolio:
         assert "BND.US=40.00%" in weights
         assert link is not None
         assert "/portfolio/" in link
-        assert "ccy=USD" in link
+        # ccy=USD is default, should be omitted
+        assert "ccy=" not in link
 
     def test_optimized_portfolio_with_weights_list_key(self):
         from pages.efficient_frontier.frontier import find_portfolio

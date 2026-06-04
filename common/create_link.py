@@ -1,7 +1,81 @@
 import hashlib
 from urllib.parse import quote
 
+import pandas as pd
+
 from common import settings as settings
+
+
+def scope_cashflow_params(
+    cf_strategy: str,
+    *,
+    cf_freq=None,
+    cf_amount=None,
+    cf_indexation=None,
+    cf_pct=None,
+    vds_pct=None,
+    vds_min=None,
+    vds_max=None,
+    vds_adj_mm=None,
+    vds_floor=None,
+    vds_ceil=None,
+    vds_adj_fc=None,
+    vds_indexation=None,
+    cwd_amount=None,
+    cwd_tr=None,
+    cf_ts=None,
+) -> dict:
+    """
+    Return cashflow params scoped to the active strategy only.
+
+    Only the active strategy's params are preserved; all others are set to None.
+    Special case: indexation with cf_amount in (None, 0) is treated as "no strategy",
+    returning all None values.
+    """
+    result = {
+        "cf_freq": None,
+        "cf_amount": None,
+        "cf_indexation": None,
+        "cf_pct": None,
+        "vds_pct": None,
+        "vds_min": None,
+        "vds_max": None,
+        "vds_adj_mm": None,
+        "vds_floor": None,
+        "vds_ceil": None,
+        "vds_adj_fc": None,
+        "vds_indexation": None,
+        "cwd_amount": None,
+        "cwd_tr": None,
+        "cf_ts": None,
+    }
+
+    if cf_strategy == "indexation":
+        if cf_amount in (None, 0):
+            return result
+        result["cf_freq"] = cf_freq
+        result["cf_amount"] = cf_amount
+        result["cf_indexation"] = cf_indexation
+    elif cf_strategy == "percentage":
+        result["cf_freq"] = cf_freq
+        result["cf_pct"] = cf_pct
+    elif cf_strategy == "vds":
+        result["vds_pct"] = vds_pct
+        result["vds_min"] = vds_min
+        result["vds_max"] = vds_max
+        result["vds_adj_mm"] = vds_adj_mm
+        result["vds_floor"] = vds_floor
+        result["vds_ceil"] = vds_ceil
+        result["vds_adj_fc"] = vds_adj_fc
+        result["vds_indexation"] = vds_indexation
+    elif cf_strategy == "cwd":
+        result["cf_freq"] = cf_freq
+        result["cwd_amount"] = cwd_amount
+        result["cwd_tr"] = cwd_tr
+    elif cf_strategy == "time_series":
+        result["cf_ts"] = cf_ts
+
+    return result
 
 
 def create_link(
@@ -40,42 +114,34 @@ def create_link(
     cwd_amount=None,
     cwd_tr=None,
     cf_ts=None,
-    # Monte Carlo settings
-    mc_number=None,
-    mc_years=None,
-    mc_dist=None,
-    mc_backtest=None,
-    # Monte Carlo distribution parameters
-    mc_mu=None,
-    mc_sigma=None,
-    mc_ln_shape=None,
-    mc_ln_scale=None,
-    mc_t_df=None,
-    mc_t_loc=None,
-    mc_t_scale=None,
-    mc_var=None,
 ) -> str:
     def _q(val) -> str:
         return quote(str(val), safe="")
 
+    # Compute current month for last_date default comparison
+    today_str = pd.Timestamp.today().strftime("%Y-%m")
+
     # Data-driven builder: (name, value, emit_rule)
-    # emit_rule: "always" | "if_not_none" | ("skip_if_default", default_value)
+    # emit_rule: "if_not_none" | ("skip_if_default", default_value) | ("skip_if_zero")
     params = [
+        ("ccy", ccy, ("skip_if_default", "USD")),
+        ("first_date", first_date, ("skip_if_default", "2000-01")),
+        ("last_date", last_date, ("skip_if_default", today_str)),
         ("benchmark", benchmark, "if_not_none"),
         ("weights", ",".join(str(w) for w in weights_list) if weights_list else None, "if_not_none"),
-        ("rebal", rebal, "if_not_none"),
-        ("initial_amount", initial_amount, "if_not_none"),
+        ("rebal", rebal, ("skip_if_default", "month")),
+        ("initial_amount", initial_amount, ("skip_if_default", settings.INITIAL_INVESTMENT_DEFAULT)),
         ("cashflow", cashflow, "if_not_none"),
         ("discount_rate", discount_rate, "if_not_none"),
-        ("symbol", symbol, "if_not_none"),
+        ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
         ("abs_dev", abs_dev, "if_not_none"),
         ("rel_dev", rel_dev, "if_not_none"),
         ("cf_strategy", cf_strategy, ("skip_if_default", "indexation")),
         ("cf_freq", cf_freq, ("skip_if_default", "month")),
-        ("cf_amount", cf_amount, "if_not_none"),
-        ("cf_indexation", cf_indexation, "if_not_none"),
-        ("cf_pct", cf_pct, "if_not_none"),
-        ("vds_pct", vds_pct, "if_not_none"),
+        ("cf_amount", cf_amount, "skip_if_zero"),
+        ("cf_indexation", cf_indexation, "skip_if_zero"),
+        ("cf_pct", cf_pct, "skip_if_zero"),
+        ("vds_pct", vds_pct, "skip_if_zero"),
         ("vds_min", vds_min, "if_not_none"),
         ("vds_max", vds_max, "if_not_none"),
         ("vds_adj_mm", "0" if vds_adj_mm is not None and not vds_adj_mm else None, "if_not_none"),
@@ -83,44 +149,38 @@ def create_link(
         ("vds_ceil", vds_ceil, "if_not_none"),
         ("vds_adj_fc", "1" if vds_adj_fc else None, "if_not_none"),
         ("vds_indexation", vds_indexation, "if_not_none"),
-        ("cwd_amount", cwd_amount, "if_not_none"),
+        ("cwd_amount", cwd_amount, "skip_if_zero"),
         ("cwd_tr", cwd_tr, "if_not_none"),
         ("cf_ts", cf_ts, "if_not_none"),
-        ("mc_number", mc_number, ("skip_if_default", 0)),
-        ("mc_years", mc_years, ("skip_if_default", 10)),
-        ("mc_dist", mc_dist, ("skip_if_default", "norm")),
-        ("mc_backtest", mc_backtest, ("skip_if_default", "yes")),
-        ("mc_mu", mc_mu, "emit_zero"),
-        ("mc_sigma", mc_sigma, "emit_zero"),
-        ("mc_ln_shape", mc_ln_shape, "emit_zero"),
-        ("mc_ln_scale", mc_ln_scale, "emit_zero"),
-        ("mc_t_df", mc_t_df, "emit_zero"),
-        ("mc_t_loc", mc_t_loc, "emit_zero"),
-        ("mc_t_scale", mc_t_scale, "emit_zero"),
-        ("mc_var", mc_var, "emit_zero"),
     ]
 
     tickers_str = "tickers=" + ",".join(_q(s) for s in tickers_list)
     reset_href = href.split("?")[0]
-    parts = [
-        f"{reset_href}?{tickers_str}",
-        f"ccy={_q(ccy)}",
-        f"first_date={_q(first_date)}",
-        f"last_date={_q(last_date)}",
-    ]
+    parts = [f"{reset_href}?{tickers_str}"]
 
     for name, value, rule in params:
         if rule == "if_not_none":
             if value is not None and value != "":
-                should_quote = isinstance(value, str) and name not in {"weights", "vds_adj_mm", "vds_adj_fc"}
+                should_quote = isinstance(value, str) and name not in {
+                    "weights",
+                    "vds_adj_mm",
+                    "vds_adj_fc",
+                    "cwd_tr",
+                    "cf_ts",
+                }
                 parts.append(f"{name}={_q(value) if should_quote else value}")
-        elif rule == "emit_zero":
-            if value is not None and value != "":
+        elif rule == "skip_if_zero":
+            if value not in (None, "", 0):
                 parts.append(f"{name}={value}")
         elif isinstance(rule, tuple) and rule[0] == "skip_if_default":
             default = rule[1]
-            if value is not None and value != default:
-                parts.append(f"{name}={_q(value) if isinstance(value, str) else value}")
+            # Numeric equality for initial_amount (1000 == 1000.0)
+            if name == "initial_amount":
+                if value is not None and value != default:
+                    parts.append(f"{name}={value}")
+            else:
+                if value is not None and value != default:
+                    parts.append(f"{name}={_q(value) if isinstance(value, str) else value}")
 
     return "&".join(parts)
 

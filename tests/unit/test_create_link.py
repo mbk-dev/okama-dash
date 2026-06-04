@@ -1,6 +1,7 @@
+import pandas as pd
 import pytest
 
-from common.create_link import check_if_list_empty_or_big, create_filename, create_link
+from common.create_link import check_if_list_empty_or_big, create_filename, create_link, scope_cashflow_params
 
 pytestmark = pytest.mark.unit
 
@@ -24,9 +25,11 @@ class TestCreateLink:
     def test_basic_link(self):
         url = create_link(**BASE_PARAMS)
         assert url.startswith("/portfolio?tickers=AAPL.US,MSFT.US")
-        assert "&ccy=USD" in url
+        # Non-default params are emitted
         assert "&first_date=2020-01" in url
         assert "&last_date=2024-12" in url
+        # Default ccy=USD is omitted
+        assert "&ccy=" not in url
 
     def test_strips_existing_query_string(self):
         url = create_link(**{**BASE_PARAMS, "href": "/portfolio?old=param"})
@@ -38,8 +41,12 @@ class TestCreateLink:
         assert "&weights=50,50" in url
 
     def test_with_rebalancing(self):
+        # Default rebal=month is omitted
         url = create_link(**BASE_PARAMS, rebal="month")
-        assert "&rebal=month" in url
+        assert "&rebal=" not in url
+        # Non-default rebal is emitted
+        url = create_link(**BASE_PARAMS, rebal="year")
+        assert "&rebal=year" in url
 
     def test_with_benchmark(self):
         url = create_link(
@@ -99,89 +106,376 @@ class TestCreateLink:
         assert "&cwd_amount=200" in url
         assert "&cwd_tr=50" in url
 
-    def test_mc_number_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_number=500)
-        assert "&mc_number=500" in url
+    def test_default_portfolio_link_is_minimal(self):
+        """THE acceptance test: default-only portfolio link contains only tickers and weights."""
+        today = pd.Timestamp.today().strftime("%Y-%m")
+        url = create_link(
+            href="/portfolio",
+            tickers_list=["AGG.US", "SPY.US"],
+            weights_list=[20, 80],
+            ccy="USD",
+            first_date="2000-01",
+            last_date=today,
+            rebal="month",
+            initial_amount=1000,
+            symbol="PORTFOLIO",
+            cf_amount=0,
+            cf_pct=0,
+            vds_pct=0,
+            cwd_amount=0,
+        )
+        assert url == "/portfolio?tickers=AGG.US,SPY.US&weights=20,80"
 
-    def test_mc_number_zero_omitted(self):
-        url = create_link(**BASE_PARAMS, mc_number=0)
-        assert "&mc_number=" not in url
+    def test_ccy_default_omitted(self):
+        """Default ccy=USD is omitted."""
+        url = create_link(
+            href="/portfolio",
+            tickers_list=["AAPL.US"],
+            ccy="USD",
+            first_date="2020-01",
+            last_date="2024-12",
+        )
+        assert "&ccy=" not in url
 
-    def test_mc_years_default_omitted(self):
-        url = create_link(**BASE_PARAMS, mc_years=10)
-        assert "&mc_years=" not in url
+    def test_ccy_non_default_emitted(self):
+        """Non-default ccy=EUR is emitted."""
+        url = create_link(
+            href="/portfolio",
+            tickers_list=["AAPL.US"],
+            ccy="EUR",
+            first_date="2020-01",
+            last_date="2024-12",
+        )
+        assert "&ccy=EUR" in url
 
-    def test_mc_years_non_default_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_years=20)
-        assert "&mc_years=20" in url
+    def test_first_date_default_omitted(self):
+        """Default first_date=2000-01 is omitted."""
+        url = create_link(
+            href="/portfolio",
+            tickers_list=["AAPL.US"],
+            ccy="USD",
+            first_date="2000-01",
+            last_date="2024-12",
+        )
+        assert "&first_date=" not in url
 
-    def test_mc_dist_default_omitted(self):
-        url = create_link(**BASE_PARAMS, mc_dist="norm")
-        assert "&mc_dist=" not in url
+    def test_first_date_non_default_emitted(self):
+        """Non-default first_date is emitted."""
+        url = create_link(
+            href="/portfolio",
+            tickers_list=["AAPL.US"],
+            ccy="USD",
+            first_date="2010-05",
+            last_date="2024-12",
+        )
+        assert "&first_date=2010-05" in url
 
-    def test_mc_dist_non_default_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_dist="t")
-        assert "&mc_dist=t" in url
+    def test_last_date_default_omitted(self):
+        """Default last_date (current month) is omitted."""
+        today = pd.Timestamp.today().strftime("%Y-%m")
+        url = create_link(
+            href="/portfolio",
+            tickers_list=["AAPL.US"],
+            ccy="USD",
+            first_date="2020-01",
+            last_date=today,
+        )
+        assert "&last_date=" not in url
 
-    def test_mc_backtest_default_omitted(self):
-        url = create_link(**BASE_PARAMS, mc_backtest="yes")
-        assert "&mc_backtest=" not in url
+    def test_last_date_non_default_emitted(self):
+        """Non-default last_date (past month) is emitted."""
+        url = create_link(
+            href="/portfolio",
+            tickers_list=["AAPL.US"],
+            ccy="USD",
+            first_date="2020-01",
+            last_date="2023-06",
+        )
+        assert "&last_date=2023-06" in url
 
-    def test_mc_backtest_non_default_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_backtest="no")
-        assert "&mc_backtest=no" in url
+    def test_rebal_default_omitted(self):
+        """Default rebal=month is omitted."""
+        url = create_link(**BASE_PARAMS, rebal="month")
+        assert "&rebal=" not in url
 
-    def test_mc_mu_non_zero_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_mu=0.007)
-        assert "&mc_mu=0.007" in url
+    def test_rebal_non_default_emitted(self):
+        """Non-default rebal=year is emitted."""
+        url = create_link(**BASE_PARAMS, rebal="year")
+        assert "&rebal=year" in url
 
-    def test_mc_mu_zero_emitted(self):
-        """Critical: 0 is a legitimate value and must be emitted."""
-        url = create_link(**BASE_PARAMS, mc_mu=0)
-        assert "&mc_mu=0" in url
+    def test_initial_amount_default_omitted(self):
+        """Default initial_amount=1000 is omitted (numeric equality)."""
+        url = create_link(**BASE_PARAMS, initial_amount=1000)
+        assert "&initial_amount=" not in url
 
-    def test_mc_t_loc_zero_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_t_loc=0.0)
-        assert "&mc_t_loc=0.0" in url
+    def test_initial_amount_default_float_omitted(self):
+        """1000.0 also treated as default."""
+        url = create_link(**BASE_PARAMS, initial_amount=1000.0)
+        assert "&initial_amount=" not in url
 
-    def test_mc_var_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_var=5)
-        assert "&mc_var=5" in url
+    def test_initial_amount_non_default_emitted(self):
+        """Non-default initial_amount=5000 is emitted."""
+        url = create_link(**BASE_PARAMS, initial_amount=5000)
+        assert "&initial_amount=5000" in url
 
-    def test_mc_sigma_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_sigma=0.15)
-        assert "&mc_sigma=0.15" in url
+    def test_symbol_default_omitted(self):
+        """Default symbol=PORTFOLIO is omitted."""
+        url = create_link(**BASE_PARAMS, symbol="PORTFOLIO")
+        assert "&symbol=" not in url
 
-    def test_mc_ln_shape_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_ln_shape=1.2)
-        assert "&mc_ln_shape=1.2" in url
+    def test_symbol_non_default_emitted(self):
+        """Non-default symbol=my_pf is emitted."""
+        url = create_link(**BASE_PARAMS, symbol="my_pf")
+        assert "&symbol=my_pf" in url
 
-    def test_mc_ln_scale_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_ln_scale=0.8)
-        assert "&mc_ln_scale=0.8" in url
+    def test_cf_amount_zero_omitted(self):
+        """cf_amount=0 (default/unset) is omitted."""
+        url = create_link(**BASE_PARAMS, cf_amount=0)
+        assert "&cf_amount=" not in url
 
-    def test_mc_t_df_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_t_df=10)
-        assert "&mc_t_df=10" in url
+    def test_cf_amount_nonzero_emitted(self):
+        """cf_amount=-1500 (withdrawal) is emitted."""
+        url = create_link(**BASE_PARAMS, cf_amount=-1500)
+        assert "&cf_amount=-1500" in url
 
-    def test_mc_t_scale_emitted(self):
-        url = create_link(**BASE_PARAMS, mc_t_scale=0.05)
-        assert "&mc_t_scale=0.05" in url
+    def test_cf_pct_zero_omitted(self):
+        """cf_pct=0 (default/unset) is omitted."""
+        url = create_link(**BASE_PARAMS, cf_pct=0)
+        assert "&cf_pct=" not in url
 
-    def test_mc_params_omitted_when_not_passed(self):
-        url = create_link(**BASE_PARAMS)
-        assert "&mc_number=" not in url
-        assert "&mc_years=" not in url
-        assert "&mc_dist=" not in url
-        assert "&mc_backtest=" not in url
-        assert "&mc_mu=" not in url
-        assert "&mc_sigma=" not in url
-        assert "&mc_ln_shape=" not in url
-        assert "&mc_ln_scale=" not in url
-        assert "&mc_t_df=" not in url
-        assert "&mc_t_loc=" not in url
-        assert "&mc_t_scale=" not in url
-        assert "&mc_var=" not in url
+    def test_cf_pct_nonzero_emitted(self):
+        """cf_pct=5 is emitted."""
+        url = create_link(**BASE_PARAMS, cf_pct=5)
+        assert "&cf_pct=5" in url
+
+    def test_vds_pct_zero_omitted(self):
+        """vds_pct=0 (default/unset) is omitted."""
+        url = create_link(**BASE_PARAMS, vds_pct=0)
+        assert "&vds_pct=" not in url
+
+    def test_vds_pct_nonzero_emitted(self):
+        """vds_pct=4 is emitted."""
+        url = create_link(**BASE_PARAMS, vds_pct=4)
+        assert "&vds_pct=4" in url
+
+    def test_cwd_amount_zero_omitted(self):
+        """cwd_amount=0 (default/unset) is omitted."""
+        url = create_link(**BASE_PARAMS, cwd_amount=0)
+        assert "&cwd_amount=" not in url
+
+    def test_cwd_amount_nonzero_emitted(self):
+        """cwd_amount=200 is emitted."""
+        url = create_link(**BASE_PARAMS, cwd_amount=200)
+        assert "&cwd_amount=200" in url
+
+    def test_cf_indexation_zero_omitted(self):
+        """cf_indexation=0 (default/unset) is omitted."""
+        url = create_link(**BASE_PARAMS, cf_indexation=0)
+        assert "&cf_indexation=" not in url
+
+    def test_cf_indexation_nonzero_emitted(self):
+        """cf_indexation=0.02 is emitted."""
+        url = create_link(**BASE_PARAMS, cf_indexation=0.02)
+        assert "&cf_indexation=0.02" in url
+
+    def test_cwd_tr_emitted_raw(self):
+        """cwd_tr emitted without percent-encoding (colon and comma are legal)."""
+        url = create_link(**BASE_PARAMS, cwd_tr="20:40,50:100")
+        assert "cwd_tr=20:40,50:100" in url
+        assert "%3A" not in url
+        assert "%2C" not in url
+
+    def test_cf_ts_emitted_raw(self):
+        """cf_ts emitted without percent-encoding."""
+        url = create_link(**BASE_PARAMS, cf_ts="2020-01:1000,2021-01:-500")
+        assert "cf_ts=2020-01:1000,2021-01:-500" in url
+        assert "%3A" not in url
+        assert "%2C" not in url
+
+
+class TestScopeCashflowParams:
+    """Test scope_cashflow_params: only active strategy's params are returned, rest are None."""
+
+    def test_indexation_with_zero_amount_returns_all_none(self):
+        """indexation with cf_amount=0 (or None) is 'no strategy' → all values None."""
+        result = scope_cashflow_params(
+            cf_strategy="indexation",
+            cf_freq="month",
+            cf_amount=0,
+            cf_indexation=0.02,
+            cf_pct=None,
+            vds_pct=None,
+            vds_min=None,
+            vds_max=None,
+            vds_adj_mm=None,
+            vds_floor=None,
+            vds_ceil=None,
+            vds_adj_fc=None,
+            vds_indexation=None,
+            cwd_amount=None,
+            cwd_tr=None,
+            cf_ts=None,
+        )
+        assert all(v is None for v in result.values())
+
+    def test_indexation_with_nonzero_amount_keeps_indexation_params(self):
+        """indexation with cf_amount=-1500 keeps cf_freq, cf_amount, cf_indexation; rest None."""
+        result = scope_cashflow_params(
+            cf_strategy="indexation",
+            cf_freq="month",
+            cf_amount=-1500,
+            cf_indexation=0.02,
+            cf_pct=5,
+            vds_pct=4,
+            vds_min=100,
+            vds_max=500,
+            vds_adj_mm=False,
+            vds_floor=3,
+            vds_ceil=5,
+            vds_adj_fc=True,
+            vds_indexation=0.03,
+            cwd_amount=200,
+            cwd_tr="20:40,50:100",
+            cf_ts="2020-01:1000",
+        )
+        assert result["cf_freq"] == "month"
+        assert result["cf_amount"] == -1500
+        assert result["cf_indexation"] == 0.02
+        assert result["cf_pct"] is None
+        assert result["vds_pct"] is None
+        assert result["vds_min"] is None
+        assert result["vds_max"] is None
+        assert result["vds_adj_mm"] is None
+        assert result["vds_floor"] is None
+        assert result["vds_ceil"] is None
+        assert result["vds_adj_fc"] is None
+        assert result["vds_indexation"] is None
+        assert result["cwd_amount"] is None
+        assert result["cwd_tr"] is None
+        assert result["cf_ts"] is None
+
+    def test_percentage_keeps_only_percentage_params(self):
+        """percentage keeps cf_freq and cf_pct; rest None."""
+        result = scope_cashflow_params(
+            cf_strategy="percentage",
+            cf_freq="quarter",
+            cf_amount=-1500,
+            cf_indexation=0.02,
+            cf_pct=5,
+            vds_pct=4,
+            vds_min=None,
+            vds_max=None,
+            vds_adj_mm=None,
+            vds_floor=None,
+            vds_ceil=None,
+            vds_adj_fc=None,
+            vds_indexation=None,
+            cwd_amount=200,
+            cwd_tr="20:40",
+            cf_ts="2020-01:1000",
+        )
+        assert result["cf_freq"] == "quarter"
+        assert result["cf_pct"] == 5
+        assert result["cf_amount"] is None
+        assert result["cf_indexation"] is None
+        assert result["vds_pct"] is None
+        assert result["cwd_amount"] is None
+        assert result["cwd_tr"] is None
+        assert result["cf_ts"] is None
+
+    def test_vds_keeps_only_vds_params(self):
+        """vds keeps vds_* params; rest None."""
+        result = scope_cashflow_params(
+            cf_strategy="vds",
+            cf_freq="month",
+            cf_amount=-1500,
+            cf_indexation=0.02,
+            cf_pct=5,
+            vds_pct=4,
+            vds_min=100,
+            vds_max=500,
+            vds_adj_mm=False,
+            vds_floor=3,
+            vds_ceil=5,
+            vds_adj_fc=True,
+            vds_indexation=0.03,
+            cwd_amount=200,
+            cwd_tr="20:40",
+            cf_ts="2020-01:1000",
+        )
+        assert result["vds_pct"] == 4
+        assert result["vds_min"] == 100
+        assert result["vds_max"] == 500
+        assert result["vds_adj_mm"] is False
+        assert result["vds_floor"] == 3
+        assert result["vds_ceil"] == 5
+        assert result["vds_adj_fc"] is True
+        assert result["vds_indexation"] == 0.03
+        assert result["cf_freq"] is None
+        assert result["cf_amount"] is None
+        assert result["cf_indexation"] is None
+        assert result["cf_pct"] is None
+        assert result["cwd_amount"] is None
+        assert result["cwd_tr"] is None
+        assert result["cf_ts"] is None
+
+    def test_cwd_keeps_only_cwd_params(self):
+        """cwd keeps cf_freq, cwd_amount, cwd_tr; rest None."""
+        result = scope_cashflow_params(
+            cf_strategy="cwd",
+            cf_freq="month",
+            cf_amount=-1500,
+            cf_indexation=0.02,
+            cf_pct=5,
+            vds_pct=4,
+            vds_min=None,
+            vds_max=None,
+            vds_adj_mm=None,
+            vds_floor=None,
+            vds_ceil=None,
+            vds_adj_fc=None,
+            vds_indexation=None,
+            cwd_amount=200,
+            cwd_tr="20:40,50:100",
+            cf_ts="2020-01:1000",
+        )
+        assert result["cf_freq"] == "month"
+        assert result["cwd_amount"] == 200
+        assert result["cwd_tr"] == "20:40,50:100"
+        assert result["cf_amount"] is None
+        assert result["cf_indexation"] is None
+        assert result["cf_pct"] is None
+        assert result["vds_pct"] is None
+        assert result["cf_ts"] is None
+
+    def test_time_series_keeps_only_cf_ts(self):
+        """time_series keeps cf_ts; rest None."""
+        result = scope_cashflow_params(
+            cf_strategy="time_series",
+            cf_freq="month",
+            cf_amount=-1500,
+            cf_indexation=0.02,
+            cf_pct=5,
+            vds_pct=4,
+            vds_min=None,
+            vds_max=None,
+            vds_adj_mm=None,
+            vds_floor=None,
+            vds_ceil=None,
+            vds_adj_fc=None,
+            vds_indexation=None,
+            cwd_amount=200,
+            cwd_tr="20:40",
+            cf_ts="2020-01:1000,2021-01:-500",
+        )
+        assert result["cf_ts"] == "2020-01:1000,2021-01:-500"
+        assert result["cf_freq"] is None
+        assert result["cf_amount"] is None
+        assert result["cf_indexation"] is None
+        assert result["cf_pct"] is None
+        assert result["vds_pct"] is None
+        assert result["cwd_amount"] is None
+        assert result["cwd_tr"] is None
 
 
 class TestCreateFilename:

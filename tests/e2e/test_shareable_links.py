@@ -56,22 +56,6 @@ class TestShareableLinks:
         assert page.locator("#benchmark-first-date").input_value() == "2017-01"
         assert page.locator("#benchmark-last-date").input_value() == "2023-06"
 
-    def test_portfolio_link_prefills_mc_params(self, page, dash_server_url):
-        page.goto(
-            f"{dash_server_url}/portfolio?tickers=AAPL.US,MSFT.US&weights=50,50"
-            f"&mc_number=100&mc_dist=t&mc_t_df=9.9&mc_t_loc=0.001&mc_t_scale=0.02&mc_var=5",
-            wait_until="domcontentloaded",
-        )
-        # Wait for the page to settle and URL params to populate inputs
-        page.locator("#pf-first-date").wait_for(state="visible", timeout=10_000)
-        page.wait_for_timeout(500)  # Brief settle for reactive callback round-trip
-
-        # MC inputs are inside a collapsed panel; Playwright reads non-visible inputs fine
-        assert page.locator("#pf-monte-carlo-number").input_value() == "100"
-        # Regression guard: would be "3.4" if auto-estimate overwrites
-        assert page.locator("#pf-mc-t-df").input_value() == "9.9"
-        assert page.locator("#pf-mc-t-var-level").input_value() == "5"
-
     def test_portfolio_fresh_link_auto_estimates_mc_params(self, page, dash_server_url):
         """Without MC URL params, reactive estimation must FILL the fields on load.
 
@@ -88,29 +72,3 @@ class TestShareableLinks:
         # expect() polls until the reactive callback round-trip fills the field
         expect(page.locator("#pf-mc-norm-mu")).to_have_value("0.007", timeout=10_000)
         assert page.locator("#pf-mc-norm-sigma").input_value() == "0.04"
-
-    def test_portfolio_url_params_not_overwritten_by_reactive_change(self, page, dash_server_url):
-        """URL MC params must survive reactive triggers like weight change (guard against auto-fit)."""
-        page.goto(
-            f"{dash_server_url}/portfolio?tickers=AAPL.US,MSFT.US&weights=50,50"
-            f"&mc_dist=t&mc_t_df=9.9&mc_t_loc=0.0&mc_t_scale=0.02",
-            wait_until="domcontentloaded",
-        )
-        page.locator("#pf-first-date").wait_for(state="visible", timeout=10_000)
-        page.wait_for_timeout(500)
-
-        # Verify initial values from URL (including zero-valued mc_t_loc)
-        assert page.locator("#pf-mc-t-df").input_value() == "9.9"
-        assert page.locator("#pf-mc-t-loc").input_value() == "0"
-        assert page.locator("#pf-mc-t-scale").input_value() == "0.02"
-
-        # Trigger reactive auto_estimate by changing weight (Input trigger)
-        weight_input = page.locator("input[type='number']").first
-        weight_input.click()
-        weight_input.fill("60")
-        page.wait_for_timeout(1500)  # Allow auto_estimate callback to fire
-
-        # Verify URL params remain unchanged (not auto-fitted)
-        assert page.locator("#pf-mc-t-df").input_value() == "9.9"
-        assert page.locator("#pf-mc-t-loc").input_value() == "0"
-        assert page.locator("#pf-mc-t-scale").input_value() == "0.02"

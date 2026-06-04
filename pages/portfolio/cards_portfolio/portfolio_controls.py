@@ -17,7 +17,7 @@ from dash.exceptions import PreventUpdate
 
 from common import settings as settings, inflation as inflation
 from common.mantine import search_provider
-from common.create_link import create_link
+from common.create_link import create_link, scope_cashflow_params
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
@@ -98,19 +98,6 @@ def card_controls(
     # parsed CSV pairs: list of (str, str) tuples or None
     cwd_tr: Optional[list] = None,
     cf_ts: Optional[list] = None,
-    # Monte Carlo settings
-    mc_number: Optional[int] = None,
-    mc_years: Optional[int] = None,
-    mc_dist: Optional[str] = None,
-    mc_backtest: Optional[str] = None,
-    mc_mu: Optional[float] = None,
-    mc_sigma: Optional[float] = None,
-    mc_ln_shape: Optional[float] = None,
-    mc_ln_scale: Optional[float] = None,
-    mc_t_df: Optional[float] = None,
-    mc_t_loc: Optional[float] = None,
-    mc_t_scale: Optional[float] = None,
-    mc_var: Optional[int] = None,
 ):
     tickers_list = make_list_from_string(tickers, char_type="str")
     weights_list = make_list_from_string(weights, char_type="float")
@@ -380,7 +367,7 @@ def card_controls(
                                     [
                                         dbc.Input(
                                             type="number",
-                                            value=mc_number if mc_number is not None else 0,
+                                            value=0,
                                             id="pf-monte-carlo-number",
                                         ),
                                         dbc.FormFeedback("", type="valid"),
@@ -417,7 +404,7 @@ def card_controls(
                                             type="number",
                                             min=1,
                                             max=50,
-                                            value=mc_years if mc_years is not None else 10,
+                                            value=10,
                                             id="pf-monte-carlo-years",
                                         ),
                                         dbc.FormFeedback("", type="valid"),
@@ -455,7 +442,7 @@ def card_controls(
                                                 {"label": "Lognormal distribution", "value": "lognorm"},
                                                 {"label": "Student's t distribution", "value": "t"},
                                             ],
-                                            value=mc_dist if mc_dist is not None else "norm",
+                                            value="norm",
                                             multi=False,
                                             clearable=False,
                                             placeholder="Select a distribution type",
@@ -494,12 +481,12 @@ def card_controls(
                                             html.Div(
                                                 [
                                                     _mc_param_row(
-                                                        "Mean (μ)", "pf-mc-norm-mu", value=mc_mu
+                                                        "Mean (μ)", "pf-mc-norm-mu", value=None
                                                     ),
                                                     _mc_param_row(
                                                         "Std deviation (σ)",
                                                         "pf-mc-norm-sigma",
-                                                        value=mc_sigma,
+                                                        value=None,
                                                     ),
                                                 ],
                                                 id="pf-mc-norm-group",
@@ -507,12 +494,12 @@ def card_controls(
                                             ),
                                             html.Div(
                                                 [
-                                                    _mc_param_row("Shape", "pf-mc-lognorm-shape", value=mc_ln_shape),
+                                                    _mc_param_row("Shape", "pf-mc-lognorm-shape", value=None),
                                                     _mc_param_row(
                                                         "Location (loc)", "pf-mc-lognorm-loc",
                                                         value=-1, disabled=True, help_text="fixed at -1 by okama",
                                                     ),
-                                                    _mc_param_row("Scale", "pf-mc-lognorm-scale", value=mc_ln_scale),
+                                                    _mc_param_row("Scale", "pf-mc-lognorm-scale", value=None),
                                                 ],
                                                 id="pf-mc-lognorm-group",
                                                 className="vstack gap-2",
@@ -527,7 +514,7 @@ def card_controls(
                                                                 [
                                                                     dbc.Input(
                                                                         type="number",
-                                                                        value=mc_t_df,
+                                                                        value=None,
                                                                         id="pf-mc-t-df",
                                                                     ),
                                                                     dbc.FormFeedback(
@@ -538,8 +525,8 @@ def card_controls(
                                                             ),
                                                         ],
                                                     ),
-                                                    _mc_param_row("Location (loc)", "pf-mc-t-loc", value=mc_t_loc),
-                                                    _mc_param_row("Scale (scale)", "pf-mc-t-scale", value=mc_t_scale),
+                                                    _mc_param_row("Location (loc)", "pf-mc-t-loc", value=None),
+                                                    _mc_param_row("Scale (scale)", "pf-mc-t-scale", value=None),
                                                     dbc.Row(
                                                         [
                                                             dbc.Label(
@@ -559,7 +546,7 @@ def card_controls(
                                                             dbc.Col(
                                                                 dbc.Input(
                                                                     type="number", min=1, max=99,
-                                                                    value=mc_var,
+                                                                    value=None,
                                                                     placeholder="e.g. 5",
                                                                     id="pf-mc-t-var-level",
                                                                 ),
@@ -605,7 +592,7 @@ def card_controls(
                                     [
                                         dcc.Dropdown(
                                             options=["yes", "no"],
-                                            value=mc_backtest if mc_backtest is not None else "yes",
+                                            value="yes",
                                             multi=False,
                                             clearable=False,
                                             placeholder="Show backtest before Monte Carlo?",
@@ -635,25 +622,6 @@ def card_controls(
                 dcc.Store(id="pf_tickers_url", data=tickers_list),
                 dcc.Store(id="pf_weights_url", data=weights_list),
                 dcc.Store(id="pf_saved_portfolios_file_names", storage_type='session'),
-                dcc.Store(
-                    id="pf-mc-url-params",
-                    data=(
-                        {
-                            "mc_mu": mc_mu,
-                            "mc_sigma": mc_sigma,
-                            "mc_ln_shape": mc_ln_shape,
-                            "mc_ln_scale": mc_ln_scale,
-                            "mc_t_df": mc_t_df,
-                            "mc_t_loc": mc_t_loc,
-                            "mc_t_scale": mc_t_scale,
-                        }
-                        if any(
-                            p is not None
-                            for p in [mc_mu, mc_sigma, mc_ln_shape, mc_ln_scale, mc_t_df, mc_t_loc, mc_t_scale]
-                        )
-                        else None
-                    ),
-                ),
             ]
         ),
         class_name="mb-3",
@@ -798,19 +766,6 @@ def show_log_scale_switch(n_clicks, plot_type: str):
     State({"type": "pf-cf-cwd-reduction", "index": ALL}, "value"),
     State({"type": "pf-cf-ts-date", "index": ALL}, "value"),
     State({"type": "pf-cf-ts-amount", "index": ALL}, "value"),
-    # Monte Carlo settings
-    State("pf-monte-carlo-number", "value"),
-    State("pf-monte-carlo-years", "value"),
-    State("pf-monte-carlo-distribution", "value"),
-    State("pf-monte-carlo-backtest", "value"),
-    State("pf-mc-norm-mu", "value"),
-    State("pf-mc-norm-sigma", "value"),
-    State("pf-mc-lognorm-shape", "value"),
-    State("pf-mc-lognorm-scale", "value"),
-    State("pf-mc-t-df", "value"),
-    State("pf-mc-t-loc", "value"),
-    State("pf-mc-t-scale", "value"),
-    State("pf-mc-t-var-level", "value"),
     prevent_initial_call=True,
 )
 def update_link_pf(
@@ -847,19 +802,6 @@ def update_link_pf(
     cwd_reductions: list,
     ts_dates: list,
     ts_amounts: list,
-    # Monte Carlo settings
-    mc_number: Optional[int],
-    mc_years: Optional[int],
-    mc_dist: Optional[str],
-    mc_backtest: Optional[str],
-    mc_mu: Optional[float],
-    mc_sigma: Optional[float],
-    mc_ln_shape: Optional[float],
-    mc_ln_scale: Optional[float],
-    mc_t_df: Optional[float],
-    mc_t_loc: Optional[float],
-    mc_t_scale: Optional[float],
-    mc_var: Optional[int],
 ):
     cwd_tr = None
     if cwd_thresholds and cwd_reductions:
@@ -877,19 +819,8 @@ def update_link_pf(
         if pairs:
             cf_ts = ",".join(pairs)
 
-    return create_link(
-        ccy=ccy,
-        first_date=first_date,
-        href=href,
-        last_date=last_date,
-        tickers_list=tickers_list,
-        weights_list=weights_list,
-        rebal=rebal,
-        initial_amount=initial_amount,
-        discount_rate=discount_rate,
-        symbol=symbol,
-        abs_dev=abs_dev,
-        rel_dev=rel_dev,
+    # Scope cashflow params to active strategy only
+    scoped_cf = scope_cashflow_params(
         cf_strategy=cf_strategy,
         cf_freq=cf_freq,
         cf_amount=cf_amount,
@@ -906,18 +837,23 @@ def update_link_pf(
         cwd_amount=cwd_amount,
         cwd_tr=cwd_tr,
         cf_ts=cf_ts,
-        mc_number=mc_number,
-        mc_years=mc_years,
-        mc_dist=mc_dist,
-        mc_backtest=mc_backtest,
-        mc_mu=mc_mu,
-        mc_sigma=mc_sigma,
-        mc_ln_shape=mc_ln_shape,
-        mc_ln_scale=mc_ln_scale,
-        mc_t_df=mc_t_df,
-        mc_t_loc=mc_t_loc,
-        mc_t_scale=mc_t_scale,
-        mc_var=mc_var,
+    )
+
+    return create_link(
+        ccy=ccy,
+        first_date=first_date,
+        href=href,
+        last_date=last_date,
+        tickers_list=tickers_list,
+        weights_list=weights_list,
+        rebal=rebal,
+        initial_amount=initial_amount,
+        discount_rate=discount_rate,
+        symbol=symbol,
+        abs_dev=abs_dev,
+        rel_dev=rel_dev,
+        cf_strategy=cf_strategy,
+        **scoped_cf,
     )
 
 
