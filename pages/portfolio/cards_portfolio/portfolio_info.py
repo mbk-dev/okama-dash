@@ -1,7 +1,8 @@
+import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
-from dash import html, dcc, callback, ALL, dash_table
+from dash import html, dcc, callback, ALL
 from dash.dependencies import Input, Output, State
 import plotly.express as px
 from dash.exceptions import PreventUpdate
@@ -83,7 +84,7 @@ def generate_pie_chart(tickers, weights, screen):
     Input("pf-inflation-switch", "value"),  # inflation
     prevent_initial_call=True,
 )
-def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> dash_table.DataTable:
+def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> tuple[dag.AgGrid, dag.AgGrid]:
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate

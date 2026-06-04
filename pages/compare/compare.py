@@ -196,7 +196,10 @@ def get_al_statistics_table(al_object):
         col_def = {"field": col, "headerName": col}
         # Apply guarded percent formatter to all columns (handles text and non-numeric cells)
         col_def["valueFormatter"] = {
-            "function": "(params.value == null || isNaN(params.value)) ? params.value : d3.format('.2%')(params.value)"
+            "function": (
+                "(typeof params.value !== 'number' || isNaN(params.value)) "
+                "? params.value : d3.format('.2%')(params.value)"
+            )
         }
         column_defs.append(col_def)
 

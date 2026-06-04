@@ -1,5 +1,6 @@
+import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
-from dash import html, callback, dash_table
+from dash import html, callback
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
@@ -26,7 +27,7 @@ card_ef_info = dbc.Card(
     Input("ef-symbols-list", "value"),  # tickers
     prevent_initial_call=False,
 )
-def pf_update_asset_names_info(assets: list) -> tuple[dash_table.DataTable, dash_table.DataTable]:
+def pf_update_asset_names_info(assets: list) -> tuple[dag.AgGrid, dag.AgGrid]:
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate

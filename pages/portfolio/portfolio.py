@@ -855,7 +855,10 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
         {"distribution": "Student's T", "statistics": ks_t.statistic, "p-value": ks_t.pvalue},
     ]
     guarded_decimal_formatter = {
-        "function": "typeof params.value === 'number' ? d3.format('.2f')(params.value) : params.value"
+        "function": (
+            "typeof params.value === 'number' && !isNaN(params.value) "
+            "? d3.format('.2f')(params.value) : params.value"
+        )
     }
     column_defs = [
         {"field": "distribution", "headerName": "distribution"},
@@ -916,7 +919,10 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "-", "4": None},
         ]
         guarded_decimal_formatter = {
-            "function": "typeof params.value === 'number' ? d3.format('.2f')(params.value) : params.value"
+            "function": (
+                "typeof params.value === 'number' && !isNaN(params.value) "
+                "? d3.format('.2f')(params.value) : params.value"
+            )
         }
         column_defs = [
             {"field": "1"},
@@ -936,7 +942,10 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
         backtest_survival_period = pf_object.dcf.survival_period_hist()
         table_list = [{"1": "Backtest survival period", "2": backtest_survival_period}]
         guarded_decimal_formatter = {
-            "function": "typeof params.value === 'number' ? d3.format('.2f')(params.value) : params.value"
+            "function": (
+                "typeof params.value === 'number' && !isNaN(params.value) "
+                "? d3.format('.2f')(params.value) : params.value"
+            )
         }
         column_defs = [
             {"field": "1"},
@@ -1010,7 +1019,10 @@ def get_forecast_wealth_statistics_table(pf_object) -> dag.AgGrid:
     else:
         table_list = [{"1": "Wealth", "2": 0}]
         guarded_decimal_formatter = {
-            "function": "typeof params.value === 'number' ? d3.format('.2f')(params.value) : params.value"
+            "function": (
+                "typeof params.value === 'number' && !isNaN(params.value) "
+                "? d3.format('.2f')(params.value) : params.value"
+            )
         }
         column_defs = [
             {"field": "1"},
@@ -1033,7 +1045,10 @@ def get_pf_statistics_table(al_object):
     statistics_dict = statistics_df.to_dict(orient="records")
 
     guarded_percent_formatter = {
-        "function": "typeof params.value === 'number' ? d3.format('.2%')(params.value) : params.value"
+        "function": (
+            "typeof params.value === 'number' && !isNaN(params.value) "
+            "? d3.format('.2%')(params.value) : params.value"
+        )
     }
     column_defs = [
         {"field": col, "headerName": col, "valueFormatter": guarded_percent_formatter}
