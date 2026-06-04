@@ -191,7 +191,14 @@ def cashflow_accordion_item(
                 [
                     dbc.Col(
                         [
-                            html.Label("Cash flow frequency"),
+                            html.Label(
+                                [
+                                    "Cash flow frequency",
+                                    html.I(className="bi bi-info-square ms-2", id="pf-info-cf-frequency"),
+                                ],
+                                className="text-nowrap",
+                            ),
+                            dbc.Tooltip(tl.pf_cf_frequency, target="pf-info-cf-frequency"),
                             dcc.Dropdown(
                                 options=FREQUENCY_OPTIONS,
                                 value=cf_freq if cf_freq else "month",
@@ -206,7 +213,14 @@ def cashflow_accordion_item(
                     ),
                     dbc.Col(
                         [
-                            html.Label("Rate"),
+                            html.Label(
+                                [
+                                    "Rate",
+                                    html.I(className="bi bi-info-square ms-2", id="pf-info-cf-rate"),
+                                ],
+                                className="text-nowrap",
+                            ),
+                            dbc.Tooltip(tl.pf_cf_rate, target="pf-info-cf-rate"),
                             dbc.Input(
                                 id="pf-withdrawal-rate",
                                 disabled=True,
@@ -287,7 +301,14 @@ def cashflow_accordion_item(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label("Indexation rate"),
+                                    html.Label(
+                                        [
+                                            "Indexation rate",
+                                            html.I(className="bi bi-info-square ms-2", id="pf-info-cf-indexation"),
+                                        ],
+                                        className="text-nowrap",
+                                    ),
+                                    dbc.Tooltip(tl.pf_cf_indexation, target="pf-info-cf-indexation"),
                                     dbc.Input(
                                         id="pf-cf-indexation",
                                         type="number",
@@ -314,7 +335,14 @@ def cashflow_accordion_item(
             # the settings above (strategy type, initial amount, discount rate).
             html.Div(
                 [
-                    html.Div("Custom cash flows", className="fw-semibold mb-2"),
+                    html.Div(
+                        [
+                            "Custom cash flows",
+                            html.I(className="bi bi-info-square ms-2", id="pf-info-cf-ts"),
+                        ],
+                        className="fw-semibold mb-2 text-nowrap",
+                    ),
+                    dbc.Tooltip(tl.pf_cf_time_series, target="pf-info-cf-ts"),
                     dbc.Row(
                         [
                             dbc.Col(html.Label("Date (YYYY-MM)"), width=5),
@@ -383,7 +411,14 @@ def cashflow_accordion_item(
                         [
                             dbc.Col(
                                 [
-                                    html.Label("Min annual withdrawal"),
+                                    html.Label(
+                                        [
+                                            "Min annual withdrawal",
+                                            html.I(className="bi bi-info-square ms-2", id="pf-info-vds-min"),
+                                        ],
+                                        className="text-nowrap",
+                                    ),
+                                    dbc.Tooltip(tl.pf_cf_vds_min_max, target="pf-info-vds-min"),
                                     dbc.Input(
                                         id="pf-cf-vds-min-withdrawal",
                                         type="number",
@@ -398,7 +433,14 @@ def cashflow_accordion_item(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label("Max annual withdrawal"),
+                                    html.Label(
+                                        [
+                                            "Max annual withdrawal",
+                                            html.I(className="bi bi-info-square ms-2", id="pf-info-vds-max"),
+                                        ],
+                                        className="text-nowrap",
+                                    ),
+                                    dbc.Tooltip(tl.pf_cf_vds_min_max, target="pf-info-vds-max"),
                                     dbc.Input(
                                         id="pf-cf-vds-max-withdrawal",
                                         type="number",
@@ -416,10 +458,18 @@ def cashflow_accordion_item(
                     ),
                     dbc.Row(
                         dbc.Col(
-                            dbc.Switch(
-                                label="Adjust min/max by indexation",
-                                value=vds_adj_mm if vds_adj_mm is not None else True,
-                                id="pf-cf-vds-adjust-minmax",
+                            html.Div(
+                                [
+                                    dbc.Switch(
+                                        label="Adjust min/max by indexation",
+                                        value=vds_adj_mm if vds_adj_mm is not None else True,
+                                        id="pf-cf-vds-adjust-minmax",
+                                        class_name="mb-0",
+                                    ),
+                                    html.I(className="bi bi-info-square ms-2", id="pf-info-vds-adj-mm"),
+                                    dbc.Tooltip(tl.pf_cf_vds_adjust_minmax, target="pf-info-vds-adj-mm"),
+                                ],
+                                className="d-flex align-items-center text-nowrap",
                             ),
                         ),
                         class_name="mt-1",
@@ -489,10 +539,18 @@ def cashflow_accordion_item(
                     ),
                     dbc.Row(
                         dbc.Col(
-                            dbc.Switch(
-                                label="Adjust floor/ceiling by indexation",
-                                value=vds_adj_fc if vds_adj_fc is not None else False,
-                                id="pf-cf-vds-adjust-fc",
+                            html.Div(
+                                [
+                                    dbc.Switch(
+                                        label="Adjust floor/ceiling by indexation",
+                                        value=vds_adj_fc if vds_adj_fc is not None else False,
+                                        id="pf-cf-vds-adjust-fc",
+                                        class_name="mb-0",
+                                    ),
+                                    html.I(className="bi bi-info-square ms-2", id="pf-info-vds-adj-fc"),
+                                    dbc.Tooltip(tl.pf_cf_vds_adjust_fc, target="pf-info-vds-adj-fc"),
+                                ],
+                                className="d-flex align-items-center text-nowrap",
                             ),
                         ),
                         class_name="mt-1",
@@ -501,7 +559,14 @@ def cashflow_accordion_item(
                         [
                             dbc.Col(
                                 [
-                                    html.Label("Indexation rate"),
+                                    html.Label(
+                                        [
+                                            "Indexation rate",
+                                            html.I(className="bi bi-info-square ms-2", id="pf-info-vds-indexation"),
+                                        ],
+                                        className="text-nowrap",
+                                    ),
+                                    dbc.Tooltip(tl.pf_cf_vds_indexation, target="pf-info-vds-indexation"),
                                     dbc.Input(
                                         id="pf-cf-vds-indexation",
                                         type="number",
@@ -559,7 +624,14 @@ def cashflow_accordion_item(
                             ),
                             dbc.Col(
                                 [
-                                    html.Label("Indexation rate"),
+                                    html.Label(
+                                        [
+                                            "Indexation rate",
+                                            html.I(className="bi bi-info-square ms-2", id="pf-info-cwd-indexation"),
+                                        ],
+                                        className="text-nowrap",
+                                    ),
+                                    dbc.Tooltip(tl.pf_cf_indexation, target="pf-info-cwd-indexation"),
                                     dbc.Input(
                                         id="pf-cf-cwd-indexation",
                                         type="number",
@@ -582,7 +654,14 @@ def cashflow_accordion_item(
                     # from the settings above (withdrawal amount, indexation rate).
                     html.Div(
                         [
-                            html.Div("Drawdown thresholds", className="fw-semibold mb-2"),
+                            html.Div(
+                                [
+                                    "Drawdown thresholds",
+                                    html.I(className="bi bi-info-square ms-2", id="pf-info-cwd-thresholds"),
+                                ],
+                                className="fw-semibold mb-2 text-nowrap",
+                            ),
+                            dbc.Tooltip(tl.pf_cf_cwd_thresholds, target="pf-info-cwd-thresholds"),
                             dbc.Row(
                                 [
                                     dbc.Col(html.Label("Drawdown threshold (%)", className="text-nowrap"), width=6),

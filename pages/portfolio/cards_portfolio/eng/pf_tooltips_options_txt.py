@@ -138,6 +138,75 @@ pf_cf_strategy_type = dcc.Markdown(
     """
 )
 
+pf_cf_frequency = dcc.Markdown(
+    """
+    The frequency of regular withdrawals or contributions in the strategy:
+    none (no regular cash flows), monthly, quarterly, half-year or yearly.
+    """
+)
+
+pf_cf_rate = dcc.Markdown(
+    """
+    Effective annual withdrawal or contribution rate: the regular cash-flow
+    amount converted to a percentage of the initial investment per year
+    (amount × number of cash flows per year ÷ initial investment).
+    Calculated automatically.
+    """
+)
+
+pf_cf_indexation = dcc.Markdown(
+    """
+    Portfolio cash flow indexation rate: the regular amount is increased by
+    this rate each period. If empty, the historical inflation rate (CAGR)
+    is used.
+    """
+)
+
+pf_cf_vds_indexation = dcc.Markdown(
+    """
+    Indexation rate for the minimum/maximum annual withdrawal and the
+    floor/ceiling limits. If empty, the historical inflation rate (CAGR)
+    is used.
+    """
+)
+
+pf_cf_vds_min_max = dcc.Markdown(
+    """
+    Optional absolute minimum and maximum annual withdrawal amounts
+    (positive values).
+    """
+)
+
+pf_cf_vds_adjust_minmax = dcc.Markdown(
+    """
+    If enabled, the min/max annual withdrawal bounds are indexed using the
+    indexation rate.
+    """
+)
+
+pf_cf_vds_adjust_fc = dcc.Markdown(
+    """
+    If enabled, the previous year's withdrawal amount is indexed before
+    applying the floor/ceiling limits.
+    """
+)
+
+pf_cf_cwd_thresholds = dcc.Markdown(
+    """
+    Pairs of drawdown threshold and withdrawal reduction coefficient.
+    Example: threshold 20, reduction 40 means if the portfolio drawdown
+    exceeds 20%, the withdrawal is reduced by 40%.
+    """
+)
+
+pf_cf_time_series = dcc.Markdown(
+    """
+    User-defined withdrawals and contributions: each entry is a date (YYYY-MM)
+    and a cash flow amount. Negative value corresponds to withdrawals,
+    positive to contributions.
+    """
+)
+
 pf_cf_percentage = dcc.Markdown(
     """
     The percentage of withdrawals or contributions. The size of withdrawals
