@@ -71,8 +71,9 @@ pf_options_tooltip_initial_amount = dcc.Markdown(
 )
 pf_options_tooltip_cash_flow = dcc.Markdown(
     """
-    Portfolio monthly cash flow FV (at last_date). Negative value corresponds to withdrawals. 
-    Positive value corresponds to contributions. Cash flow value is indexed each month by discount rate.
+    Portfolio regular cash flow FV (at last_date). Negative value corresponds to withdrawals.
+    Positive value corresponds to contributions. The amount is indexed each period by the indexation rate.
+    The discount rate is used only to convert future values to present values.
     """
 )
 pf_options_tooltip_discount_rate = dcc.Markdown(
