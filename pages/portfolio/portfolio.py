@@ -184,8 +184,32 @@ def layout(
     cwd_amount=None,
     cwd_tr=None,
     cf_ts=None,
+    # Monte Carlo settings
+    mc_number=None,
+    mc_years=None,
+    mc_dist=None,
+    mc_backtest=None,
+    mc_mu=None,
+    mc_sigma=None,
+    mc_ln_shape=None,
+    mc_ln_scale=None,
+    mc_t_df=None,
+    mc_t_loc=None,
+    mc_t_scale=None,
+    mc_var=None,
     **kwargs,
 ):
+    mc_number_val = int(float(mc_number)) if mc_number not in (None, "") else None
+    mc_years_val = int(float(mc_years)) if mc_years not in (None, "") else None
+    mc_mu_val = float(mc_mu) if mc_mu not in (None, "") else None
+    mc_sigma_val = float(mc_sigma) if mc_sigma not in (None, "") else None
+    mc_ln_shape_val = float(mc_ln_shape) if mc_ln_shape not in (None, "") else None
+    mc_ln_scale_val = float(mc_ln_scale) if mc_ln_scale not in (None, "") else None
+    mc_t_df_val = float(mc_t_df) if mc_t_df not in (None, "") else None
+    mc_t_loc_val = float(mc_t_loc) if mc_t_loc not in (None, "") else None
+    mc_t_scale_val = float(mc_t_scale) if mc_t_scale not in (None, "") else None
+    mc_var_val = int(float(mc_var)) if mc_var not in (None, "") else None
+
     page = dbc.Container(
         [
             dbc.Toast(
@@ -230,6 +254,18 @@ def layout(
                             cwd_amount=float(cwd_amount) if cwd_amount else None,
                             cwd_tr=_parse_pair_csv(cwd_tr),
                             cf_ts=_parse_pair_csv(cf_ts),
+                            mc_number=mc_number_val,
+                            mc_years=mc_years_val,
+                            mc_dist=mc_dist,
+                            mc_backtest=mc_backtest,
+                            mc_mu=mc_mu_val,
+                            mc_sigma=mc_sigma_val,
+                            mc_ln_shape=mc_ln_shape_val,
+                            mc_ln_scale=mc_ln_scale_val,
+                            mc_t_df=mc_t_df_val,
+                            mc_t_loc=mc_t_loc_val,
+                            mc_t_scale=mc_t_scale_val,
+                            mc_var=mc_var_val,
                         ),
                         lg=5,
                     ),
@@ -444,6 +480,7 @@ def show_graf_and_statistics_rows(n_clicks, style):
     Output(component_id="pf-mc-t-loc", component_property="value"),
     Output(component_id="pf-mc-t-scale", component_property="value"),
     Output(component_id="pf-mc-params-message", component_property="children"),
+    Output(component_id="pf-mc-url-params", component_property="data"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
     Input(component_id="pf-base-currency", component_property="value"),
@@ -454,10 +491,11 @@ def show_graf_and_statistics_rows(n_clicks, style):
     Input(component_id="pf-rebal-rel-deviation", component_property="value"),
     Input(component_id="pf-monte-carlo-distribution", component_property="value"),
     Input(component_id="pf-mc-t-var-level", component_property="value"),
+    State(component_id="pf-mc-url-params", component_property="data"),
     prevent_initial_call=True,
 )
 def auto_estimate_distribution_parameters(
-    assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution, var_level,
+    assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution, var_level, url_params,
 ):
     """Recompute Monte Carlo distribution parameters in the background.
 
@@ -469,7 +507,9 @@ def auto_estimate_distribution_parameters(
     filled and weights summing to 100%.
     """
     nu = dash.no_update
-    no_op = (nu,) * 8
+    no_op = (nu,) * 9
+    if url_params:
+        return nu, nu, nu, nu, nu, nu, nu, "parameters loaded from link", None
     if not _portfolio_is_complete(assets, weights):
         return no_op
     if not (_valid_mc_date(fd) and _valid_mc_date(ld)):
@@ -485,8 +525,8 @@ def auto_estimate_distribution_parameters(
             )
         except Exception as e:
             logging.exception("df recompute failed")
-            return nu, nu, nu, nu, nu, nu, nu, f"Could not recompute df: {e}"
-        return nu, nu, nu, nu, df, nu, nu, message
+            return nu, nu, nu, nu, nu, nu, nu, f"Could not recompute df: {e}", nu
+        return nu, nu, nu, nu, df, nu, nu, message, nu
 
     start = time.perf_counter()
     try:
@@ -495,19 +535,19 @@ def auto_estimate_distribution_parameters(
         params = tuple(round(float(p), 6) for p in pf.dcf.mc.get_parameters_for_distribution())
     except Exception as e:
         logging.exception("Estimate parameters failed")
-        return nu, nu, nu, nu, nu, nu, nu, f"Could not estimate: {e}"
+        return nu, nu, nu, nu, nu, nu, nu, f"Could not estimate: {e}", nu
     elapsed = time.perf_counter() - start
     logging.info(f"MC parameter estimation took {elapsed:.3f} s")
     message = f"estimated in {elapsed:.2f} s"
     if distribution == "norm":
         mu, sigma = params
-        return mu, sigma, nu, nu, nu, nu, nu, message
+        return mu, sigma, nu, nu, nu, nu, nu, message, nu
     if distribution == "lognorm":
         shape, _loc, scale = params
-        return nu, nu, shape, scale, nu, nu, nu, message
+        return nu, nu, shape, scale, nu, nu, nu, message, nu
     if distribution == "t":
         df, loc, scale = params
-        return nu, nu, nu, nu, df, loc, scale, message
+        return nu, nu, nu, nu, df, loc, scale, message, nu
     return no_op
 
 

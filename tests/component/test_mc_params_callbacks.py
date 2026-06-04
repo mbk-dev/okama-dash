@@ -153,6 +153,7 @@ class TestAutoEstimateDistributionParameters:
             "fd": "2020-01", "ld": "2024-12", "rebal": "month",
             "abs_dev": None, "rel_dev": None,
             "distribution": "norm", "var_level": None,
+            "url_params": None,
         }
         state.update(overrides)
         return state
@@ -253,6 +254,37 @@ class TestAutoEstimateDistributionParameters:
 
         assert result[0] is dash.no_update
         assert "no data" in str(result[7])
+
+    def test_url_params_set_blocks_recompute_and_consumes_flag(self, patched_okama_portfolio):
+        """When URL params are present, return no_update for all param outputs and consume the store flag."""
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        url_params_data = {"mc_mu": 0.01, "mc_sigma": 0.05}
+        result = self._call("pf-base-currency", distribution="norm", url_params=url_params_data)
+
+        assert len(result) == 9
+        assert result[0] is dash.no_update  # mu
+        assert result[1] is dash.no_update  # sigma
+        assert result[2] is dash.no_update  # lognorm shape
+        assert result[3] is dash.no_update  # lognorm scale
+        assert result[4] is dash.no_update  # t df
+        assert result[5] is dash.no_update  # t loc
+        assert result[6] is dash.no_update  # t scale
+        assert "link" in str(result[7]).lower()  # message mentions loaded from link
+        assert result[8] is None  # store output: consume the flag
+        mock_pf.dcf.mc.get_parameters_for_distribution.assert_not_called()
+
+    def test_url_params_none_allows_normal_fit(self, patched_okama_portfolio):
+        """When URL params are None, proceed with normal parameter estimation."""
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (0.007, 0.04)
+
+        result = self._call("pf-base-currency", distribution="norm", url_params=None)
+
+        assert len(result) == 9
+        assert result[0] == 0.007  # mu filled from fit
+        assert result[1] == 0.04  # sigma filled from fit
+        assert result[8] is dash.no_update  # store output: not consumed
+        assert "estimated in" in str(result[7])
 
 
 class TestValidateDf:
