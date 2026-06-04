@@ -233,11 +233,16 @@ class TestAutoEstimateDistributionParameters:
         assert all(r is dash.no_update for r in result)
         mock_pf.dcf.mc.optimize_df_for_students.assert_not_called()
 
-    def test_empty_var_level_does_not_optimize(self, patched_okama_portfolio):
+    def test_clearing_var_level_resets_df_to_fitted(self, patched_okama_portfolio):
         mock_pf = patched_okama_portfolio["portfolio_instance"]
+        mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (3.4, 0.006, 0.038)
+
         result = self._call("pf-mc-t-var-level", distribution="t", var_level=None)
 
-        assert all(r is dash.no_update for r in result)
+        assert result[4] == 3.4  # df back to the fitted value
+        assert result[5] is dash.no_update  # loc untouched
+        assert result[6] is dash.no_update  # scale untouched
+        assert "df reset" in str(result[7])
         mock_pf.dcf.mc.optimize_df_for_students.assert_not_called()
 
     def test_estimate_failure_returns_message(self, patched_okama_portfolio):

@@ -131,6 +131,27 @@ def _build_ror_portfolio(assets, weights, ccy, first_date, last_date, rebal_peri
     return pf_object
 
 
+def _recompute_df_for_var_level(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, var_level):
+    """Recompute Student's t degrees of freedom for a VaR-level change.
+
+    With a VaR level set, df is optimized to match the empirical VaR/CVaR at
+    that level; with the level cleared, df is reset back to the fitted value.
+    Returns (df, status message with elapsed time).
+    """
+    start = time.perf_counter()
+    pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
+    pf.dcf.mc.distribution = "t"
+    if var_level in (None, ""):
+        df = round(float(pf.dcf.mc.get_parameters_for_distribution()[0]), 6)
+        elapsed = time.perf_counter() - start
+        logging.info(f"MC df reset to fitted took {elapsed:.3f} s")
+        return df, f"df reset to fitted in {elapsed:.2f} s"
+    df = round(float(pf.dcf.mc.optimize_df_for_students(int(var_level))), 6)
+    elapsed = time.perf_counter() - start
+    logging.info(f"MC df optimization took {elapsed:.3f} s")
+    return df, f"df optimized in {elapsed:.2f} s"
+
+
 def layout(
     tickers=None,
     weights=None,
@@ -442,9 +463,10 @@ def auto_estimate_distribution_parameters(
 
     Fires when the portfolio definition changes (tickers, weights, dates,
     currency, rebalancing) or the distribution type is switched — re-fits the
-    active distribution's parameters. A VaR-level change (Student's t only,
-    non-empty level) re-optimizes df instead. No-op until the portfolio is
-    complete: all constructor rows filled and weights summing to 100%.
+    active distribution's parameters. A VaR-level change (Student's t only)
+    re-optimizes df instead; clearing the VaR level resets df back to the
+    fitted value. No-op until the portfolio is complete: all constructor rows
+    filled and weights summing to 100%.
     """
     nu = dash.no_update
     no_op = (nu,) * 8
@@ -455,19 +477,16 @@ def auto_estimate_distribution_parameters(
 
     trigger = dash.ctx.triggered_id
     if trigger == "pf-mc-t-var-level":
-        if distribution != "t" or var_level in (None, ""):
+        if distribution != "t":
             return no_op
-        start = time.perf_counter()
         try:
-            pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
-            pf.dcf.mc.distribution = "t"
-            df = round(float(pf.dcf.mc.optimize_df_for_students(int(var_level))), 6)
+            df, message = _recompute_df_for_var_level(
+                assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, var_level
+            )
         except Exception as e:
-            logging.exception("Optimize df failed")
-            return nu, nu, nu, nu, nu, nu, nu, f"Could not optimize df: {e}"
-        elapsed = time.perf_counter() - start
-        logging.info(f"MC df optimization took {elapsed:.3f} s")
-        return nu, nu, nu, nu, df, nu, nu, f"df optimized in {elapsed:.2f} s"
+            logging.exception("df recompute failed")
+            return nu, nu, nu, nu, nu, nu, nu, f"Could not recompute df: {e}"
+        return nu, nu, nu, nu, df, nu, nu, message
 
     start = time.perf_counter()
     try:

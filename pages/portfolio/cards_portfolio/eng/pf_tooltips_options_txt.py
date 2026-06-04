@@ -125,7 +125,8 @@ pf_mc_tooltip_var_level = dcc.Markdown(
     """
     Enter a VaR confidence level (1-99) to recompute the degrees of freedom (df)
     so that Student's t-distribution best matches the empirical VaR and CVaR at
-    that level. Leave empty to keep the df fitted from historical returns.
+    that level. Clear the field to reset df back to the value fitted from
+    historical returns.
     """
 )
 

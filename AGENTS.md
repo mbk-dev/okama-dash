@@ -143,7 +143,7 @@ tests/
 │   ├── test_ef_data_callback.py       # update_ef_cards (8): figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution
 │   ├── test_ef_grid_callbacks.py     # sim-mode visibility, dynamic grid step options, grid↔pairwise exclusivity, submit gating (6 tests)
 │   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (11): figure, y-titles (incl. annual_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (2: bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit)
-│   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows), reactive auto_estimate_distribution_parameters (gates, norm/lognorm/t fit, VaR-level df optimize, errors), df>2 validation (23 tests)
+│   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows), reactive auto_estimate_distribution_parameters (gates, norm/lognorm/t fit, VaR-level df optimize + reset-on-clear, errors), df>2 validation (23 tests)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types), rolling-window disabled for annual_return (compare + portfolio)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
