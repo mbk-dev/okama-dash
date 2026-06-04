@@ -1,10 +1,6 @@
-from typing import Optional, Tuple
-
-import dash
+import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
-import numpy as np
-from dash.dependencies import Input, Output, State
-from dash import html, dcc, callback, ALL, MATCH, dash_table
+from dash import html
 
 import pandas as pd
 import okama as ok
@@ -16,13 +12,12 @@ namespaces_df = pd.DataFrame.from_dict(ok.namespaces, orient="index").reset_inde
 namespaces_df = namespaces_df.rename(columns={0: column2_name})
 namespaces_df = namespaces_df[[column1_name, column2_name]]
 
-db_namespaces_table = dash_table.DataTable(
-    data=namespaces_df.to_dict(orient="records"),
-    style_data={
-        "whiteSpace": "normal",
-        "height": "auto",
-    },
-    style_table={"overflowX": "auto"},
+db_namespaces_table = dag.AgGrid(
+    rowData=namespaces_df.to_dict("records"),
+    columnDefs=[{"field": column1_name}, {"field": column2_name}],
+    columnSize="responsiveSizeToFit",
+    dashGridOptions={"domLayout": "autoHeight"},
+    style={"height": None},
 )
 
 card_db_namespaces = dbc.Card(

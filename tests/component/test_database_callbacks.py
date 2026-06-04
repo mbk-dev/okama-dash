@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
+import dash_ag_grid as dag
 import pandas as pd
 import pytest
-from dash import dash_table
 
 pytestmark = pytest.mark.component
 
@@ -25,9 +25,10 @@ class TestDbSearch:
         with patch(f"{SEARCH_MODULE}.ok.search", return_value=_make_search_df(3)):
             result = db_search(1, "TICK", "US")
 
-        assert isinstance(result, dash_table.DataTable)
-        assert len(result.data) == 3
-        assert result.page_size == 15
+        assert isinstance(result, dag.AgGrid)
+        assert len(result.rowData) == 3
+        assert result.dashGridOptions["pagination"] is True
+        assert result.dashGridOptions["paginationPageSize"] == 15
 
     def test_ticker_column_dropped_from_results(self):
         from pages.database.cards_database.db_search_results import db_search
@@ -35,7 +36,7 @@ class TestDbSearch:
         with patch(f"{SEARCH_MODULE}.ok.search", return_value=_make_search_df(2)):
             result = db_search(1, "TICK", "US")
 
-        columns_in_data = set(result.data[0].keys())
+        columns_in_data = set(result.rowData[0].keys())
         assert "ticker" not in columns_in_data
         assert "symbol" in columns_in_data
         assert "name" in columns_in_data
