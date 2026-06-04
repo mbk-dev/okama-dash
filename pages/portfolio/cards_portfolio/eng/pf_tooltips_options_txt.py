@@ -120,7 +120,7 @@ pf_mc_tooltip_var_level = dcc.Markdown(
     """
     VaR confidence level (1-99) at which the degrees of freedom (df) of
     Student's t-distribution are optimized to match the empirical VaR and CVaR
-    of the portfolio returns (e.g. 5 = 5% left tail).
+    of the portfolio's monthly returns (e.g. 5 = 5% left tail).
     """
 )
 
