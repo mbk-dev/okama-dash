@@ -78,6 +78,37 @@ def scope_cashflow_params(
     return result
 
 
+def _quote_value(val) -> str:
+    return quote(str(val), safe="")
+
+
+# Param values that stay raw in the URL: comma/colon are legal in query strings
+# (the tickers CSV proves it end-to-end) and keep pair values human-readable.
+_UNQUOTED_PARAMS = {"weights", "vds_adj_mm", "vds_adj_fc", "cwd_tr", "cf_ts"}
+
+
+def _format_query_param(name, value, rule) -> str | None:
+    """Format one query param per its emission rule; None = omit from the URL.
+
+    Rules: "if_not_none" | "skip_if_zero" (0 means "unset" for cash-flow amounts)
+    | ("skip_if_default", default) — equality covers numerics (1000.0 == 1000).
+    """
+    if rule == "if_not_none":
+        if value is None or value == "":
+            return None
+        should_quote = isinstance(value, str) and name not in _UNQUOTED_PARAMS
+        return f"{name}={_quote_value(value) if should_quote else value}"
+    if rule == "skip_if_zero":
+        if value in (None, "", 0):
+            return None
+        return f"{name}={value}"
+    # ("skip_if_default", default)
+    default = rule[1]
+    if value is None or value == default:
+        return None
+    return f"{name}={_quote_value(value) if isinstance(value, str) else value}"
+
+
 def create_link(
     *,
     href,
@@ -115,9 +146,6 @@ def create_link(
     cwd_tr=None,
     cf_ts=None,
 ) -> str:
-    def _q(val) -> str:
-        return quote(str(val), safe="")
-
     # Compute current month for last_date default comparison
     today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -154,33 +182,14 @@ def create_link(
         ("cf_ts", cf_ts, "if_not_none"),
     ]
 
-    tickers_str = "tickers=" + ",".join(_q(s) for s in tickers_list)
+    tickers_str = "tickers=" + ",".join(_quote_value(s) for s in tickers_list)
     reset_href = href.split("?")[0]
     parts = [f"{reset_href}?{tickers_str}"]
 
     for name, value, rule in params:
-        if rule == "if_not_none":
-            if value is not None and value != "":
-                should_quote = isinstance(value, str) and name not in {
-                    "weights",
-                    "vds_adj_mm",
-                    "vds_adj_fc",
-                    "cwd_tr",
-                    "cf_ts",
-                }
-                parts.append(f"{name}={_q(value) if should_quote else value}")
-        elif rule == "skip_if_zero":
-            if value not in (None, "", 0):
-                parts.append(f"{name}={value}")
-        elif isinstance(rule, tuple) and rule[0] == "skip_if_default":
-            default = rule[1]
-            # Numeric equality for initial_amount (1000 == 1000.0)
-            if name == "initial_amount":
-                if value is not None and value != default:
-                    parts.append(f"{name}={value}")
-            else:
-                if value is not None and value != default:
-                    parts.append(f"{name}={_q(value) if isinstance(value, str) else value}")
+        formatted = _format_query_param(name, value, rule)
+        if formatted is not None:
+            parts.append(formatted)
 
     return "&".join(parts)
 
