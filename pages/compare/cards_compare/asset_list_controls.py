@@ -40,7 +40,9 @@ def card_controls(
                         html.Label("Tickers to compare"),
                         search_provider(
                             dmc.MultiSelect(
-                                data=get_selected_symbol_options(tickers_list if tickers_list else settings.default_symbols),
+                                data=get_selected_symbol_options(
+                                    tickers_list if tickers_list else settings.default_symbols
+                                ),
                                 value=tickers_list if tickers_list else settings.default_symbols,
                                 placeholder="Select assets",
                                 id="al-symbols-list",

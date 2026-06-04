@@ -27,7 +27,10 @@ dash.register_page(
     path="/benchmark",
     title="Compare with benchmark : okama",
     name="Compare with benchmark",
-    description="Okama.io widget to compare assets with benchmark: tracking difference, tracking error, correlation, beta",
+    description=(
+        "Okama.io widget to compare assets with benchmark: tracking difference, "
+        "tracking error, correlation, beta"
+    ),
 )
 
 
@@ -115,7 +118,7 @@ def update_graf_benchmark(
         return fig, config, json_data
     except Exception as e:
         alert_fig = go.Figure()
-        alert_fig.add_annotation(text=str(e), showarrow=False, font=dict(color="red", size=14))
+        alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
         return alert_fig, {}, None
 
 
@@ -168,7 +171,7 @@ def get_benchmark_figure(
             if plot_type not in ("correlation", "beta")
             else return_series.map("{:,.2f}".format)
         )
-        annotations_text = [cum_return for cum_return in annotation_series]
+        annotations_text = list(annotation_series)
 
         add_last_value_annotations(fig, annotations_xy, annotations_text)
         fig.update_yaxes(

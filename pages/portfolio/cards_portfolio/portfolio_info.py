@@ -71,7 +71,7 @@ def generate_pie_chart(tickers, weights, screen):
     # Change layout for screen sizes
     fig, config = adopt_small_screens(fig, screen)
     fig.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0, pad=0),
+        margin={"l": 0, "r": 0, "t": 0, "b": 0, "pad": 0},
     )
     return fig, config
 

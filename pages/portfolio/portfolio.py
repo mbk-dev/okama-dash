@@ -22,7 +22,13 @@ import okama as ok
 import common.create_link
 import common.settings as settings
 import common.update_style
-from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row, add_return_type_annotation
+from common.chart_helpers import (
+    add_inflation_trace,
+    add_crisis_rectangles,
+    add_last_value_annotations,
+    add_sharpe_ratio_row,
+    add_return_type_annotation,
+)
 from common.mobile_screens import adopt_small_screens
 from common.object_cache import get_or_create, TTL_PORTFOLIO
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
@@ -726,13 +732,22 @@ def _update_graf_portfolio_inner(
     # Monte Carlo statistics
     if n_monte_carlo != 0 and plot_type == "wealth":
         forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
-            df_forecast, df_backtest, pf_object
+            df_forecast,
+            df_backtest,
+            pf_object,
         )
         forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(pf_object)
     else:
         forecast_survival_statistics_datatable = dag.AgGrid()
         forecast_wealth_statistics_datatable = dag.AgGrid()
-    return fig, config, statistics_dash_table, forecast_survival_statistics_datatable, forecast_wealth_statistics_datatable, json_data
+    return (
+        fig,
+        config,
+        statistics_dash_table,
+        forecast_survival_statistics_datatable,
+        forecast_wealth_statistics_datatable,
+        json_data,
+    )
 
 
 def _resolve_indexation(indexation_value, has_inflation=True):
@@ -808,7 +823,7 @@ def _build_cashflow_strategy(
     if strategy_type == "time_series":
         ts_dict = {}
         if ts_dates and ts_amounts:
-            for d, a in zip(ts_dates, ts_amounts):
+            for d, a in zip(ts_dates, ts_amounts, strict=True):
                 if d and a is not None:
                     try:
                         pd.to_datetime(str(d), format="%Y-%m")
@@ -1008,13 +1023,62 @@ def get_forecast_wealth_statistics_table(pf_object):
 
         rate = f"{pf_object.dcf.discount_rate * 100:.2f}%"
         table_list = [
-            {"1": "1st percentile", "2": wealth.quantile(1 / 100), "3": wealth_pv.quantile(1 / 100), "4": "Min", "5": wealth.min(), "6": wealth_pv.min()},
-            {"1": "5th percentile", "2": wealth.quantile(5 / 100), "3": wealth_pv.quantile(5 / 100), "4": "Max", "5": wealth.max(), "6": wealth_pv.max()},
-            {"1": "25th percentile", "2": wealth.quantile(25 / 100), "3": wealth_pv.quantile(25 / 100), "4": "Mean", "5": wealth.mean(), "6": wealth_pv.mean()},
-            {"1": "50th percentile", "2": wealth.quantile(50 / 100), "3": wealth_pv.quantile(50 / 100), "4": "Std", "5": wealth.std(),"6": wealth_pv.std()},
-            {"1": "75th percentile", "2": wealth.quantile(75 / 100), "3": wealth_pv.quantile(75 / 100), "4": "Discount rate", "5": None, "6": rate},
-            {"1": "95th percentile", "2": wealth.quantile(95 / 100), "3": wealth_pv.quantile(95 / 100), "4": "-", "5": None, "6": None},
-            {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": wealth_pv.quantile(99 / 100), "4": "-", "5": None, "6": None},
+            {
+                "1": "1st percentile",
+                "2": wealth.quantile(1 / 100),
+                "3": wealth_pv.quantile(1 / 100),
+                "4": "Min",
+                "5": wealth.min(),
+                "6": wealth_pv.min(),
+            },
+            {
+                "1": "5th percentile",
+                "2": wealth.quantile(5 / 100),
+                "3": wealth_pv.quantile(5 / 100),
+                "4": "Max",
+                "5": wealth.max(),
+                "6": wealth_pv.max(),
+            },
+            {
+                "1": "25th percentile",
+                "2": wealth.quantile(25 / 100),
+                "3": wealth_pv.quantile(25 / 100),
+                "4": "Mean",
+                "5": wealth.mean(),
+                "6": wealth_pv.mean(),
+            },
+            {
+                "1": "50th percentile",
+                "2": wealth.quantile(50 / 100),
+                "3": wealth_pv.quantile(50 / 100),
+                "4": "Std",
+                "5": wealth.std(),
+                "6": wealth_pv.std(),
+            },
+            {
+                "1": "75th percentile",
+                "2": wealth.quantile(75 / 100),
+                "3": wealth_pv.quantile(75 / 100),
+                "4": "Discount rate",
+                "5": None,
+                "6": rate,
+            },
+            {
+                "1": "95th percentile",
+                "2": wealth.quantile(95 / 100),
+                "3": wealth_pv.quantile(95 / 100),
+                "4": "-",
+                "5": None,
+                "6": None,
+            },
+            {
+                "1": "99th percentile",
+                "2": wealth.quantile(99 / 100),
+                "3": wealth_pv.quantile(99 / 100),
+                "4": "-",
+                "5": None,
+                "6": None,
+            },
         ]
         guarded_integer_formatter = {
             "function": "typeof params.value === 'number' ? d3.format(',.0f')(params.value) : params.value"
@@ -1167,22 +1231,39 @@ def _get_distribution_figure(pf_object: ok.Portfolio) -> go.Figure:
 
 
 def _get_wealth_data(
-    pf_object, has_cashflow, n_monte_carlo, show_backtest_bool, distribution_mc, years_mc,
+    pf_object,
+    has_cashflow,
+    n_monte_carlo,
+    show_backtest_bool,
+    distribution_mc,
+    years_mc,
     distribution_parameters_mc=None,
 ):
     df_backtest = pd.DataFrame()
     df_forecast = pd.DataFrame()
     if n_monte_carlo == 0:
-        df = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False) if has_cashflow else pf_object.wealth_index_with_assets
+        df = (
+            pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)
+            if has_cashflow
+            else pf_object.wealth_index_with_assets
+        )
         if has_cashflow:
             _nullify_after_first_zero(df, pf_object.symbol)
         return_series = pf_object.get_cumulative_return(real=False)
         return df, df_backtest, df_forecast, return_series
 
-    df_backtest = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)[[pf_object.symbol]] if show_backtest_bool else pd.DataFrame()
+    df_backtest = (
+        pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)[[pf_object.symbol]]
+        if show_backtest_bool
+        else pd.DataFrame()
+    )
     if not df_backtest.empty:
         _nullify_after_first_zero(df_backtest, pf_object.symbol)
-    initial_investment = pf_object.dcf.cashflow_parameters.initial_investment if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment") else settings.INITIAL_INVESTMENT_DEFAULT
+    initial_investment = (
+        pf_object.dcf.cashflow_parameters.initial_investment
+        if hasattr(pf_object.dcf.cashflow_parameters, "initial_investment")
+        else settings.INITIAL_INVESTMENT_DEFAULT
+    )
     last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
     if last_backtest_value > 0:
         pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
@@ -1201,7 +1282,9 @@ def _get_wealth_data(
     return df, df_backtest, df_forecast, None
 
 
-def _build_timeseries_figure(pf_object, df, plot_type, titles, inflation_on, log_scale, condition_monte_carlo, has_cashflow, return_series):
+def _build_timeseries_figure(
+    pf_object, df, plot_type, titles, inflation_on, log_scale, condition_monte_carlo, has_cashflow, return_series
+):
     ind = df.index.to_timestamp("D")
     condition_plot_inflation = inflation_on and plot_type != "real_cagr"
 

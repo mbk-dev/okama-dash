@@ -9,7 +9,7 @@ def footer():
                 html.Hr(),
                 dcc.Markdown(
                     """
-                **Okama-Dash** open source free project. *MIT License*  
+                **Okama-Dash** open source free project. *MIT License*
                 """
                 ),
                 html.P(

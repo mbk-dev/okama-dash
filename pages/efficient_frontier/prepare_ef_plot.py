@@ -339,7 +339,7 @@ def _estimate_horizontal_text_padding(fig: go.Figure, compact: bool = False) -> 
         if not texts:
             continue
         positions = _to_position_list(getattr(trace, "textposition", None), len(texts))
-        for label, position in zip(texts, positions):
+        for label, position in zip(texts, positions, strict=True):
             label_padding = base_padding + char_padding * len(label)
             if "left" in position:
                 left_padding = max(left_padding, label_padding)
@@ -421,7 +421,7 @@ def _add_assets_trace(
             customdata=assets_weights,
             mode="markers+text",
             cliponaxis=False,
-            marker=dict(size=8, color="orange"),
+            marker={"size": 8, "color": "orange"},
             text=df.iloc[:, 0].to_list(),
             hovertemplate="<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b><extra></extra>",
             textposition="bottom right",
@@ -447,14 +447,14 @@ def _make_pairwise_ef_object(
     ef_object: okama.EfficientFrontier,
     pair_assets: list,
 ) -> okama.EfficientFrontier:
-    ef_kwargs = dict(
-        ccy=ef_object.currency,
-        first_date=ef_object.first_date,
-        last_date=ef_object.last_date,
-        inflation=hasattr(ef_object, "inflation"),
-        full_frontier=True,
-        n_points=ef_object.n_points,
-    )
+    ef_kwargs = {
+        "ccy": ef_object.currency,
+        "first_date": ef_object.first_date,
+        "last_date": ef_object.last_date,
+        "inflation": hasattr(ef_object, "inflation"),
+        "full_frontier": True,
+        "n_points": ef_object.n_points,
+    }
     ef_signature = inspect.signature(okama.EfficientFrontier)
     if "rebalancing_strategy" in ef_signature.parameters and hasattr(ef_object, "rebalancing_strategy"):
         ef_kwargs["rebalancing_strategy"] = ef_object.rebalancing_strategy
@@ -565,7 +565,7 @@ def _prepare_single_ef(
             hovertemplate=hovertemplate,
             mode="lines",
             name=f"Efficient Frontier - {return_type} mean",
-            line=dict(width=line_width),
+            line={"width": line_width},
         )
     )
     # MDP frontier
@@ -584,7 +584,10 @@ def _prepare_single_ef(
             mdp_weights = mdp_frontier[mdp_asset_columns].to_numpy()
             mdp_weights_array = mdp_weights.tolist()
         # TODO: add Diversification Ratio to hovertemplate
-        # hovertemplate = "<b>Risk: %{x:.2f}%<br>Return: %{y:.2f}%<br>Diversification Ratio:%{text:.2f}</b>" + "<extra></extra>"
+        # hovertemplate = (
+        #     "<b>Risk: %{x:.2f}%<br>Return: %{y:.2f}%<br>Diversification Ratio:%{text:.2f}</b>"
+        #     "<extra></extra>"
+        # )
         fig.add_trace(
             go.Scatter(
                 x=mdp_frontier_data["risk"],
@@ -623,7 +626,7 @@ def _prepare_single_ef(
                 text=["MDP"],
                 textposition="top left",
                 name="Most diversified portfolio (MDP)",
-                marker=dict(size=8, color="grey"),
+                marker={"size": 8, "color": "grey"},
             )
         )
     # CML line
@@ -644,7 +647,7 @@ def _prepare_single_ef(
                 y=y_cml,
                 mode="lines",
                 name="Capital Market Line (CML)",
-                line=dict(width=0.5, color="green"),
+                line={"width": 0.5, "color": "green"},
             )
         )
         # Tangency portfolio
@@ -659,7 +662,7 @@ def _prepare_single_ef(
                 text="MSR",
                 textposition="top left",
                 name="Tangency portfolio (MSR)",
-                marker=dict(size=8, color="grey"),
+                marker={"size": 8, "color": "grey"},
             )
         )
     if include_assets:

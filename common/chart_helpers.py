@@ -6,12 +6,12 @@ import plotly.graph_objects as go
 import okama as ok
 
 import common.settings as settings
+import common.crisis.crisis_data as cr
 
 
 def make_error_alert(error: Exception) -> dbc.Alert:
     logging.exception("Callback error")
     return dbc.Alert(f"Error: {error}", color="danger", dismissable=True)
-import common.crisis.crisis_data as cr
 
 
 def add_inflation_trace(fig: go.Figure, ind, df: pd.DataFrame) -> None:
@@ -34,7 +34,7 @@ def add_crisis_rectangles(fig: go.Figure, chart_first_date, chart_last_date) -> 
                 x0=crisis.first_date,
                 x1=crisis.last_date,
                 annotation_text=crisis.name,
-                annotation=dict(align="left", valign="top", textangle=-90),
+                annotation={"align": "left", "valign": "top", "textangle": -90},
                 fillcolor="red",
                 opacity=0.25,
                 line_width=0,
@@ -42,7 +42,7 @@ def add_crisis_rectangles(fig: go.Figure, chart_first_date, chart_last_date) -> 
 
 
 def add_last_value_annotations(fig: go.Figure, annotations_xy, annotations_text) -> None:
-    for (x, y), text in zip(annotations_xy, annotations_text):
+    for (x, y), text in zip(annotations_xy, annotations_text, strict=True):
         fig.add_annotation(
             x=x,
             y=y,

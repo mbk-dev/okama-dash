@@ -49,7 +49,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
                     [
                         dcc.Markdown(
                         """
-                        **Portfolio data**  
+                        **Portfolio data**
                         Click on points to get portfolio data.
                         """
                         ),
@@ -185,7 +185,7 @@ def update_ef_cards(
         return fig1, fig2, config1, config2, ef_file_name
     except Exception as e:
         alert_fig = go.Figure()
-        alert_fig.add_annotation(text=str(e), showarrow=False, font=dict(color="red", size=14))
+        alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
         return alert_fig, go.Figure(), {}, {}, None
 
 
@@ -217,7 +217,7 @@ def display_click_data(clickData, n_click, symbols, file_name):
     if weights_list is None:
         return risk_str, ror_str, "Weights: unavailable for this point.", None
 
-    weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for w, t in zip(weights_list, symbols)])
+    weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for w, t in zip(weights_list, symbols, strict=True)])
     weights_for_link = common.math.round_list(weights_list, 2)
     ef_object = load_ef_object(file_name)
     link = common.create_link.create_link(
@@ -291,9 +291,13 @@ def find_portfolio(n_clicks, ror, file_name):
         cagr = optimized_portfolio.get('CAGR')
         risk = optimized_portfolio.get('Risk')
 
-        asset_weights = {ticker: optimized_portfolio[ticker] for ticker in ef_object.symbols if ticker in optimized_portfolio}
+        asset_weights = {
+            ticker: optimized_portfolio[ticker]
+            for ticker in ef_object.symbols
+            if ticker in optimized_portfolio
+        }
         if not asset_weights and "Weights" in optimized_portfolio:
-            asset_weights = dict(zip(ef_object.symbols, optimized_portfolio["Weights"]))
+            asset_weights = dict(zip(ef_object.symbols, optimized_portfolio["Weights"], strict=True))
 
         mean_return_str = f"Mean return: {mean_return * 100:.2f}%" if mean_return is not None else ''
         cagr_str = f"CAGR: {cagr * 100:.2f}%" if cagr is not None else ''

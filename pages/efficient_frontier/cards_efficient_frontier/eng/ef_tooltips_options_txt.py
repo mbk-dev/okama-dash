@@ -22,7 +22,7 @@ ef_options_tooltip_cml = dcc.Markdown(
     """
     **Capital Market Line** (CML) is the tangent line drawn from the point of
     the risk-free asset (volatility is zero) to the point of tangency portfolio
-    or Maximum Sharpe Ratio (MSR) point.  
+    or Maximum Sharpe Ratio (MSR) point.
 
     The slope of the CML is the Sharpe ratio of the tangency portfolio.
     """

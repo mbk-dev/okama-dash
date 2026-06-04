@@ -4,14 +4,14 @@ def adopt_small_screens(fig, screen: dict):
     """
     if screen and screen["in_width"] < 800:
         fig.update_layout(
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="left",
-                x=0,
-            ),
-            margin=dict(l=8, r=8, t=80, b=24, pad=0),
+            legend={
+                "orientation": "h",
+                "yanchor": "bottom",
+                "y": 1.02,
+                "xanchor": "left",
+                "x": 0,
+            },
+            margin={"l": 8, "r": 8, "t": 80, "b": 24, "pad": 0},
         )
         fig.update_yaxes(
             # tickangle=90,
@@ -23,7 +23,7 @@ def adopt_small_screens(fig, screen: dict):
         config = {"displayModeBar": False, "displaylogo": False}
     else:
         fig.update_layout(
-            margin=dict(pad=3),
+            margin={"pad": 3},
         )
         config = {"displayModeBar": True, "displaylogo": False}
     return fig, config

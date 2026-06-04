@@ -863,13 +863,17 @@ def update_link_pf(
 ):
     cwd_tr = None
     if cwd_thresholds and cwd_reductions:
-        pairs = [f"{t}:{r}" for t, r in zip(cwd_thresholds, cwd_reductions) if t is not None and r is not None]
+        pairs = [
+            f"{t}:{r}"
+            for t, r in zip(cwd_thresholds, cwd_reductions, strict=True)
+            if t is not None and r is not None
+        ]
         if pairs:
             cwd_tr = ",".join(pairs)
 
     cf_ts = None
     if ts_dates and ts_amounts:
-        pairs = [f"{d}:{a}" for d, a in zip(ts_dates, ts_amounts) if d and a is not None]
+        pairs = [f"{d}:{a}" for d, a in zip(ts_dates, ts_amounts, strict=True) if d and a is not None]
         if pairs:
             cf_ts = ",".join(pairs)
 
@@ -928,7 +932,9 @@ def update_link_pf(
     State({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
     State({"type": "pf-dynamic-input", "index": ALL}, "value"),
 )
-def update_rows_in_constructor(tickers, weights, n_clicks, remove_clicks, dropdown_ids, selected_tickers, selected_weights):
+def update_rows_in_constructor(
+    tickers, weights, n_clicks, remove_clicks, dropdown_ids, selected_tickers, selected_weights
+):
     trigger = dash.ctx.triggered_id
 
     if trigger == "pf_tickers_url" or trigger == "pf_weights_url" or not dropdown_ids:
@@ -939,12 +945,18 @@ def update_rows_in_constructor(tickers, weights, n_clicks, remove_clicks, dropdo
             next_index = max((row["index"] for row in rows), default=-1) + 1
             rows.append({"index": next_index, "symbol": None, "weight": None})
         elif isinstance(trigger, dict) and trigger.get("type") == "pf-dynamic-remove":
-            rows = [row for row in rows if row["index"] != trigger["index"]]
+            rows = [
+                row for row in rows
+                if row["index"] != trigger["index"]
+            ]
             if not rows:
                 next_index = max((row_id["index"] for row_id in dropdown_ids), default=-1) + 1
                 rows = [{"index": next_index, "symbol": None, "weight": None}]
 
-    return [append_row(row["index"], row["symbol"], row["weight"], get_weight_placeholder(rows, idx)) for idx, row in enumerate(rows)]
+    return [
+        append_row(row["index"], row["symbol"], row["weight"], get_weight_placeholder(rows, idx))
+        for idx, row in enumerate(rows)
+    ]
 
 
 def get_constructor_rows_from_url(tickers, weights):
@@ -968,7 +980,7 @@ def get_current_constructor_rows(dropdown_ids, selected_tickers, selected_weight
             "symbol": ticker,
             "weight": weight,
         }
-        for row_id, ticker, weight in zip(dropdown_ids, selected_tickers, selected_weights)
+        for row_id, ticker, weight in zip(dropdown_ids, selected_tickers, selected_weights, strict=True)
     ]
 
 
@@ -1105,7 +1117,7 @@ def disable_submit_add_link_buttons(
     weights_and_tickers_has_different_length = len(set(tickers_list)) != len(weights_list)
     rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
 
-    mc_number_is_incorrect = mc_number_valid == False
+    mc_number_is_incorrect = not mc_number_valid
 
     submit_result = (
         weights_sum_is_not_100

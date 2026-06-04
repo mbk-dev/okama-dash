@@ -332,7 +332,10 @@ def cashflow_accordion_item(
                         ),
                         class_name="mt-1",
                     ),
-                    dbc.FormText(f"Negative amounts = withdrawals, positive = contributions (max {MAX_TIMESERIES_ENTRIES} entries)"),
+                    dbc.FormText(
+                        f"Negative amounts = withdrawals, positive = contributions "
+                        f"(max {MAX_TIMESERIES_ENTRIES} entries)"
+                    ),
                 ],
                 id="pf-cf-timeseries-panel",
                 className="border rounded p-3 bg-body-tertiary mt-3",
@@ -731,7 +734,7 @@ def manage_ts_rows(add_clicks, remove_clicks, ids, dates, amounts):
     trigger = dash.ctx.triggered_id
     rows = []
     if ids:
-        for row_id, d, a in zip(ids, dates, amounts):
+        for row_id, d, a in zip(ids, dates, amounts, strict=True):
             rows.append({"index": row_id["index"], "date": d, "amount": a})
 
     if isinstance(trigger, dict) and trigger.get("type") == "pf-cf-ts-remove":
@@ -820,7 +823,7 @@ def manage_cwd_rows(add_clicks, remove_clicks, ids, thresholds, reductions):
     trigger = dash.ctx.triggered_id
     rows = []
     if ids:
-        for row_id, t, r in zip(ids, thresholds, reductions):
+        for row_id, t, r in zip(ids, thresholds, reductions, strict=True):
             rows.append({"index": row_id["index"], "threshold": t, "reduction": r})
 
     if isinstance(trigger, dict) and trigger.get("type") == "pf-cf-cwd-remove":
