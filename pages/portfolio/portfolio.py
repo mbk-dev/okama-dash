@@ -4,10 +4,10 @@ import time
 import typing
 
 import dash
+import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
 import plotly
-from dash import dash_table, callback, ALL, html, dcc
-from dash.dash_table.Format import Format, Scheme
+from dash import callback, ALL, html, dcc
 from dash.dependencies import Input, Output, State
 
 import plotly.express as px
@@ -448,7 +448,7 @@ def update_graf_portfolio(
         logging.exception("Callback error")
         empty_fig = go.Figure()
         return (
-            empty_fig, {}, dash_table.DataTable(), dash_table.DataTable(), dash_table.DataTable(), None,
+            empty_fig, {}, dag.AgGrid(), dag.AgGrid(), dag.AgGrid(), None,
             True, f"Error: {e}",
         )
 
@@ -697,8 +697,8 @@ def _update_graf_portfolio_inner(
         )
         forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(pf_object)
     else:
-        forecast_survival_statistics_datatable = dash_table.DataTable()
-        forecast_wealth_statistics_datatable = dash_table.DataTable()
+        forecast_survival_statistics_datatable = dag.AgGrid()
+        forecast_wealth_statistics_datatable = dag.AgGrid()
     return fig, config, statistics_dash_table, forecast_survival_statistics_datatable, forecast_wealth_statistics_datatable, json_data
 
 
@@ -854,10 +854,13 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
         {"distribution": "Lognormal", "statistics": ks_lognorm.statistic, "p-value": ks_lognorm.pvalue},
         {"distribution": "Student's T", "statistics": ks_t.statistic, "p-value": ks_t.pvalue},
     ]
-    columns = [
-        dict(id="distribution", name="distribution"),
-        dict(id="statistics", name="statistics", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
-        dict(id="p-value", name="p-value", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+    guarded_decimal_formatter = {
+        "function": "typeof params.value === 'number' ? d3.format('.2f')(params.value) : params.value"
+    }
+    column_defs = [
+        {"field": "distribution", "headerName": "distribution"},
+        {"field": "statistics", "headerName": "statistics", "valueFormatter": guarded_decimal_formatter},
+        {"field": "p-value", "headerName": "p-value", "valueFormatter": guarded_decimal_formatter},
     ]
     statistics_html = html.Div(
         [
@@ -884,10 +887,12 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
             ),
             html.Div(
                 [
-                    dash_table.DataTable(
-                        data=table_list,
-                        columns=columns,
-                        style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
+                    dag.AgGrid(
+                        rowData=table_list,
+                        columnDefs=column_defs,
+                        columnSize="responsiveSizeToFit",
+                        dashGridOptions={"domLayout": "autoHeight"},
+                        style={"height": None},
                     )
                 ],
             ),
@@ -896,7 +901,7 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
     return statistics_html
 
 
-def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio) -> dash_table.DataTable:
+def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio) -> dag.AgGrid:
     if not df_forecast.empty:
         backtest_survival_period = 0 if df_backtsest.empty else pf_object.dcf.survival_period_hist()
         fsp = pf_object.dcf.monte_carlo_survival_period(threshold=0)
@@ -910,36 +915,44 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             {"1": "95th percentile", "2": fsp.quantile(95 / 100), "3": "-", "4": None},
             {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "-", "4": None},
         ]
-        columns = [
-            dict(id="1", name="1"),
-            dict(id="2", name="2", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
-            dict(id="3", name="3"),
-            dict(id="4", name="4", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+        guarded_decimal_formatter = {
+            "function": "typeof params.value === 'number' ? d3.format('.2f')(params.value) : params.value"
+        }
+        column_defs = [
+            {"field": "1"},
+            {"field": "2", "valueFormatter": guarded_decimal_formatter},
+            {"field": "3"},
+            {"field": "4", "valueFormatter": guarded_decimal_formatter},
         ]
-        forecast_survival_statistics_datatable = dash_table.DataTable(
-            data=table_list,
-            columns=columns,
-            style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
-            style_header={"display": "none"},
-            export_format="xlsx",
+        forecast_survival_statistics_datatable = dag.AgGrid(
+            rowData=table_list,
+            columnDefs=column_defs,
+            columnSize="responsiveSizeToFit",
+            dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
+            style={"height": None},
+            csvExportParams={"fileName": "forecast_survival_statistics.csv"},
         )
     else:
         backtest_survival_period = pf_object.dcf.survival_period_hist()
         table_list = [{"1": "Backtest survival period", "2": backtest_survival_period}]
-        columns = [
-            dict(id="1", name="1"),
-            dict(id="2", name="2", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+        guarded_decimal_formatter = {
+            "function": "typeof params.value === 'number' ? d3.format('.2f')(params.value) : params.value"
+        }
+        column_defs = [
+            {"field": "1"},
+            {"field": "2", "valueFormatter": guarded_decimal_formatter},
         ]
-        forecast_survival_statistics_datatable = dash_table.DataTable(
-            data=table_list,
-            columns=columns,
-            style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
-            style_header={"display": "none"},
+        forecast_survival_statistics_datatable = dag.AgGrid(
+            rowData=table_list,
+            columnDefs=column_defs,
+            columnSize="responsiveSizeToFit",
+            dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
+            style={"height": None},
         )
     return forecast_survival_statistics_datatable
 
 
-def get_forecast_wealth_statistics_table(pf_object) -> dash_table.DataTable:
+def get_forecast_wealth_statistics_table(pf_object) -> dag.AgGrid:
     wealth_fv = pf_object.dcf.monte_carlo_wealth(discounting="fv")
     if not wealth_fv.empty:
         wealth = wealth_fv.iloc[-1, :]
@@ -955,44 +968,60 @@ def get_forecast_wealth_statistics_table(pf_object) -> dash_table.DataTable:
             {"1": "95th percentile", "2": wealth.quantile(95 / 100), "3": wealth_pv.quantile(95 / 100), "4": "-", "5": None, "6": None},
             {"1": "99th percentile", "2": wealth.quantile(99 / 100), "3": wealth_pv.quantile(99 / 100), "4": "-", "5": None, "6": None},
         ]
-        columns = [
-            dict(id="1", name=""),
-            dict(id="2", name="FV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
-            dict(id="3", name="PV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
-            dict(id="4", name=""),
-            dict(id="5", name="FV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
-            dict(id="6", name="PV", type="numeric", format=Format(scheme=Scheme.decimal_integer, group=True)),
+        guarded_integer_formatter = {
+            "function": "typeof params.value === 'number' ? d3.format(',.0f')(params.value) : params.value"
+        }
+        column_defs = [
+            {"field": "1", "headerName": ""},
+            {
+                "field": "2",
+                "headerName": "FV",
+                "headerTooltip": "Future Value (not discounted)",
+                "valueFormatter": guarded_integer_formatter,
+            },
+            {
+                "field": "3",
+                "headerName": "PV",
+                "headerTooltip": "Present Value (discounted)",
+                "valueFormatter": guarded_integer_formatter,
+            },
+            {"field": "4", "headerName": ""},
+            {
+                "field": "5",
+                "headerName": "FV",
+                "headerTooltip": "Future Value (not discounted)",
+                "valueFormatter": guarded_integer_formatter,
+            },
+            {
+                "field": "6",
+                "headerName": "PV",
+                "headerTooltip": "Present Value (discounted)",
+                "valueFormatter": guarded_integer_formatter,
+            },
         ]
-        forecast_wealth_statistics_datatable = dash_table.DataTable(
-            data=table_list,
-            columns=columns,
-            style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
-            export_format="xlsx",
-            style_header={
-                # "display": "none",
-                'textAlign': 'center',
-                'fontWeight': 'bold'
-            },
-            tooltip_header={
-                1: None,
-                2: 'Future Value (not discounted)',
-                3: 'Present Value (discounted)',
-                4: None,
-                5: 'Future Value (not discounted)',
-                6: 'Present Value (discounted)',
-            },
+        forecast_wealth_statistics_datatable = dag.AgGrid(
+            rowData=table_list,
+            columnDefs=column_defs,
+            columnSize="responsiveSizeToFit",
+            dashGridOptions={"domLayout": "autoHeight"},
+            style={"height": None},
+            csvExportParams={"fileName": "forecast_wealth_statistics.csv"},
         )
     else:
         table_list = [{"1": "Wealth", "2": 0}]
-        columns = [
-            dict(id="1", name="1"),
-            dict(id="2", name="2", type="numeric", format=Format(precision=2, scheme=Scheme.decimal)),
+        guarded_decimal_formatter = {
+            "function": "typeof params.value === 'number' ? d3.format('.2f')(params.value) : params.value"
+        }
+        column_defs = [
+            {"field": "1"},
+            {"field": "2", "valueFormatter": guarded_decimal_formatter},
         ]
-        forecast_wealth_statistics_datatable = dash_table.DataTable(
-            data=table_list,
-            columns=columns,
-            style_data={"whiteSpace": "normal", "height": "auto", "overflowX": "auto"},
-            style_header={"display": "none"},
+        forecast_wealth_statistics_datatable = dag.AgGrid(
+            rowData=table_list,
+            columnDefs=column_defs,
+            columnSize="responsiveSizeToFit",
+            dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
+            style={"height": None},
         )
     return forecast_wealth_statistics_datatable
 
@@ -1003,15 +1032,20 @@ def get_pf_statistics_table(al_object):
 
     statistics_dict = statistics_df.to_dict(orient="records")
 
-    columns = [
-        dict(id=i, name=i, type="numeric", format=dash_table.FormatTemplate.percentage(2))
-        for i in statistics_df.columns
+    guarded_percent_formatter = {
+        "function": "typeof params.value === 'number' ? d3.format('.2%')(params.value) : params.value"
+    }
+    column_defs = [
+        {"field": col, "headerName": col, "valueFormatter": guarded_percent_formatter}
+        for col in statistics_df.columns
     ]
-    return dash_table.DataTable(
-        data=statistics_dict,
-        columns=columns,
-        style_table={"overflowX": "auto"},
-        export_format="xlsx",
+    return dag.AgGrid(
+        rowData=statistics_dict,
+        columnDefs=column_defs,
+        columnSize="responsiveSizeToFit",
+        dashGridOptions={"domLayout": "autoHeight"},
+        style={"height": None},
+        csvExportParams={"fileName": "portfolio_statistics.csv"},
     )
 
 

@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock, patch
 
+import dash_ag_grid as dag
 import pandas as pd
 import plotly.graph_objects as go
 import pytest
-from dash import dash_table
 
 from tests.mocks.okama_mock import make_mock_portfolio
 
@@ -50,7 +50,7 @@ def patched_pf_inner(tmp_path):
         patch(f"{PF_MODULE}.ok.Rebalance", return_value=MagicMock()),
         patch(f"{PF_MODULE}.ok.IndexationStrategy", return_value=MagicMock()),
         patch(f"{PF_MODULE}.get_pf_figure", return_value=(mock_fig, empty_df, empty_df, empty_df)),
-        patch(f"{PF_MODULE}.get_pf_statistics_table", return_value=dash_table.DataTable(data=[{"a": 1}])),
+        patch(f"{PF_MODULE}.get_pf_statistics_table", return_value=dag.AgGrid(rowData=[{"a": 1}])),
     ):
         yield mock_pf
 
@@ -103,8 +103,8 @@ class TestUpdateGrafPortfolioInner:
         result = _update_graf_portfolio_inner(**_default_args())
         forecast_surv = result[3]
         forecast_wealth = result[4]
-        assert isinstance(forecast_surv, dash_table.DataTable)
-        assert isinstance(forecast_wealth, dash_table.DataTable)
+        assert isinstance(forecast_surv, dag.AgGrid)
+        assert isinstance(forecast_wealth, dag.AgGrid)
 
     def test_weights_divided_by_100(self, patched_pf_inner):
         from pages.portfolio.portfolio import _update_graf_portfolio_inner
