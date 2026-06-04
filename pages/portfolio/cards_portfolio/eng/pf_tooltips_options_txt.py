@@ -112,23 +112,20 @@ pf_mc_tooltip_backtest = dcc.Markdown(
 
 pf_mc_tooltip_distribution_parameters = dcc.Markdown(
     """
-    Parameters of the selected distribution. Leave a field empty to let okama
-    estimate it from the portfolio's historical returns.
+    Parameters of the selected distribution, estimated automatically from the
+    portfolio's historical returns whenever the portfolio is complete
+    (weights sum to 100%) and its composition, dates, currency or rebalancing
+    change. You can edit any value afterwards; leave a field empty to let
+    okama estimate it during the simulation.
     For the lognormal distribution, okama always fixes the location parameter
     (loc) at -1, so that field is shown but disabled.
     """
 )
-pf_mc_tooltip_estimate = dcc.Markdown(
+pf_mc_tooltip_var_level = dcc.Markdown(
     """
-    Fit the selected distribution to the portfolio's historical returns and
-    fill the fields with the estimated values. You can edit them afterwards,
-    or leave fields empty for okama to estimate them during the simulation.
-    """
-)
-pf_mc_tooltip_optimize_df = dcc.Markdown(
-    """
-    Find the degrees of freedom (df) for Student's t-distribution that best match
-    the empirical VaR and CVaR at the given level, then write it into the df field.
+    Enter a VaR confidence level (1-99) to recompute the degrees of freedom (df)
+    so that Student's t-distribution best matches the empirical VaR and CVaR at
+    that level. Leave empty to keep the df fitted from historical returns.
     """
 )
 

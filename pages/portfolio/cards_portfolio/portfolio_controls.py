@@ -524,27 +524,20 @@ def card_controls(
                                                                     "VaR level, %",
                                                                     html.I(
                                                                         className="bi bi-info-square ms-2",
-                                                                        id="pf-mc-optimize-info-label",
+                                                                        id="pf-mc-var-level-info-label",
                                                                     ),
                                                                     dbc.Tooltip(
-                                                                        tl.pf_mc_tooltip_optimize_df,
-                                                                        target="pf-mc-optimize-info-label",
+                                                                        tl.pf_mc_tooltip_var_level,
+                                                                        target="pf-mc-var-level-info-label",
                                                                     ),
                                                                 ],
                                                                 width=6,
                                                             ),
                                                             dbc.Col(
-                                                                dbc.InputGroup(
-                                                                    [
-                                                                        dbc.Input(
-                                                                            type="number", min=1, max=99, value=5,
-                                                                            id="pf-mc-t-var-level",
-                                                                        ),
-                                                                        dbc.Button(
-                                                                            "Optimize df", id="pf-mc-t-optimize-btn",
-                                                                            n_clicks=0, color="secondary", outline=True,
-                                                                        ),
-                                                                    ]
+                                                                dbc.Input(
+                                                                    type="number", min=1, max=99,
+                                                                    placeholder="e.g. 5",
+                                                                    id="pf-mc-t-var-level",
                                                                 ),
                                                                 width=6,
                                                             ),
@@ -554,23 +547,6 @@ def card_controls(
                                                 id="pf-mc-t-group",
                                                 className="vstack gap-2",
                                                 style={"display": "none"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    dbc.Button(
-                                                        "Estimate parameters", id="pf-mc-estimate-btn",
-                                                        n_clicks=0, color="secondary", outline=True,
-                                                    ),
-                                                    html.I(
-                                                        className="bi bi-info-square ms-2",
-                                                        id="pf-mc-estimate-info-label",
-                                                    ),
-                                                    dbc.Tooltip(
-                                                        tl.pf_mc_tooltip_estimate,
-                                                        target="pf-mc-estimate-info-label",
-                                                    ),
-                                                ],
-                                                className="mt-2",
                                             ),
                                             html.Small(
                                                 "", id="pf-mc-params-message", className="text-muted d-block mt-1"
