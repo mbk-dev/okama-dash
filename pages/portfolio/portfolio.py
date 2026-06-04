@@ -1245,7 +1245,11 @@ def _get_wealth_data(
         )
         if has_cashflow:
             _nullify_after_first_zero(df, pf_object.symbol)
-        return_series = pf_object.get_cumulative_return(real=False)
+            return_series = None  # annotations are not drawn for cash-flow charts
+        else:
+            # Full-period cumulative return of every plotted trace
+            # (portfolio, assets, inflation), aligned with df columns.
+            return_series = df.iloc[-1] / df.iloc[0] - 1
         return df, df_backtest, df_forecast, return_series
 
     df_backtest = (

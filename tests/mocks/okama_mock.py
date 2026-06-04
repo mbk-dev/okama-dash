@@ -130,8 +130,10 @@ class PicklablePortfolio:
         })
 
     def get_cumulative_return(self, real: bool = False) -> pd.DataFrame:
-        cum_data = np.cumprod(1 + self.ror.to_numpy()[:, None] * np.array([[1.0, 1.1, 0.9]]), axis=0) - 1.0
-        return pd.DataFrame(cum_data, index=self._dates, columns=["TestPF.PF", "AAPL.US", "MSFT.US"])
+        # Mirrors okama 2.1.1: Portfolio.get_cumulative_return returns an expanding
+        # time series with the portfolio column only (plus inflation if enabled).
+        cum_data = np.cumprod(1 + self.ror.to_numpy()[:, None], axis=0) - 1.0
+        return pd.DataFrame(cum_data, index=self._dates, columns=["TestPF.PF"])
 
     def get_rolling_cagr(self, window: int | None = None, real: bool = False) -> pd.DataFrame:
         return pd.DataFrame(
@@ -360,9 +362,11 @@ def make_mock_portfolio() -> MagicMock:
 
     mock.drawdowns = pd.Series(rng.uniform(-0.2, 0, n), index=dates, name="TestPF.PF")
 
-    cum_return_data = np.cumprod(1 + rng.normal(0.005, 0.03, (n, 3)), axis=0) - 1.0
+    # Mirrors okama 2.1.1: Portfolio.get_cumulative_return returns an expanding
+    # time series with the portfolio column only (plus inflation if enabled).
+    cum_return_data = np.cumprod(1 + rng.normal(0.005, 0.03, (n, 1)), axis=0) - 1.0
     mock.get_cumulative_return.return_value = pd.DataFrame(
-        cum_return_data, index=dates, columns=["TestPF.PF", "AAPL.US", "MSFT.US"],
+        cum_return_data, index=dates, columns=["TestPF.PF"],
     )
     mock.get_rolling_cagr.return_value = pd.DataFrame(
         rng.normal(0.08, 0.02, (n, 3)),

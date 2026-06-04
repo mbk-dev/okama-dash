@@ -170,6 +170,22 @@ class TestGetPfFigureAnnualReturn:
         assert any("CAGR" in t for t in annotation_texts)
 
 
+class TestGetPfFigureWealthAnnotations:
+    def test_wealth_plot_annotates_each_trace_with_cumulative_return(self):
+        from pages.portfolio.portfolio import get_pf_figure
+
+        pf = make_mock_portfolio()
+        fig, *_ = get_pf_figure(
+            pf, plot_type="wealth", inflation_on=False, rolling_window=2,
+            n_monte_carlo=0, years_monte_carlo=0, distribution_monte_carlo="norm",
+            show_backtest="no", log_scale=False, cf_strategy="indexation",
+        )
+        wealth = pf.wealth_index_with_assets
+        expected = list(((wealth.iloc[-1] / wealth.iloc[0] - 1) * 100).map("{:,.2f}%".format))
+        percent_annotations = [a.text for a in fig.layout.annotations if a.text and a.text.endswith("%")]
+        assert percent_annotations == expected
+
+
 class TestUpdateGrafPortfolioOuter:
     def test_exception_opens_toast_with_message(self):
         from pages.portfolio.portfolio import update_graf_portfolio
