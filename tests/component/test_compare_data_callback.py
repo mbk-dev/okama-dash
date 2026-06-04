@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
+import dash_ag_grid as dag
 import plotly.graph_objects as go
 import pytest
-from dash import dash_table
 
 from tests.mocks.okama_mock import make_mock_asset_list
 
@@ -30,7 +30,8 @@ class TestUpdateGrafCompareInner:
         )
         assert isinstance(fig, go.Figure)
         assert isinstance(config, dict)
-        assert isinstance(table, dash_table.DataTable)
+        assert isinstance(table, dag.AgGrid)
+        assert len(table.rowData) > 0
         assert json_data is not None
 
     def test_cagr_plot_type(self, mock_al):
@@ -104,7 +105,7 @@ class TestUpdateGrafCompareInner:
             ccy="USD", fd_value="2020-01", ld_value="2024-12",
             plot_type="wealth", inflation_on=False, rolling_window=2,
         )
-        assert len(table.data) > 0
+        assert len(table.rowData) > 0
 
 
 class TestUpdateGrafCompareOuter:

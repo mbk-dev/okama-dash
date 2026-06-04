@@ -2,8 +2,9 @@ import typing
 
 import dash
 import dash.exceptions
+import dash_ag_grid as dag
 import plotly
-from dash import dash_table, callback
+from dash import callback
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
@@ -16,7 +17,14 @@ import okama as ok
 import common.settings as settings
 from common.object_cache import get_or_create, TTL_ASSET_LIST
 import common.update_style
-from common.chart_helpers import add_inflation_trace, add_crisis_rectangles, add_last_value_annotations, add_sharpe_ratio_row, add_return_type_annotation, make_error_alert
+from common.chart_helpers import (
+    add_inflation_trace,
+    add_crisis_rectangles,
+    add_last_value_annotations,
+    add_sharpe_ratio_row,
+    add_return_type_annotation,
+    make_error_alert,
+)
 import plotly.graph_objects as go
 
 from common.mobile_screens import adopt_small_screens
@@ -31,7 +39,7 @@ dash.register_page(
     path="/compare",
     title="Compare financial assets : okama",
     name="Compare assets",
-    description="""Okama.io widget to compare financial assets properties: 
+    description="""Okama.io widget to compare financial assets properties:
                 rate of return, risk, CVAR, drawdowns, correlation""",
 )
 
@@ -105,13 +113,19 @@ def update_graf_compare(
     if not selected_symbols:
         raise dash.exceptions.PreventUpdate
     try:
-        return _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window)
+        return _update_graf_compare_inner(
+            screen, log_on, selected_symbols, ccy, fd_value, ld_value,
+            plot_type, inflation_on, rolling_window
+        )
     except Exception as e:
         alert = make_error_alert(e)
         return go.Figure(), {}, alert, None
 
 
-def _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window):
+def _update_graf_compare_inner(
+    screen, log_on, selected_symbols, ccy, fd_value, ld_value,
+    plot_type, inflation_on, rolling_window
+):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     al_object, _ = get_or_create(
         obj_type="assetlist",
@@ -174,17 +188,26 @@ def _update_graf_compare_inner(screen, log_on, selected_symbols, ccy, fd_value, 
 def get_al_statistics_table(al_object):
     statistics_df = al_object.describe().iloc[:-4, :]  # crop from Max drawdown date
     statistics_df = add_sharpe_ratio_row(al_object, statistics_df)
-    statistics_dict = statistics_df.to_dict(orient="records")
 
-    columns = [
-        dict(id=i, name=i, type="numeric", format=dash_table.FormatTemplate.percentage(2))
-        for i in statistics_df.columns
-    ]
-    return dash_table.DataTable(
-        data=statistics_dict,
-        columns=columns,
-        style_table={"overflowX": "auto"},
-        export_format="xlsx",
+    # Build columnDefs with percent formatting for all numeric columns
+    # Preserves existing quirk: all numeric values (including Sharpe) get percent formatting
+    column_defs = []
+    for col in statistics_df.columns:
+        col_def = {"field": col, "headerName": col}
+        # Apply guarded percent formatter to all columns (handles text and non-numeric cells)
+        col_def["valueFormatter"] = {
+            "function": "(params.value == null || isNaN(params.value)) ? params.value : d3.format('.2%')(params.value)"
+        }
+        column_defs.append(col_def)
+
+    return dag.AgGrid(
+        id="al-describe-table-grid",
+        rowData=statistics_df.to_dict("records"),
+        columnDefs=column_defs,
+        columnSize="responsiveSizeToFit",
+        dashGridOptions={"domLayout": "autoHeight"},
+        style={"height": None},
+        csvExportParams={"fileName": "compare_statistics.csv"},
     )
 
 
@@ -227,7 +250,7 @@ def get_al_figure(
     elif plot_type == "correlation":
         matrix = al_object.assets_ror.corr()
         matrix = matrix.map("{:,.2f}".format)
-        fig = px.imshow(matrix, text_auto=True, aspect="equal", labels=dict(x="", y="", color=""))
+        fig = px.imshow(matrix, text_auto=True, aspect="equal", labels={"x": "", "y": "", "color": ""})
         return fig, matrix
 
     ind = df.index.to_timestamp("D")
@@ -236,7 +259,7 @@ def get_al_figure(
 
     annotations_xy = [(ind[-1], y) for y in df.iloc[-1].to_numpy()]
     annotation_series = (return_series * 100).map("{:,.2f}%".format)
-    annotations_text = [cum_return for cum_return in annotation_series]
+    annotations_text = list(annotation_series)
 
     # inflation must not be in the chart for "Real CAGR"
     plot_inflation_condition = inflation_on and plot_type != "real_cagr"
@@ -271,3 +294,13 @@ def get_al_figure(
 def show_graf_and_statistics_table_rows(n_clicks, style):
     style = common.update_style.change_style_for_hidden_row(n_clicks, style)
     return style, style
+
+
+@callback(
+    Output("al-describe-table-grid", "exportDataAsCsv"),
+    Input("al-statistics-export-btn", "n_clicks"),
+    prevent_initial_call=True,
+)
+def export_statistics_csv(n_clicks):
+    from common.html_elements.grid_export import csv_export_callback
+    return csv_export_callback(n_clicks)
