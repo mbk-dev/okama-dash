@@ -54,3 +54,18 @@ class TestShareableLinks:
         assert "TSLA.US" in texts
         assert page.locator("#benchmark-first-date").input_value() == "2017-01"
         assert page.locator("#benchmark-last-date").input_value() == "2023-06"
+
+    def test_portfolio_link_prefills_mc_params(self, page, dash_server_url):
+        page.goto(
+            f"{dash_server_url}/portfolio?tickers=AAPL.US,MSFT.US&weights=50,50"
+            f"&mc_number=100&mc_dist=t&mc_t_df=9.9&mc_t_loc=0.001&mc_t_scale=0.02&mc_var=5",
+            wait_until="domcontentloaded",
+        )
+        # Wait for the page to settle and URL params to populate inputs
+        page.locator("#pf-first-date").wait_for(state="visible", timeout=10_000)
+        page.wait_for_timeout(500)  # Brief settle for reactive callback round-trip
+
+        # MC inputs are inside a collapsed panel; Playwright reads non-visible inputs fine
+        assert page.locator("#pf-monte-carlo-number").input_value() == "100"
+        assert page.locator("#pf-mc-t-df").input_value() == "9.9"  # Regression guard: would be "3.4" if auto-estimate overwrites
+        assert page.locator("#pf-mc-t-var-level").input_value() == "5"
