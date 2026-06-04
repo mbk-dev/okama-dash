@@ -255,3 +255,58 @@ class TestShowGrafAndStatisticsRows:
 
         assert graf_style == {"display": "none"}
         assert stats_style == {"display": "none"}
+
+
+class TestMonteCarloForecastZeroTermination:
+    # Each MC scenario line must end exactly at zero when the portfolio dies,
+    # then break (NaN) — same convention as the backtest wealth line.
+    @staticmethod
+    def _portfolio_with_mc_forecast():
+        dates = pd.period_range("2025-01", "2025-06", freq="M")
+        raw = pd.DataFrame(
+            {
+                0: [1000.0, 500.0, -100.0, -200.0, -300.0, -400.0],
+                1: [1000.0, 1100.0, 1200.0, 1300.0, 1400.0, 1500.0],
+            },
+            index=dates,
+        )
+
+        def mc_wealth(discounting="fv", include_negative_values=True):
+            # Mirrors okama monte_carlo_wealth: with include_negative_values=False
+            # the first non-positive value becomes 0 and the tail is zero-filled.
+            if include_negative_values:
+                return raw.copy()
+            out = raw.copy()
+            out.loc[out[0] <= 0, 0] = 0.0
+            return out
+
+        pf = make_mock_portfolio()
+        pf.dcf.cashflow_parameters.initial_investment = 1000.0
+        pf.dcf.monte_carlo_wealth = MagicMock(side_effect=mc_wealth)
+        return pf, dates
+
+    def test_dead_scenario_ends_with_single_zero_then_breaks(self):
+        from pages.portfolio.portfolio import _get_wealth_data
+
+        pf, dates = self._portfolio_with_mc_forecast()
+        _, _, df_forecast, _ = _get_wealth_data(
+            pf, has_cashflow=True, n_monte_carlo=2, show_backtest_bool=False,
+            distribution_mc="norm", years_mc=5,
+        )
+
+        dead = df_forecast[0]
+        assert dead.loc[dates[2]] == 0  # death point kept at exactly zero
+        assert dead.loc[dates[3]:].isna().all()  # line breaks after death
+
+    def test_surviving_scenario_keeps_all_values(self):
+        from pages.portfolio.portfolio import _get_wealth_data
+
+        pf, _ = self._portfolio_with_mc_forecast()
+        _, _, df_forecast, _ = _get_wealth_data(
+            pf, has_cashflow=True, n_monte_carlo=2, show_backtest_bool=False,
+            distribution_mc="norm", years_mc=5,
+        )
+
+        alive = df_forecast[1]
+        assert alive.notna().all()
+        assert (alive > 0).all()

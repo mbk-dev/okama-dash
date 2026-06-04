@@ -1046,7 +1046,9 @@ def _get_wealth_data(
             period=years_mc,
             mc_number=n_monte_carlo,
         )
-        df_forecast = pf_object.dcf.monte_carlo_wealth()
+        df_forecast = pf_object.dcf.monte_carlo_wealth(discounting="fv", include_negative_values=False)
+        for scenario in df_forecast.columns:
+            _nullify_after_first_zero(df_forecast, scenario)
         df = pd.concat([df_backtest, df_forecast], axis=0, join="outer", ignore_index=False)
     else:
         df = df_backtest

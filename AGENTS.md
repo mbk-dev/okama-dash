@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-347 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+370 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -142,7 +142,7 @@ tests/
 │   ├── test_benchmark_data_callback.py  # update_graf_benchmark (10): 6 plot types, bar chart, errors
 │   ├── test_ef_data_callback.py       # update_ef_cards (8): figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution
 │   ├── test_ef_grid_callbacks.py     # sim-mode visibility, dynamic grid step options, grid↔pairwise exclusivity, submit gating (6 tests)
-│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (11): figure, y-titles (incl. annual_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (2: bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit)
+│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner (11): figure, y-titles (incl. annual_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (2: bars + CAGR return_type/annotation); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit); MC forecast scenarios end at zero then break (2)
 │   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows), reactive auto_estimate_distribution_parameters (gates, norm/lognorm/t fit, VaR-level df optimize + reset-on-clear, errors), df>2 validation (23 tests)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types), rolling-window disabled for annual_return (compare + portfolio)
@@ -158,11 +158,11 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 132 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 195 | ~5s |
+| `poetry run pytest -m unit` | Pure logic | 153 | ~4s |
+| `poetry run pytest -m component` | Dash callbacks | 197 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 20 | ~70s |
-| `poetry run pytest -q` | Everything | 347 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 327 | ~6s |
+| `poetry run pytest -q` | Everything | 370 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 350 | ~6s |
 
 ### What's covered per page
 
