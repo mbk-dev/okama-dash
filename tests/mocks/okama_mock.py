@@ -38,6 +38,26 @@ class _CashflowParameters:
         self.initial_investment = initial_investment
 
 
+class _MC:
+    """Picklable mock for okama MonteCarlo object."""
+    def __init__(self):
+        self.distribution = "norm"
+        self.distribution_parameters = None
+
+    def get_parameters_for_distribution(self) -> tuple:
+        """Return fixed distribution parameters per self.distribution."""
+        params_map = {
+            "norm": (0.007, 0.04),
+            "lognorm": (0.05, -1.0, 1.01),
+            "t": (3.4, 0.006, 0.038),
+        }
+        return params_map.get(self.distribution, (0.0, 1.0))
+
+    def optimize_df_for_students(self, var_level: float) -> float:
+        """Return a fixed degrees-of-freedom value."""
+        return 7.5
+
+
 class _DCF:
     def __init__(self, wealth_index_df: pd.DataFrame):
         self.use_discounted_values = True
@@ -45,6 +65,7 @@ class _DCF:
         self.cashflow_parameters = _CashflowParameters()
         self._wealth_index_df = wealth_index_df
         self._mc_params: dict = {}
+        self.mc = _MC()
 
     def wealth_index(self, discounting: str = "fv", include_negative_values: bool = True) -> pd.DataFrame:
         return self._wealth_index_df.copy()
@@ -59,7 +80,7 @@ class _DCF:
             "mc_number": mc_number,
         }
 
-    def monte_carlo_wealth(self, discounting: str = "fv") -> pd.DataFrame:
+    def monte_carlo_wealth(self, discounting: str = "fv", include_negative_values: bool = True) -> pd.DataFrame:
         return pd.DataFrame()
 
     def survival_period_hist(self) -> float:
