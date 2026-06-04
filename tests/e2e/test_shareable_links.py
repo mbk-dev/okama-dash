@@ -67,5 +67,32 @@ class TestShareableLinks:
 
         # MC inputs are inside a collapsed panel; Playwright reads non-visible inputs fine
         assert page.locator("#pf-monte-carlo-number").input_value() == "100"
-        assert page.locator("#pf-mc-t-df").input_value() == "9.9"  # Regression guard: would be "3.4" if auto-estimate overwrites
+        # Regression guard: would be "3.4" if auto-estimate overwrites
+        assert page.locator("#pf-mc-t-df").input_value() == "9.9"
         assert page.locator("#pf-mc-t-var-level").input_value() == "5"
+
+    def test_portfolio_url_params_not_overwritten_by_reactive_change(self, page, dash_server_url):
+        """URL MC params must survive reactive triggers like weight change (guard against auto-fit)."""
+        page.goto(
+            f"{dash_server_url}/portfolio?tickers=AAPL.US,MSFT.US&weights=50,50"
+            f"&mc_dist=t&mc_t_df=9.9&mc_t_loc=0.0&mc_t_scale=0.02",
+            wait_until="domcontentloaded",
+        )
+        page.locator("#pf-first-date").wait_for(state="visible", timeout=10_000)
+        page.wait_for_timeout(500)
+
+        # Verify initial values from URL (including zero-valued mc_t_loc)
+        assert page.locator("#pf-mc-t-df").input_value() == "9.9"
+        assert page.locator("#pf-mc-t-loc").input_value() == "0"
+        assert page.locator("#pf-mc-t-scale").input_value() == "0.02"
+
+        # Trigger reactive auto_estimate by changing weight (Input trigger)
+        weight_input = page.locator("input[type='number']").first
+        weight_input.click()
+        weight_input.fill("60")
+        page.wait_for_timeout(1500)  # Allow auto_estimate callback to fire
+
+        # Verify URL params remain unchanged (not auto-fitted)
+        assert page.locator("#pf-mc-t-df").input_value() == "9.9"
+        assert page.locator("#pf-mc-t-loc").input_value() == "0"
+        assert page.locator("#pf-mc-t-scale").input_value() == "0.02"

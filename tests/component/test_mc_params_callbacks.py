@@ -146,6 +146,70 @@ class TestHideMonteCarloRows:
         assert all(style is None for style in result)
 
 
+class TestMcUrlParamsStoreCreation:
+    def _extract_store_data(self, component):
+        """Extract pf-mc-url-params store data from the card_controls layout."""
+        if hasattr(component, "id") and component.id == "pf-mc-url-params":
+            return component.data
+        if hasattr(component, "children"):
+            children = component.children if isinstance(component.children, list) else [component.children]
+            for child in children:
+                result = self._extract_store_data(child)
+                if result != "not_found":
+                    return result
+        return "not_found"
+
+    def test_zero_valued_param_creates_store_dict(self, _dash_app):
+        """Zero-valued MC param (mc_t_loc=0.0) must create store dict, not None."""
+        from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
+
+        card = card_controls(
+            tickers="AAPL.US", weights="100",
+            first_date="2020-01", last_date="2024-12",
+            ccy="USD", rebal="month",
+            initial_amount=1000, cashflow=0, discount_rate=0, symbol="PF",
+            mc_t_loc=0.0,  # zero is a valid value
+        )
+
+        store_data = self._extract_store_data(card)
+        assert store_data is not None, "Store should be dict when mc_t_loc=0.0 is present"
+        assert isinstance(store_data, dict)
+        assert store_data["mc_t_loc"] == 0.0
+
+    def test_all_none_params_creates_none_store(self, _dash_app):
+        """When all MC params are None, store should be None."""
+        from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
+
+        card = card_controls(
+            tickers="AAPL.US", weights="100",
+            first_date="2020-01", last_date="2024-12",
+            ccy="USD", rebal="month",
+            initial_amount=1000, cashflow=0, discount_rate=0, symbol="PF",
+        )
+
+        store_data = self._extract_store_data(card)
+        assert store_data is None
+
+    def test_mix_of_zero_and_none_creates_store_dict(self, _dash_app):
+        """Mix of zero and None params must create store dict."""
+        from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
+
+        card = card_controls(
+            tickers="AAPL.US", weights="100",
+            first_date="2020-01", last_date="2024-12",
+            ccy="USD", rebal="month",
+            initial_amount=1000, cashflow=0, discount_rate=0, symbol="PF",
+            mc_mu=0.0,  # zero
+            mc_sigma=0.05,  # non-zero
+        )
+
+        store_data = self._extract_store_data(card)
+        assert store_data is not None
+        assert isinstance(store_data, dict)
+        assert store_data["mc_mu"] == 0.0
+        assert store_data["mc_sigma"] == 0.05
+
+
 class TestAutoEstimateDistributionParameters:
     def _form_state(self, **overrides):
         state = {
@@ -285,6 +349,24 @@ class TestAutoEstimateDistributionParameters:
         assert result[1] == 0.04  # sigma filled from fit
         assert result[8] is dash.no_update  # store output: not consumed
         assert "estimated in" in str(result[7])
+
+    def test_url_params_with_zero_valued_param_blocks_recompute(self, patched_okama_portfolio):
+        """A URL param with numeric zero (e.g. mc_t_loc=0) is a valid user value and must block auto-fit."""
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        url_params_data = {"mc_t_loc": 0.0}
+        result = self._call("pf-base-currency", distribution="t", url_params=url_params_data)
+
+        assert len(result) == 9
+        assert result[0] is dash.no_update  # mu
+        assert result[1] is dash.no_update  # sigma
+        assert result[2] is dash.no_update  # lognorm shape
+        assert result[3] is dash.no_update  # lognorm scale
+        assert result[4] is dash.no_update  # t df
+        assert result[5] is dash.no_update  # t loc
+        assert result[6] is dash.no_update  # t scale
+        assert "link" in str(result[7]).lower()  # message mentions loaded from link
+        assert result[8] is None  # store output: consume the flag
+        mock_pf.dcf.mc.get_parameters_for_distribution.assert_not_called()
 
 
 class TestValidateDf:

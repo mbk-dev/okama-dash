@@ -647,7 +647,10 @@ def card_controls(
                             "mc_t_loc": mc_t_loc,
                             "mc_t_scale": mc_t_scale,
                         }
-                        if any([mc_mu, mc_sigma, mc_ln_shape, mc_ln_scale, mc_t_df, mc_t_loc, mc_t_scale])
+                        if any(
+                            p is not None
+                            for p in [mc_mu, mc_sigma, mc_ln_shape, mc_ln_scale, mc_t_df, mc_t_loc, mc_t_scale]
+                        )
                         else None
                     ),
                 ),
