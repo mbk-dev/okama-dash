@@ -144,20 +144,18 @@ def _recompute_df_for_var_level(assets, weights, ccy, fd, ld, rebal, abs_dev, re
 
     With a VaR level set, df is optimized to match the empirical VaR/CVaR at
     that level; with the level cleared, df is reset back to the fitted value.
-    Returns (df, status message with elapsed time).
+    Timings go to the server log only.
     """
     start = time.perf_counter()
     pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
     pf.dcf.mc.distribution = "t"
     if var_level in (None, ""):
         df = round(float(pf.dcf.mc.get_parameters_for_distribution()[0]), 6)
-        elapsed = time.perf_counter() - start
-        logging.info(f"MC df reset to fitted took {elapsed:.3f} s")
-        return df, f"df reset to fitted in {elapsed:.2f} s"
+        logging.info(f"MC df reset to fitted took {time.perf_counter() - start:.3f} s")
+        return df
     df = round(float(pf.dcf.mc.optimize_df_for_students(int(var_level))), 6)
-    elapsed = time.perf_counter() - start
-    logging.info(f"MC df optimization took {elapsed:.3f} s")
-    return df, f"df optimized in {elapsed:.2f} s"
+    logging.info(f"MC df optimization took {time.perf_counter() - start:.3f} s")
+    return df
 
 
 def layout(
@@ -480,31 +478,31 @@ def export_pf_wealth_statistics_xlsx(n_clicks, row_data):
 
 
 def _fit_distribution_params(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution):
-    """Fit distribution parameters for the active distribution. Returns (params tuple, message)."""
+    """Fit distribution parameters for the active distribution; timing goes to the server log."""
     start = time.perf_counter()
     pf = _build_ror_portfolio(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev)
     pf.dcf.mc.distribution = distribution
     params = tuple(round(float(p), 6) for p in pf.dcf.mc.get_parameters_for_distribution())
-    elapsed = time.perf_counter() - start
-    logging.info(f"MC parameter estimation took {elapsed:.3f} s")
-    return params, f"estimated in {elapsed:.2f} s"
+    logging.info(f"MC parameter estimation took {time.perf_counter() - start:.3f} s")
+    return params
 
 
-def _format_params_output_by_distribution(distribution, params, message):
+def _format_params_output_by_distribution(distribution, params):
     """Format params tuple into the 8-output contract.
 
     Outputs: (mu, sigma, ln_shape, ln_scale, t_df, t_loc, t_scale, message).
+    The message slot stays empty on success - the status line shows errors only.
     """
     nu = dash.no_update
     if distribution == "norm":
         mu, sigma = params
-        return mu, sigma, nu, nu, nu, nu, nu, message
+        return mu, sigma, nu, nu, nu, nu, nu, ""
     if distribution == "lognorm":
         shape, _loc, scale = params
-        return nu, nu, shape, scale, nu, nu, nu, message
+        return nu, nu, shape, scale, nu, nu, nu, ""
     if distribution == "t":
         df, loc, scale = params
-        return nu, nu, nu, nu, df, loc, scale, message
+        return nu, nu, nu, nu, df, loc, scale, ""
     return (nu,) * 8
 
 
@@ -553,21 +551,21 @@ def auto_estimate_distribution_parameters(
         if distribution != "t":
             return no_op
         try:
-            df, message = _recompute_df_for_var_level(
+            df = _recompute_df_for_var_level(
                 assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, var_level
             )
         except Exception as e:
             logging.exception("df recompute failed")
             return nu, nu, nu, nu, nu, nu, nu, f"Could not recompute df: {e}"
-        return nu, nu, nu, nu, df, nu, nu, message
+        return nu, nu, nu, nu, df, nu, nu, ""
 
     try:
-        params, message = _fit_distribution_params(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution)
+        params = _fit_distribution_params(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution)
     except Exception as e:
         logging.exception("Estimate parameters failed")
         return nu, nu, nu, nu, nu, nu, nu, f"Could not estimate: {e}"
 
-    return _format_params_output_by_distribution(distribution, params, message)
+    return _format_params_output_by_distribution(distribution, params)
 
 
 def _update_graf_portfolio_inner(

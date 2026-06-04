@@ -198,7 +198,8 @@ class TestAutoEstimateDistributionParameters:
 
         assert all(r is dash.no_update for r in result)
 
-    def test_fit_fills_norm_group_with_timing_message(self, patched_okama_portfolio):
+    def test_fit_fills_norm_group_without_status_message(self, patched_okama_portfolio):
+        """Successful estimation must leave the status line empty (no debug timing text)."""
         mock_pf = patched_okama_portfolio["portfolio_instance"]
         mock_pf.dcf.mc.get_parameters_for_distribution.return_value = (0.007, 0.04)
 
@@ -208,7 +209,7 @@ class TestAutoEstimateDistributionParameters:
         assert result[0] == 0.007
         assert result[1] == 0.04
         assert result[4] is dash.no_update
-        assert "estimated in" in str(result[7])
+        assert result[7] == ""
 
     def test_fit_fills_lognorm_group(self, patched_okama_portfolio):
         mock_pf = patched_okama_portfolio["portfolio_instance"]
@@ -243,7 +244,7 @@ class TestAutoEstimateDistributionParameters:
         assert result[4] == 7.5
         assert result[0] is dash.no_update
         assert result[5] is dash.no_update
-        assert "df optimized in" in str(result[7])
+        assert result[7] == ""
         mock_pf.dcf.mc.optimize_df_for_students.assert_called_once_with(5)
         mock_pf.dcf.mc.get_parameters_for_distribution.assert_not_called()
 
@@ -264,7 +265,7 @@ class TestAutoEstimateDistributionParameters:
         assert result[4] == 3.4  # df back to the fitted value
         assert result[5] is dash.no_update  # loc untouched
         assert result[6] is dash.no_update  # scale untouched
-        assert "df reset" in str(result[7])
+        assert result[7] == ""
         mock_pf.dcf.mc.optimize_df_for_students.assert_not_called()
 
     def test_estimate_failure_returns_message(self, patched_okama_portfolio):
