@@ -97,7 +97,7 @@ def rebalancing_accordion_item(rebal=None, abs_dev=None, rel_dev=None):
                                 value=rel_dev,
                                 placeholder="e.g. 10",
                             ),
-                            dbc.FormText("0-100+ (%)"),
+                            dbc.FormText("0-100 (%)"),
                             dbc.Tooltip(
                                 tl.pf_rebal_rel_deviation,
                                 target="pf-info-rebal-rel-dev",
