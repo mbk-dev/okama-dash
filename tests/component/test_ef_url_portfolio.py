@@ -1,9 +1,12 @@
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import plotly.graph_objects as go
 import pytest
 
 pytestmark = pytest.mark.component
+
+FRONTIER_MODULE = "pages.efficient_frontier.frontier"
 
 
 def _walk(component):
@@ -226,3 +229,91 @@ class TestPrepareEfUrlPortfolioTrace:
         fig = prepare_ef(_ef_frame_percent(), _ef_object_mock(), _ef_options())
 
         assert "MyPF" not in [t.name for t in fig.data]
+
+
+def _make_mock_ef_object():
+    import numpy as np
+
+    ef = MagicMock()
+    ef.symbols = ["AAPL.US", "MSFT.US"]
+    ef.currency = "USD"
+    ef.first_date = pd.Timestamp("2020-01-01")
+    ef.last_date = pd.Timestamp("2024-12-01")
+    ef.ef_points = pd.DataFrame({
+        "Mean return": np.linspace(0.04, 0.12, 10),
+        "CAGR": np.linspace(0.035, 0.11, 10),
+        "Risk": np.linspace(0.05, 0.20, 10),
+        "AAPL.US": np.linspace(0.0, 1.0, 10),
+        "MSFT.US": np.linspace(1.0, 0.0, 10),
+    })
+    return ef
+
+
+def _call_update_ef_cards(url_portfolio, captured, point_patch):
+    from pages.efficient_frontier.frontier import update_ef_cards
+
+    def fake_prepare_ef(ef, ef_object, ef_options, ef_cache_key=None):
+        captured["ef_options"] = ef_options
+        return go.Figure()
+
+    with (
+        patch(f"{FRONTIER_MODULE}.get_or_create_ef_object",
+              return_value=(_make_mock_ef_object(), "t.pkl")),
+        patch(f"{FRONTIER_MODULE}.prepare_ef", side_effect=fake_prepare_ef),
+        patch(f"{FRONTIER_MODULE}.prepare_transition_map", return_value=go.Figure()),
+        patch(f"{FRONTIER_MODULE}.get_portfolio_point", **point_patch) as mock_point,
+    ):
+        result = update_ef_cards(
+            screen=None, n_clicks=1,
+            selected_symbols=["AAPL.US", "MSFT.US"],
+            ccy="USD", fd_value="2020-01", ld_value="2024-12",
+            rebalancing_period="month", plot_option="Frontier",
+            mdp_option="Off", cml_option="Off", rf_rate=0.0,
+            n_monte_carlo=0, sim_mode="Off", grid_step_value="Auto",
+            url_portfolio=url_portfolio,
+        )
+    return result, mock_point
+
+
+class TestUpdateEfCardsUrlPortfolio:
+    STORE = {"tickers": ["AAPL.US", "MSFT.US"], "weights": [60.0, 40.0], "symbol": "MyPF"}
+
+    def test_payload_passed_when_tickers_match(self):
+        captured = {}
+        _call_update_ef_cards(
+            self.STORE, captured, {"return_value": {"risk": 11.0, "cagr": 8.5}}
+        )
+
+        assert captured["ef_options"]["url_portfolio"] == {
+            "risk": 11.0, "cagr": 8.5, "weights": [60.0, 40.0], "label": "MyPF",
+        }
+
+    def test_payload_none_when_tickers_differ(self):
+        captured = {}
+        store = {"tickers": ["SPY.US", "BND.US"], "weights": [60.0, 40.0], "symbol": "MyPF"}
+        _, mock_point = _call_update_ef_cards(
+            store, captured, {"return_value": {"risk": 11.0, "cagr": 8.5}}
+        )
+
+        assert captured["ef_options"]["url_portfolio"] is None
+        mock_point.assert_not_called()
+
+    def test_point_failure_does_not_break_figure(self):
+        captured = {}
+        result, _ = _call_update_ef_cards(
+            self.STORE, captured, {"side_effect": ValueError("okama failed")}
+        )
+
+        # The frontier still renders through the normal path: prepare_ef was
+        # reached and the file name is returned (not the error-annotation path).
+        assert captured["ef_options"]["url_portfolio"] is None
+        assert result[4] == "t.pkl"
+
+    def test_default_label_when_symbol_missing(self):
+        captured = {}
+        store = {"tickers": ["AAPL.US", "MSFT.US"], "weights": [60.0, 40.0], "symbol": None}
+        _call_update_ef_cards(
+            store, captured, {"return_value": {"risk": 11.0, "cagr": 8.5}}
+        )
+
+        assert captured["ef_options"]["url_portfolio"]["label"] == "PORTFOLIO"

@@ -1,3 +1,5 @@
+import logging
+
 import dash
 import dash.exceptions
 from dash import callback, html, dcc
@@ -24,7 +26,14 @@ from pages.efficient_frontier.cards_efficient_frontier.ef_portfolio_card import 
 from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens, is_small_screen
 from pages.efficient_frontier.prepare_ef_plot import prepare_transition_map, prepare_ef, compact_ef_for_small_screens
-from pages.efficient_frontier.ef_cache import get_minimized_risk_portfolio, get_or_create_ef_object, load_ef_object
+from pages.efficient_frontier.ef_cache import (
+    get_minimized_risk_portfolio,
+    get_or_create_ef_object,
+    get_portfolio_point,
+    load_ef_object,
+)
+
+logger = logging.getLogger(__name__)
 
 dash.register_page(
     __name__,
@@ -54,6 +63,43 @@ def _parse_url_portfolio(tickers_list, weights, symbol) -> dict | None:
     if not abs(sum(weights_list) - 100.0) < 1e-6:
         return None
     return {"tickers": tickers_list, "weights": weights_list, "symbol": symbol}
+
+
+def _url_portfolio_point_payload(
+    url_portfolio: dict | None,
+    symbols: list,
+    ccy: str,
+    first_date: str,
+    last_date: str,
+    rebalancing_period: str,
+) -> dict | None:
+    """Ready-to-render point payload for the URL portfolio; None when absent,
+    incompatible with the submitted tickers, or failing to compute.
+
+    Weights are positional, so the point renders only while the submitted
+    symbols equal the URL tickers element-wise. Any okama failure is swallowed:
+    the portfolio overlay must never break the frontier.
+    """
+    if not url_portfolio or url_portfolio.get("tickers") != symbols:
+        return None
+    try:
+        point = get_portfolio_point(
+            symbols=symbols,
+            weights_percent=url_portfolio["weights"],
+            ccy=ccy,
+            first_date=first_date,
+            last_date=last_date,
+            rebalancing_period=rebalancing_period,
+        )
+    except Exception:
+        logger.warning("URL portfolio point skipped", exc_info=True)
+        return None
+    return {
+        "risk": point["risk"],
+        "cagr": point["cagr"],
+        "weights": list(url_portfolio["weights"]),
+        "label": url_portfolio.get("symbol") or "PORTFOLIO",
+    }
 
 
 def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, weights=None, symbol=None, **kwargs):
@@ -151,6 +197,8 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
     # Simulation mode + grid step
     State(component_id="ef-sim-mode", component_property="value"),
     State(component_id="ef-grid-step", component_property="value"),
+    # Portfolio handed off from the Portfolio page via URL (weights + symbol)
+    State(component_id="ef-url-portfolio", component_property="data"),
     # Show the spinner under the Submit button while computing (the chart's
     # own dcc.Loading spinner is below the fold on mobile).
     running=submit_spinner_running("ef-submit-spinner"),
@@ -173,6 +221,7 @@ def update_ef_cards(
     n_monte_carlo: int,
     sim_mode: str,
     grid_step_value: str,
+    url_portfolio: dict | None = None,
 ):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     if not symbols:
@@ -201,6 +250,9 @@ def update_ef_cards(
             "n_monte_carlo": effective_n_monte_carlo,
             "grid_step": grid_step,
         }
+        ef_options["url_portfolio"] = _url_portfolio_point_payload(
+            url_portfolio, symbols, ccy, fd_value, ld_value, rebalancing_period
+        )
         ef = ef_object.ef_points * 100
 
         fig1 = prepare_ef(ef, ef_object, ef_options, ef_cache_key=ef_file_name)
