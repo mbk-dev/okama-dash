@@ -617,6 +617,15 @@ def card_controls(
                             n_clicks=0,
                             color="primary",
                         ),
+                        dbc.Button(
+                            "Go to EF",
+                            id="pf-go-to-ef-button",
+                            outline=True,
+                            color="primary",
+                            external_link=True,
+                            target="_blank",
+                            class_name="ms-2",
+                        ),
                         create_submit_spinner("pf-submit-spinner"),
                     ],
                     style={"textAlign": "center"},
@@ -859,6 +868,45 @@ def update_link_pf(
         # strategy has a zero primary flow value and no custom cash flows,
         # i.e. is effectively inactive.
         **scoped_cf,
+    )
+
+
+@callback(
+    Output("pf-go-to-ef-button", "href"),
+    Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
+    Input({"type": "pf-dynamic-input", "index": ALL}, "value"),  # weights
+    Input("pf-base-currency", "value"),
+    Input("pf-first-date", "value"),
+    Input("pf-last-date", "value"),
+    Input("pf-rebalancing-period", "value"),
+    Input("pf-ticker", "value"),
+)
+def update_go_to_ef_link(
+    tickers_list: Optional[list],
+    weights_list: Optional[list],
+    ccy: str,
+    first_date: str,
+    last_date: str,
+    rebal: str,
+    symbol: Optional[str],
+) -> str:
+    """Build the EF-page link carrying the portfolio.
+
+    Standard frontier params (tickers/ccy/dates/rebal) define the frontier;
+    the portfolio section is just weights + symbol. Same vocabulary as the
+    EF "Backtest portfolio" link, in reverse.
+    """
+    tickers = [t for t in tickers_list if t]
+    weights = [w for w in weights_list if w is not None]
+    return create_link(
+        href="/",
+        tickers_list=tickers,
+        ccy=ccy,
+        first_date=first_date,
+        last_date=last_date,
+        rebal=rebal,
+        weights_list=weights,
+        symbol=symbol,
     )
 
 
