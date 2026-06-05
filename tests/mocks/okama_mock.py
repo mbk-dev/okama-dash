@@ -23,6 +23,16 @@ def get_mock_namespaces() -> list[str]:
     return load_symbols_data()["namespaces"]
 
 
+def get_names_by_symbol() -> dict[str, str]:
+    """Symbol -> display name mapping across all fixture namespaces."""
+    namespaces = load_symbols_data()["symbols_by_namespace"]
+    return {
+        symbol: name
+        for ns_data in namespaces.values()
+        for symbol, name in zip(ns_data["symbol"], ns_data["name"], strict=True)
+    }
+
+
 # ---------------------------------------------------------------------------
 # Picklable mock classes (for E2E tests that go through pickle.dump)
 # ---------------------------------------------------------------------------
@@ -161,11 +171,25 @@ class PicklableAssetList:
         self.symbols = symbols
         self.symbol = symbols[0] if len(symbols) == 1 else "AssetList"
         self._pl_txt = "annually"
+        self.currency = kwargs.get("ccy", "USD")
+        # Real AssetList.names maps each symbol to its long name (issue #13);
+        # unknown symbols fall back to the ticker itself.
+        names_by_symbol = get_names_by_symbol()
+        self.names = {s: names_by_symbol.get(s, s) for s in symbols}
 
         dates = pd.period_range("2020-01", "2024-12", freq="M")
         n = len(dates)
         n_assets = len(symbols)
         rng = np.random.default_rng(42)
+
+        # Attributes read by common/html_elements/info_ag_grid.py::get_info.
+        # Real assets_first_dates lists assets eldest-first and includes the
+        # currency entry, which get_info pops before reading the eldest ticker.
+        self.first_date = dates[0].to_timestamp()
+        self.last_date = dates[-1].to_timestamp()
+        self.assets_first_dates = dict.fromkeys(symbols, self.first_date)
+        self.assets_first_dates[self.currency] = self.first_date
+        self.newest_asset = symbols[-1]
 
         wealth_data = np.cumprod(1 + rng.normal(0.005, 0.03, (n, n_assets)), axis=0) * 1000
         self.wealth_indexes = pd.DataFrame(wealth_data, index=dates, columns=symbols)

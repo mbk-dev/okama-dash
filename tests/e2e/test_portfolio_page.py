@@ -83,3 +83,21 @@ class TestMobileViewport:
 
         mobile_page.close()
         context.close()
+
+
+class TestEfInfoPanel:
+    # Guard for mbk-dev/okama-dash#13: PicklableAssetList lacked .names (and the
+    # attributes get_info reads), so the EF info-panel callback 500'd on every
+    # page load with URL tickers — invisibly, because nothing asserted the panel.
+    def test_assets_names_and_info_render_for_url_tickers(self, page, dash_server_url):
+        page.goto(
+            f"{dash_server_url}/?tickers=GOOG.US,AMZN.US&first_date=2018-06&last_date=2022-09",
+            wait_until="domcontentloaded",
+        )
+
+        names_panel = page.locator("#ef-assets-names")
+        names_panel.get_by_text("Alphabet Inc").wait_for(state="visible", timeout=10_000)
+        names_panel.get_by_text("Amazon.com Inc").wait_for(state="visible", timeout=10_000)
+
+        info_panel = page.locator("#ef-info")
+        info_panel.get_by_text("First available date").wait_for(state="visible", timeout=10_000)
