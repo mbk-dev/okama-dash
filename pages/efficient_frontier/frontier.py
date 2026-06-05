@@ -221,6 +221,12 @@ def display_click_data(clickData, n_click, symbols, file_name, rf_rate, trace_na
     """
     if not clickData:
         raise dash.exceptions.PreventUpdate
+    if _is_submit_trigger():
+        # A re-submit renders a new frontier: the previously clicked point no
+        # longer belongs to it — reset the section to the hint instead of
+        # re-rendering stale clickData (whose weights crash the strict zip
+        # when the ticker set changed; live incident 2026-06-05).
+        return None, None
     point_data = clickData["points"][0]
     risk = point_data["x"]
     ror = point_data["y"]
@@ -228,7 +234,7 @@ def display_click_data(clickData, n_click, symbols, file_name, rf_rate, trace_na
     badge = _trace_badge(point_data, trace_names)
 
     weights_list = point_data.get("customdata")
-    if weights_list is None:
+    if weights_list is None or len(weights_list) != len(symbols):
         card = build_portfolio_card(
             stats=stats,
             symbols=symbols,
@@ -251,6 +257,15 @@ def display_click_data(clickData, n_click, symbols, file_name, rf_rate, trace_na
         rebal=_ef_rebalancing_period(ef_object),
     )
     return card, link
+
+
+def _is_submit_trigger() -> bool:
+    """True when the running callback was triggered by the Submit button."""
+    try:
+        return dash.ctx.triggered_id == "ef-submit-button-state"
+    except dash.exceptions.MissingCallbackContextException:
+        # Direct invocation (component tests) — treat as a click trigger.
+        return False
 
 
 def _point_stats(ror: float, risk: float, rf_rate: float | None) -> list[tuple[str, str]]:

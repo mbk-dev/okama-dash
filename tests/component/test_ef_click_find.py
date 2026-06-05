@@ -271,6 +271,54 @@ class TestDisplayClickData:
             assert expected in texts
         assert link is not None
 
+    def test_resubmit_resets_card_and_link(self):
+        # A re-submit renders a new frontier: the previously clicked point no
+        # longer belongs to it. The callback must reset the section (hint comes
+        # back) instead of re-rendering stale clickData — which crashed with
+        # ValueError when the ticker count had changed (live incident 2026-06-05).
+        from dash._callback_context import context_value
+        from dash._utils import AttributeDict
+
+        from pages.efficient_frontier.frontier import display_click_data
+
+        stale_click_data = {
+            "points": [{"x": 10.0, "y": 7.5, "customdata": [60.0, 40.0, 0.0]}]
+        }
+        # ContextVar token reset (NOT set(None)): setting None would poison the
+        # context for every later test in the same process.
+        token = context_value.set(AttributeDict(
+            triggered_inputs=[{"prop_id": "ef-submit-button-state.n_clicks", "value": 2}]
+        ))
+        try:
+            children, link = display_click_data(
+                stale_click_data, 2, ["SPY.US", "BND.US", "GLD.US", "MSFT.US"],
+                "file.pkl", 0.0, [],
+            )
+        finally:
+            context_value.reset(token)
+
+        assert children is None
+        assert link is None
+
+    def test_stale_clickdata_with_changed_ticker_count_renders_note(self):
+        # Defense in depth for the same incident: if stale clickData still meets
+        # a changed symbols list (count mismatch), render the unavailable-note
+        # card instead of letting the builder's strict zip raise.
+        from pages.efficient_frontier.frontier import display_click_data
+
+        click_data = {
+            "points": [{"x": 10.0, "y": 7.5, "customdata": [60.0, 40.0]}]
+        }
+        card, link = display_click_data(
+            click_data, 1, ["SPY.US", "BND.US", "GLD.US"], "file.pkl", 0.0, []
+        )
+
+        notes = _by_class(card, "pf-note")
+        assert len(notes) == 1
+        assert notes[0].children == "Weights: unavailable for this point."
+        assert _by_class(card, "pf-asset-row") == []
+        assert link is None
+
 
 class TestFindPortfolio:
     def test_zero_clicks_raises_prevent_update(self):
