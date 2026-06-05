@@ -6,6 +6,7 @@ import okama as ok
 from common import cache, settings
 from common.object_cache import (
     TTL_EFFICIENT_FRONTIER,
+    TTL_PORTFOLIO,
     get_okama_version,
     get_or_create,
     load_cached,
@@ -55,6 +56,53 @@ def get_or_create_ef_object(
 
 def load_ef_object(file_name: str) -> ok.EfficientFrontier:
     return load_cached(file_name)
+
+
+def get_portfolio_point(
+    symbols: list[str],
+    weights_percent: list[float],
+    ccy: str,
+    first_date: str,
+    last_date: str,
+    rebalancing_period: str,
+) -> dict:
+    """Risk/CAGR coordinates (in percent) for the portfolio passed in the URL.
+
+    Builds (or loads from the object cache) an ok.Portfolio with the same
+    universe and settings as the frontier; the point is therefore directly
+    comparable with ef_points on both axes.
+    """
+    weights = [w / 100.0 for w in weights_percent]
+
+    def _construct() -> ok.Portfolio:
+        return ok.Portfolio(
+            assets=symbols,
+            weights=weights,
+            ccy=ccy,
+            first_date=first_date,
+            last_date=last_date,
+            inflation=False,
+            rebalancing_strategy=ok.Rebalance(period=rebalancing_period),
+        )
+
+    pf, _ = get_or_create(
+        obj_type="portfolio",
+        constructor_fn=_construct,
+        cache_key_params={
+            "symbols": symbols,
+            "weights": weights,
+            "ccy": ccy,
+            "first_date": first_date,
+            "last_date": last_date,
+            "rebal": rebalancing_period,
+            "purpose": "ef_point",
+        },
+        ttl_seconds=TTL_PORTFOLIO,
+    )
+    return {
+        "risk": float(pf.risk_annual.iloc[-1]) * 100,
+        "cagr": float(pf.get_cagr().iloc[-1][pf.symbol]) * 100,
+    }
 
 
 @cache.memoize(timeout=CACHE_TIMEOUT)

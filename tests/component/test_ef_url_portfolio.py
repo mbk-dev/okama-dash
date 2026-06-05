@@ -1,3 +1,6 @@
+from unittest.mock import MagicMock, patch
+
+import pandas as pd
 import pytest
 
 pytestmark = pytest.mark.component
@@ -82,3 +85,73 @@ class TestLayoutStore:
 
         store = _find_by_id(page, "ef-url-portfolio")
         assert store.data is None
+
+
+class TestGetPortfolioPoint:
+    def _mock_pf(self):
+        pf = MagicMock()
+        pf.symbol = "portfolio_1.PF"
+        pf.risk_annual = pd.Series([0.08, 0.11], index=["2023-12", "2024-12"])
+        pf.get_cagr.return_value = pd.DataFrame(
+            {"portfolio_1.PF": [0.07, 0.085]}, index=["2023-12", "2024-12"]
+        )
+        return pf
+
+    def test_returns_percent_risk_and_cagr(self):
+        from pages.efficient_frontier.ef_cache import get_portfolio_point
+
+        pf = self._mock_pf()
+        with patch(
+            "pages.efficient_frontier.ef_cache.get_or_create",
+            return_value=(pf, "key.pkl"),
+        ) as mock_goc:
+            point = get_portfolio_point(
+                symbols=["SPY.US", "BND.US"],
+                weights_percent=[60.0, 40.0],
+                ccy="USD",
+                first_date="2015-01",
+                last_date="2024-12",
+                rebalancing_period="year",
+            )
+
+        assert point == {"risk": pytest.approx(11.0), "cagr": pytest.approx(8.5)}
+        kwargs = mock_goc.call_args.kwargs
+        assert kwargs["obj_type"] == "portfolio"
+        assert kwargs["cache_key_params"]["weights"] == [0.6, 0.4]
+        assert kwargs["cache_key_params"]["purpose"] == "ef_point"
+
+    def test_constructor_builds_portfolio_with_fraction_weights(self):
+        from pages.efficient_frontier import ef_cache
+
+        pf = self._mock_pf()
+        captured = {}
+
+        def fake_get_or_create(*, obj_type, constructor_fn, cache_key_params, ttl_seconds):
+            captured["constructor"] = constructor_fn
+            return pf, "key.pkl"
+
+        with (
+            patch(
+                "pages.efficient_frontier.ef_cache.get_or_create",
+                side_effect=fake_get_or_create,
+            ),
+            patch(
+                "pages.efficient_frontier.ef_cache.ok.Portfolio", return_value=pf
+            ) as mock_pf_cls,
+            patch("pages.efficient_frontier.ef_cache.ok.Rebalance") as mock_rebal,
+        ):
+            ef_cache.get_portfolio_point(
+                symbols=["SPY.US", "BND.US"],
+                weights_percent=[60.0, 40.0],
+                ccy="USD",
+                first_date="2015-01",
+                last_date="2024-12",
+                rebalancing_period="year",
+            )
+            captured["constructor"]()
+
+        mock_rebal.assert_called_once_with(period="year")
+        call_kwargs = mock_pf_cls.call_args.kwargs
+        assert call_kwargs["weights"] == [0.6, 0.4]
+        assert call_kwargs["inflation"] is False
+        assert call_kwargs["ccy"] == "USD"
