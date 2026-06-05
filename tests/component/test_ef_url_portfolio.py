@@ -155,3 +155,74 @@ class TestGetPortfolioPoint:
         assert call_kwargs["weights"] == [0.6, 0.4]
         assert call_kwargs["inflation"] is False
         assert call_kwargs["ccy"] == "USD"
+
+
+def _ef_frame_percent():
+    # Mirrors what update_ef_cards passes: ef_points already multiplied by 100.
+    return pd.DataFrame({
+        "Risk": [5.0, 20.0],
+        "CAGR": [4.0, 11.0],
+        "SPY.US": [100.0, 0.0],
+        "BND.US": [0.0, 100.0],
+    })
+
+
+def _ef_object_mock():
+    ef_object = MagicMock()
+    ef_object.symbols = ["SPY.US", "BND.US"]
+    ef_object.get_cagr.return_value = pd.Series([0.08, 0.04], index=["SPY.US", "BND.US"])
+    ef_object.risk_annual = pd.DataFrame({"SPY.US": [0.18], "BND.US": [0.06]})
+    return ef_object
+
+
+def _ef_options(url_portfolio=None):
+    options = {
+        "plot_type": ["Frontier"],
+        "return_type": "Geometric",
+        "mdp": "Off",
+        "cml": "Off",
+        "rf_rate": 0.0,
+        "n_monte_carlo": 0,
+        "grid_step": None,
+    }
+    if url_portfolio is not None:
+        options["url_portfolio"] = url_portfolio
+    return options
+
+
+class TestPrepareEfUrlPortfolioTrace:
+    PAYLOAD = {"risk": 11.0, "cagr": 8.5, "weights": [60.0, 40.0], "label": "MyPF"}
+
+    def test_star_trace_added_with_label_and_coordinates(self):
+        from pages.efficient_frontier.prepare_ef_plot import prepare_ef
+
+        fig = prepare_ef(_ef_frame_percent(), _ef_object_mock(), _ef_options(self.PAYLOAD))
+
+        pf_traces = [t for t in fig.data if t.name == "MyPF"]
+        assert len(pf_traces) == 1
+        assert list(pf_traces[0].x) == [11.0]
+        assert list(pf_traces[0].y) == [8.5]
+        assert pf_traces[0].marker.symbol == "star"
+
+    def test_trace_customdata_serializes_as_json_list(self):
+        # plotly>=6 drops numpy customdata from clickData (plotly/plotly.py#5119);
+        # the weights must serialize as a JSON array to reach display_click_data.
+        import json
+
+        import plotly.io as pio
+
+        from pages.efficient_frontier.prepare_ef_plot import prepare_ef
+
+        fig = prepare_ef(_ef_frame_percent(), _ef_object_mock(), _ef_options(self.PAYLOAD))
+
+        serialized = json.loads(pio.to_json(fig))["data"]
+        pf_trace = next(t for t in serialized if t.get("name") == "MyPF")
+        assert isinstance(pf_trace["customdata"], list)
+        assert pf_trace["customdata"][0] == [60.0, 40.0]
+
+    def test_no_trace_without_payload(self):
+        from pages.efficient_frontier.prepare_ef_plot import prepare_ef
+
+        fig = prepare_ef(_ef_frame_percent(), _ef_object_mock(), _ef_options())
+
+        assert "MyPF" not in [t.name for t in fig.data]

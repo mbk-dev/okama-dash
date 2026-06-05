@@ -696,6 +696,26 @@ def _prepare_single_ef(
     return _update_figure_layout(fig)
 
 
+def _add_url_portfolio_trace(fig: go.Figure, point: dict) -> None:
+    """Star marker for the portfolio handed off from the Portfolio page via URL."""
+    fig.add_trace(
+        go.Scatter(
+            x=[point["risk"]],
+            y=[point["cagr"]],
+            # Plain lists, not numpy: plotly>=6 serializes numpy as base64 typed
+            # arrays, which never reach clickData (plotly/plotly.py#5119).
+            customdata=[list(point["weights"])],
+            hovertemplate="<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b><extra></extra>",
+            mode="markers+text",
+            cliponaxis=False,
+            text=[point["label"]],
+            textposition="top center",
+            name=point["label"],
+            marker={"size": 12, "color": "red", "symbol": "star"},
+        )
+    )
+
+
 def prepare_ef(
     ef: pd.DataFrame,
     ef_object: okama.EfficientFrontier,
@@ -729,5 +749,8 @@ def prepare_ef(
 
     if not any(getattr(trace, "name", None) == "Assets" for trace in fig.data):
         _add_assets_trace(fig, ef_object, return_type, trace_name="Assets")
+
+    if ef_options.get("url_portfolio"):
+        _add_url_portfolio_trace(fig, ef_options["url_portfolio"])
 
     return _update_figure_layout(fig)
