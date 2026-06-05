@@ -856,7 +856,8 @@ def update_link_pf(
         abs_dev=abs_dev,
         rel_dev=rel_dev,
         # scoped_cf carries cf_strategy too: None (omitted) when the selected
-        # strategy has a zero primary flow value, i.e. is effectively inactive.
+        # strategy has a zero primary flow value and no custom cash flows,
+        # i.e. is effectively inactive.
         **scoped_cf,
     )
 

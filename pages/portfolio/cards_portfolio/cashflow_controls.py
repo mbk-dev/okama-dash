@@ -34,6 +34,11 @@ STRATEGY_DESCRIPTIONS = {
 
 MAX_TIMESERIES_ENTRIES = 50
 
+# Example entry shown when the Custom cash flows block opens empty: one
+# past-dated withdrawal the user can edit (mirrors the CWD default thresholds).
+TS_DEFAULT_DATE = "2020-01"
+TS_DEFAULT_AMOUNT = -1000
+
 
 def _build_initial_ts_rows(cf_ts):
     if not cf_ts:
@@ -60,6 +65,21 @@ def _build_initial_cwd_rows(cwd_tr):
             continue
         rows.append({"index": i, "threshold": t_val, "reduction": r_val})
     return rows or None
+
+
+def _ts_accordion_active_item(cf_strategy, ts_rows) -> str | None:
+    """Open the Custom cash flows accordion for the time_series strategy
+    (the block IS the strategy) or when rows were prefilled from the URL."""
+    if cf_strategy == "time_series" or ts_rows:
+        return "custom-cashflows"
+    return None
+
+
+def _ts_accordion_class(cf_strategy) -> str:
+    """Plain-block look for the time_series strategy: the accordion header
+    would just repeat the selected strategy name, so `ts-plain` hides it
+    (assets/forms.css) and the body shows as the former bordered block."""
+    return "mt-3 ts-plain" if cf_strategy == "time_series" else "mt-3"
 
 
 def cashflow_accordion_item(
@@ -331,45 +351,6 @@ def cashflow_accordion_item(
                     ),
                 ],
                 id="pf-cf-indexation-panel",
-            ),
-            # ---- TimeSeriesStrategy panel ----
-            # Bordered block visually separates the user date-amount entries from
-            # the settings above (strategy type, initial amount, discount rate).
-            html.Div(
-                [
-                    html.Div(
-                        [
-                            "Custom cash flows",
-                            html.I(className="bi bi-info-square ms-2", id="pf-info-cf-ts"),
-                        ],
-                        className="fw-semibold mb-2 text-nowrap",
-                    ),
-                    dbc.Tooltip(tl.pf_cf_time_series, target="pf-info-cf-ts"),
-                    dbc.Row(
-                        [
-                            dbc.Col(html.Label("Date (YYYY-MM)"), width=5),
-                            dbc.Col(html.Label("Amount"), width=5),
-                            dbc.Col(width=2),
-                        ],
-                    ),
-                    html.Div(
-                        id="pf-cf-ts-container",
-                        children=[_ts_row(r["index"], r["date"], r["amount"]) for r in ts_initial_rows],
-                    ),
-                    dbc.Row(
-                        dbc.Col(
-                            dbc.Button("Add Entry", id="pf-cf-ts-add", n_clicks=0, size="sm", color="secondary"),
-                        ),
-                        class_name="mt-1",
-                    ),
-                    dbc.FormText(
-                        f"Negative amounts = withdrawals, positive = contributions "
-                        f"(max {MAX_TIMESERIES_ENTRIES} entries)"
-                    ),
-                ],
-                id="pf-cf-timeseries-panel",
-                className="border rounded p-3 bg-body-tertiary mt-3",
-                style={"display": "none"},
             ),
             # ---- VanguardDynamicSpending panel ----
             html.Div(
@@ -701,6 +682,52 @@ def cashflow_accordion_item(
                 id="pf-cf-cwd-panel",
                 style={"display": "none"},
             ),
+            # ---- Custom cash flows (shared across all strategies) ----
+            # okama's base CashFlow accepts time_series_dic for every strategy,
+            # so one-off user entries combine with the regular flow. Initially
+            # collapsed; expanded for time_series (the block IS the strategy)
+            # and for URL-prefilled entries.
+            dbc.Accordion(
+                [
+                    dbc.AccordionItem(
+                        [
+                            dbc.Tooltip(tl.pf_cf_time_series, target="pf-info-cf-ts"),
+                            dbc.Row(
+                                [
+                                    dbc.Col(html.Label("Date (YYYY-MM)"), width=5),
+                                    dbc.Col(html.Label("Amount"), width=5),
+                                    dbc.Col(width=2),
+                                ],
+                            ),
+                            html.Div(
+                                id="pf-cf-ts-container",
+                                children=[_ts_row(r["index"], r["date"], r["amount"]) for r in ts_initial_rows],
+                            ),
+                            dbc.Row(
+                                dbc.Col(
+                                    dbc.Button(
+                                        "Add Entry", id="pf-cf-ts-add", n_clicks=0, size="sm", color="secondary"
+                                    ),
+                                ),
+                                class_name="mt-1",
+                            ),
+                            dbc.FormText(
+                                f"Negative amounts = withdrawals, positive = contributions "
+                                f"(max {MAX_TIMESERIES_ENTRIES} entries)"
+                            ),
+                        ],
+                        title=[
+                            "Custom cash flows",
+                            html.I(className="bi bi-info-square ms-2", id="pf-info-cf-ts"),
+                        ],
+                        item_id="custom-cashflows",
+                    ),
+                ],
+                id="pf-cf-ts-accordion",
+                start_collapsed=True,
+                active_item=_ts_accordion_active_item(cf_strategy, ts_initial_rows),
+                class_name=_ts_accordion_class(cf_strategy),
+            ),
         ],
         title="Cash Flow Strategy",
         item_id="cashflow",
@@ -713,7 +740,6 @@ def cashflow_accordion_item(
     Output("pf-cf-strategy-description", "children"),
     Output("pf-cf-indexation-panel", "style"),
     Output("pf-cf-percentage-col", "style"),
-    Output("pf-cf-timeseries-panel", "style"),
     Output("pf-cf-vds-panel", "style"),
     Output("pf-cf-cwd-panel", "style"),
     Input("pf-cf-strategy-type", "value"),
@@ -722,15 +748,30 @@ def toggle_strategy_panels(strategy):
     show = None
     hide = {"display": "none"}
     panels = {
-        "indexation": (show, hide, hide, hide, hide),
-        "percentage": (hide, show, hide, hide, hide),
-        "time_series": (hide, hide, show, hide, hide),
-        "vds": (hide, hide, hide, show, hide),
-        "cwd": (hide, hide, hide, hide, show),
+        "indexation": (show, hide, hide, hide),
+        "percentage": (hide, show, hide, hide),
+        "time_series": (hide, hide, hide, hide),
+        "vds": (hide, hide, show, hide),
+        "cwd": (hide, hide, hide, show),
     }
     styles = panels.get(strategy, panels["indexation"])
     description = STRATEGY_DESCRIPTIONS.get(strategy, "")
     return (description, *styles)
+
+
+@callback(
+    Output("pf-cf-ts-accordion", "active_item"),
+    Output("pf-cf-ts-accordion", "class_name"),
+    Input("pf-cf-strategy-type", "value"),
+    prevent_initial_call=True,
+)
+def open_ts_accordion_for_time_series(strategy):
+    """Force-open the accordion in plain-block mode when switching to
+    time_series (the block IS that strategy's only input); collapse it and
+    restore the accordion chrome for any other strategy."""
+    if strategy == "time_series":
+        return "custom-cashflows", _ts_accordion_class(strategy)
+    return None, _ts_accordion_class(strategy)
 
 
 @callback(
@@ -806,11 +847,12 @@ def _ts_row(index, date_val=None, amount_val=None):
     Output("pf-cf-ts-container", "children"),
     Input("pf-cf-ts-add", "n_clicks"),
     Input({"type": "pf-cf-ts-remove", "index": ALL}, "n_clicks"),
+    Input("pf-cf-ts-accordion", "active_item"),
     State({"type": "pf-cf-ts-date", "index": ALL}, "id"),
     State({"type": "pf-cf-ts-date", "index": ALL}, "value"),
     State({"type": "pf-cf-ts-amount", "index": ALL}, "value"),
 )
-def manage_ts_rows(add_clicks, remove_clicks, ids, dates, amounts):
+def manage_ts_rows(add_clicks, remove_clicks, active_item, ids, dates, amounts):
     trigger = dash.ctx.triggered_id
     rows = []
     if ids:
@@ -819,9 +861,15 @@ def manage_ts_rows(add_clicks, remove_clicks, ids, dates, amounts):
 
     if isinstance(trigger, dict) and trigger.get("type") == "pf-cf-ts-remove":
         rows = [r for r in rows if r["index"] != trigger["index"]]
-    elif (trigger == "pf-cf-ts-add" or not rows) and len(rows) < MAX_TIMESERIES_ENTRIES:
+    elif trigger == "pf-cf-ts-add" and len(rows) < MAX_TIMESERIES_ENTRIES:
         next_idx = max((r["index"] for r in rows), default=-1) + 1
         rows.append({"index": next_idx, "date": None, "amount": None})
+
+    # An empty visible block starts with one example withdrawal row; while the
+    # accordion is collapsed the container stays empty, so the example never
+    # leaks into a calculation the user hasn't seen.
+    if not rows and active_item == "custom-cashflows":
+        rows = [{"index": 0, "date": TS_DEFAULT_DATE, "amount": TS_DEFAULT_AMOUNT}]
 
     return [_ts_row(r["index"], r["date"], r["amount"]) for r in rows]
 

@@ -790,7 +790,8 @@ def _build_percentage_strategy(pf_object, initial_amount, frequency, cf_percenta
     return s
 
 
-def _build_time_series_strategy(pf_object, initial_amount, ts_dates, ts_amounts):
+def _build_ts_dict(ts_dates, ts_amounts) -> dict[str, float]:
+    """Parse custom cash flow rows (YYYY-MM dates + amounts) into a time_series_dic."""
     ts_dict = {}
     if ts_dates and ts_amounts:
         for d, a in zip(ts_dates, ts_amounts, strict=True):
@@ -800,10 +801,24 @@ def _build_time_series_strategy(pf_object, initial_amount, ts_dates, ts_amounts)
                     ts_dict[str(d)] = float(a)
                 except (ValueError, TypeError):
                     pass
+    return ts_dict
+
+
+def _apply_custom_time_series(strategy, ts_dates, ts_amounts) -> None:
+    """Attach user-defined one-off cash flows on top of any strategy.
+
+    okama's base CashFlow accepts time_series_dic for every strategy type,
+    so custom entries combine with the regular flow (e.g. indexation + a
+    planned 2030 contribution).
+    """
+    ts_dict = _build_ts_dict(ts_dates, ts_amounts)
+    if ts_dict:
+        strategy.time_series_dic = ts_dict
+
+
+def _build_time_series_strategy(pf_object, initial_amount):
     s = ok.TimeSeriesStrategy(pf_object)
     s.initial_investment = initial_amount
-    if ts_dict:
-        s.time_series_dic = ts_dict
     return s
 
 
@@ -888,20 +903,25 @@ def _build_cashflow_strategy(
     has_inflation=True,
 ):
     if strategy_type == "percentage":
-        return _build_percentage_strategy(pf_object, initial_amount, frequency, cf_percentage)
-    if strategy_type == "time_series":
-        return _build_time_series_strategy(pf_object, initial_amount, ts_dates, ts_amounts)
-    if strategy_type == "vds":
-        return _build_vds_strategy(
+        strategy = _build_percentage_strategy(pf_object, initial_amount, frequency, cf_percentage)
+    elif strategy_type == "time_series":
+        strategy = _build_time_series_strategy(pf_object, initial_amount)
+    elif strategy_type == "vds":
+        strategy = _build_vds_strategy(
             pf_object, initial_amount, vds_percentage, vds_min_withdrawal, vds_max_withdrawal,
             vds_adjust_minmax, vds_floor, vds_ceiling, vds_adjust_fc, vds_indexation, has_inflation
         )
-    if strategy_type == "cwd":
-        return _build_cwd_strategy(
+    elif strategy_type == "cwd":
+        strategy = _build_cwd_strategy(
             pf_object, initial_amount, frequency, cwd_amount, cwd_indexation,
             cwd_thresholds, cwd_reductions, has_inflation
         )
-    return _build_indexation_strategy(pf_object, initial_amount, frequency, cf_amount, cf_indexation, has_inflation)
+    else:
+        strategy = _build_indexation_strategy(
+            pf_object, initial_amount, frequency, cf_amount, cf_indexation, has_inflation
+        )
+    _apply_custom_time_series(strategy, ts_dates, ts_amounts)
+    return strategy
 
 
 def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:

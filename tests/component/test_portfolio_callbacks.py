@@ -308,6 +308,117 @@ class TestBuildCashflowStrategy:
             assert mock_instance.initial_investment == 1000.0
             assert mock_instance.time_series_dic == {"2020-01": 100.0, "2020-06": 200.0}
 
+    def test_indexation_strategy_sets_custom_time_series(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import _build_cashflow_strategy
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        with patch("pages.portfolio.portfolio.ok.IndexationStrategy") as mock_cls:
+            mock_instance = MagicMock()
+            mock_cls.return_value = mock_instance
+
+            _build_cashflow_strategy(
+                pf_object=mock_pf,
+                strategy_type="indexation",
+                **{**CASHFLOW_DEFAULTS, "cf_amount": 100, "ts_dates": ["2030-01"], "ts_amounts": [5000]},
+            )
+
+            assert mock_instance.time_series_dic == {"2030-01": 5000.0}
+
+    def test_percentage_strategy_sets_custom_time_series(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import _build_cashflow_strategy
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        with patch("pages.portfolio.portfolio.ok.PercentageStrategy") as mock_cls:
+            mock_instance = MagicMock()
+            mock_cls.return_value = mock_instance
+
+            _build_cashflow_strategy(
+                pf_object=mock_pf,
+                strategy_type="percentage",
+                **{**CASHFLOW_DEFAULTS, "cf_percentage": 4, "ts_dates": ["2030-01"], "ts_amounts": [5000]},
+            )
+
+            assert mock_instance.time_series_dic == {"2030-01": 5000.0}
+
+    def test_vds_strategy_sets_custom_time_series(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import _build_cashflow_strategy
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        with patch("pages.portfolio.portfolio.ok.VanguardDynamicSpending") as mock_cls:
+            mock_instance = MagicMock()
+            mock_cls.return_value = mock_instance
+
+            _build_cashflow_strategy(
+                pf_object=mock_pf,
+                strategy_type="vds",
+                **{**CASHFLOW_DEFAULTS, "vds_percentage": 5, "ts_dates": ["2030-01"], "ts_amounts": [5000]},
+            )
+
+            assert mock_instance.time_series_dic == {"2030-01": 5000.0}
+
+    def test_cwd_strategy_sets_custom_time_series(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import _build_cashflow_strategy
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        with patch("pages.portfolio.portfolio.ok.CutWithdrawalsIfDrawdown") as mock_cls:
+            mock_instance = MagicMock()
+            mock_cls.return_value = mock_instance
+
+            _build_cashflow_strategy(
+                pf_object=mock_pf,
+                strategy_type="cwd",
+                **{
+                    **CASHFLOW_DEFAULTS,
+                    "cwd_amount": 200,
+                    "cwd_thresholds": [20, 50],
+                    "cwd_reductions": [40, 100],
+                    "ts_dates": ["2030-01"],
+                    "ts_amounts": [5000],
+                },
+            )
+
+            assert mock_instance.time_series_dic == {"2030-01": 5000.0}
+
+    def test_no_custom_rows_leaves_time_series_unset(self, patched_okama_portfolio):
+        from pages.portfolio.portfolio import _build_cashflow_strategy
+
+        mock_pf = patched_okama_portfolio["portfolio_instance"]
+        with patch("pages.portfolio.portfolio.ok.IndexationStrategy") as mock_cls:
+            mock_instance = MagicMock()
+            mock_cls.return_value = mock_instance
+
+            _build_cashflow_strategy(
+                pf_object=mock_pf,
+                strategy_type="indexation",
+                **{**CASHFLOW_DEFAULTS, "cf_amount": 100},
+            )
+
+            # MagicMock auto-creates attributes on access; a real assignment
+            # would replace the child mock with a plain dict.
+            assert not isinstance(mock_instance.time_series_dic, dict)
+
+
+class TestBuildTsDict:
+    def test_valid_pairs_build_dict(self):
+        from pages.portfolio.portfolio import _build_ts_dict
+
+        assert _build_ts_dict(["2020-01", "2020-06"], [100, -200]) == {"2020-01": 100.0, "2020-06": -200.0}
+
+    def test_invalid_date_skipped(self):
+        from pages.portfolio.portfolio import _build_ts_dict
+
+        assert _build_ts_dict(["bad-date", "2020-06"], [100, 200]) == {"2020-06": 200.0}
+
+    def test_empty_inputs_return_empty_dict(self):
+        from pages.portfolio.portfolio import _build_ts_dict
+
+        assert _build_ts_dict(None, None) == {}
+
+    def test_row_without_amount_skipped(self):
+        from pages.portfolio.portfolio import _build_ts_dict
+
+        assert _build_ts_dict(["2020-01"], [None]) == {}
+
 
 class TestValidateCwdThresholds:
     def test_valid_pair_returns_none(self):
@@ -571,3 +682,180 @@ class TestWeightRangeValidation:
             ["AAPL.US", "MSFT.US"], [60, 40], 2, True
         )
         assert submit_disabled is False
+
+
+def _find_by_id(component, target_id):
+    """Depth-first search of a Dash component tree for an exact string id.
+
+    Walks the ``children`` prop only — ids embedded in other props
+    (e.g. an icon inside an AccordionItem ``title``) are not searched.
+    """
+    if getattr(component, "id", None) == target_id:
+        return component
+    children = getattr(component, "children", None)
+    if children is None:
+        return None
+    if not isinstance(children, (list, tuple)):
+        children = [children]
+    for child in children:
+        found = _find_by_id(child, target_id)
+        if found is not None:
+            return found
+    return None
+
+
+class TestTsAccordionActiveItem:
+    def test_collapsed_by_default(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_accordion_active_item
+
+        assert _ts_accordion_active_item(None, []) is None
+
+    def test_expanded_for_time_series_strategy(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_accordion_active_item
+
+        assert _ts_accordion_active_item("time_series", []) == "custom-cashflows"
+
+    def test_expanded_when_rows_prefilled(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_accordion_active_item
+
+        rows = [{"index": 0, "date": "2030-01", "amount": 100.0}]
+        assert _ts_accordion_active_item("indexation", rows) == "custom-cashflows"
+
+
+class TestCashflowNestedAccordionLayout:
+    def test_present_and_collapsed_for_default_strategy(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        accordion = _find_by_id(cashflow_accordion_item(), "pf-cf-ts-accordion")
+        assert accordion is not None
+        assert accordion.start_collapsed is True
+        assert getattr(accordion, "active_item", None) is None
+
+    def test_expanded_for_time_series_strategy(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        accordion = _find_by_id(cashflow_accordion_item(cf_strategy="time_series"), "pf-cf-ts-accordion")
+        assert accordion.active_item == "custom-cashflows"
+
+    def test_expanded_when_cf_ts_prefilled(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        accordion = _find_by_id(
+            cashflow_accordion_item(cf_strategy="indexation", cf_ts=[("2030-01", 5000)]),
+            "pf-cf-ts-accordion",
+        )
+        assert accordion.active_item == "custom-cashflows"
+
+    def test_plain_mode_class_for_time_series_strategy(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        accordion = _find_by_id(cashflow_accordion_item(cf_strategy="time_series"), "pf-cf-ts-accordion")
+        assert accordion.class_name == "mt-3 ts-plain"
+
+    def test_accordion_chrome_class_for_other_strategies(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        accordion = _find_by_id(cashflow_accordion_item(cf_strategy="indexation"), "pf-cf-ts-accordion")
+        assert accordion.class_name == "mt-3"
+
+
+class TestToggleStrategyPanels:
+    def test_returns_description_plus_four_styles(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import toggle_strategy_panels
+
+        result = toggle_strategy_panels("indexation")
+        assert len(result) == 5  # description + 4 panel styles (TS panel is gone)
+
+    def test_time_series_hides_all_strategy_panels(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import toggle_strategy_panels
+
+        _description, indexation, percentage, vds, cwd = toggle_strategy_panels("time_series")
+        hide = {"display": "none"}
+        assert (indexation, percentage, vds, cwd) == (hide, hide, hide, hide)
+
+    def test_indexation_shows_only_indexation_panel(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import toggle_strategy_panels
+
+        _description, indexation, percentage, vds, cwd = toggle_strategy_panels("indexation")
+        hide = {"display": "none"}
+        assert indexation is None
+        assert (percentage, vds, cwd) == (hide, hide, hide)
+
+
+class TestOpenTsAccordionOnStrategyChange:
+    def test_time_series_opens_accordion_in_plain_mode(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import open_ts_accordion_for_time_series
+
+        assert open_ts_accordion_for_time_series("time_series") == ("custom-cashflows", "mt-3 ts-plain")
+
+    def test_other_strategy_closes_accordion_and_restores_chrome(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import open_ts_accordion_for_time_series
+
+        assert open_ts_accordion_for_time_series("indexation") == (None, "mt-3")
+
+
+class TestManageTsRows:
+    """Row container behavior: empty while collapsed, one example row on expand."""
+
+    def _run(self, trigger, active_item, rows=None):
+        import dash
+
+        from pages.portfolio.cards_portfolio.cashflow_controls import manage_ts_rows
+
+        rows = rows or []
+        ids = [{"index": r["index"]} for r in rows]
+        dates = [r["date"] for r in rows]
+        amounts = [r["amount"] for r in rows]
+        with patch.object(dash, "ctx") as mock_ctx:
+            mock_ctx.triggered_id = trigger
+            return manage_ts_rows(0, [], active_item, ids, dates, amounts)
+
+    @staticmethod
+    def _row_values(row):
+        date_input = row.children[0].children[0]
+        amount_input = row.children[1].children
+        return date_input.value, amount_input.value
+
+    def test_initial_load_collapsed_creates_no_rows(self):
+        assert self._run(trigger=None, active_item=None) == []
+
+    def test_expand_with_no_rows_creates_prefilled_withdrawal_row(self):
+        result = self._run(trigger="pf-cf-ts-accordion", active_item="custom-cashflows")
+
+        assert len(result) == 1
+        assert self._row_values(result[0]) == ("2020-01", -1000)
+
+    def test_initial_load_open_creates_prefilled_row(self):
+        result = self._run(trigger=None, active_item="custom-cashflows")
+
+        assert len(result) == 1
+        assert self._row_values(result[0]) == ("2020-01", -1000)
+
+    def test_add_appends_empty_row(self):
+        existing = [{"index": 0, "date": "2031-05", "amount": -500}]
+
+        result = self._run(trigger="pf-cf-ts-add", active_item="custom-cashflows", rows=existing)
+
+        assert len(result) == 2
+        assert self._row_values(result[0]) == ("2031-05", -500)
+        assert self._row_values(result[1]) == (None, None)
+
+    def test_remove_last_row_while_open_recreates_prefilled_row(self):
+        existing = [{"index": 0, "date": "2031-05", "amount": -500}]
+
+        result = self._run(
+            trigger={"type": "pf-cf-ts-remove", "index": 0},
+            active_item="custom-cashflows",
+            rows=existing,
+        )
+
+        assert len(result) == 1
+        assert self._row_values(result[0]) == ("2020-01", -1000)
+
+    def test_collapse_keeps_existing_rows(self):
+        existing = [{"index": 0, "date": "2031-05", "amount": -500}]
+
+        result = self._run(trigger="pf-cf-ts-accordion", active_item=None, rows=existing)
+
+        assert len(result) == 1
+        assert self._row_values(result[0]) == ("2031-05", -500)

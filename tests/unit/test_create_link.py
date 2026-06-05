@@ -344,6 +344,20 @@ class TestInactiveStrategyOmitted:
         result = scope_cashflow_params(cf_strategy="percentage", **{**self._base(), "cf_pct": 0})
         assert result["cf_strategy"] is None
 
+    def test_zero_amount_with_cf_ts_is_active(self):
+        result = scope_cashflow_params(
+            cf_strategy="indexation", **{**self._base(), "cf_amount": 0, "cf_ts": "2030-01:5000"}
+        )
+        assert result["cf_strategy"] == "indexation"
+        assert result["cf_ts"] == "2030-01:5000"
+
+    def test_zero_pct_with_cf_ts_is_active(self):
+        result = scope_cashflow_params(
+            cf_strategy="percentage", **{**self._base(), "cf_pct": 0, "cf_ts": "2030-01:5000"}
+        )
+        assert result["cf_strategy"] == "percentage"
+        assert result["cf_ts"] == "2030-01:5000"
+
 
 class TestScopeCashflowParams:
     """Test scope_cashflow_params: only active strategy's params are returned, rest are None."""
@@ -404,7 +418,7 @@ class TestScopeCashflowParams:
         assert result["vds_indexation"] is None
         assert result["cwd_amount"] is None
         assert result["cwd_tr"] is None
-        assert result["cf_ts"] is None
+        assert result["cf_ts"] == "2020-01:1000"
 
     def test_percentage_keeps_only_percentage_params(self):
         """percentage keeps cf_freq and cf_pct; rest None."""
@@ -433,7 +447,7 @@ class TestScopeCashflowParams:
         assert result["vds_pct"] is None
         assert result["cwd_amount"] is None
         assert result["cwd_tr"] is None
-        assert result["cf_ts"] is None
+        assert result["cf_ts"] == "2020-01:1000"
 
     def test_vds_keeps_only_vds_params(self):
         """vds keeps vds_* params; rest None."""
@@ -469,7 +483,7 @@ class TestScopeCashflowParams:
         assert result["cf_pct"] is None
         assert result["cwd_amount"] is None
         assert result["cwd_tr"] is None
-        assert result["cf_ts"] is None
+        assert result["cf_ts"] == "2020-01:1000"
 
     def test_cwd_keeps_only_cwd_params(self):
         """cwd keeps cf_freq, cwd_amount, cwd_tr; rest None."""
@@ -498,7 +512,7 @@ class TestScopeCashflowParams:
         assert result["cf_indexation"] is None
         assert result["cf_pct"] is None
         assert result["vds_pct"] is None
-        assert result["cf_ts"] is None
+        assert result["cf_ts"] == "2020-01:1000"
 
     def test_time_series_keeps_only_cf_ts(self):
         """time_series keeps cf_ts; rest None."""
@@ -528,6 +542,33 @@ class TestScopeCashflowParams:
         assert result["vds_pct"] is None
         assert result["cwd_amount"] is None
         assert result["cwd_tr"] is None
+
+
+class TestCfTsOwnedByAllStrategies:
+    """Custom cash flows survive link scoping under every strategy."""
+
+    _CF_TS = "2030-01:5000,2031-06:-1000"
+
+    def _scope(self, cf_strategy, **overrides):
+        base = {
+            "cf_freq": "month", "cf_amount": None, "cf_indexation": None, "cf_pct": None,
+            "vds_pct": None, "vds_min": None, "vds_max": None, "vds_adj_mm": None,
+            "vds_floor": None, "vds_ceil": None, "vds_adj_fc": None, "vds_indexation": None,
+            "cwd_amount": None, "cwd_tr": None, "cf_ts": self._CF_TS,
+        }
+        return scope_cashflow_params(cf_strategy=cf_strategy, **{**base, **overrides})
+
+    def test_indexation_keeps_cf_ts(self):
+        assert self._scope("indexation", cf_amount=-1500)["cf_ts"] == self._CF_TS
+
+    def test_percentage_keeps_cf_ts(self):
+        assert self._scope("percentage", cf_pct=-12)["cf_ts"] == self._CF_TS
+
+    def test_vds_keeps_cf_ts(self):
+        assert self._scope("vds", vds_pct=-8)["cf_ts"] == self._CF_TS
+
+    def test_cwd_keeps_cf_ts(self):
+        assert self._scope("cwd", cwd_amount=-200, cwd_tr="20:40")["cf_ts"] == self._CF_TS
 
 
 class TestCreateFilename:

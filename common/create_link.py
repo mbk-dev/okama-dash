@@ -7,14 +7,19 @@ from common import settings as settings
 
 
 # Strategy table: (primary flow value - zero/empty means "inactive", owned param names).
+# cf_ts (custom one-off cash flows) is owned by every strategy: okama applies
+# time_series_dic on top of any regular strategy.
 _STRATEGY_PARAMS = {
-    "indexation": ("cf_amount", ("cf_freq", "cf_amount", "cf_indexation")),
-    "percentage": ("cf_pct", ("cf_freq", "cf_pct")),
+    "indexation": ("cf_amount", ("cf_freq", "cf_amount", "cf_indexation", "cf_ts")),
+    "percentage": ("cf_pct", ("cf_freq", "cf_pct", "cf_ts")),
     "vds": (
         "vds_pct",
-        ("vds_pct", "vds_min", "vds_max", "vds_adj_mm", "vds_floor", "vds_ceil", "vds_adj_fc", "vds_indexation"),
+        (
+            "vds_pct", "vds_min", "vds_max", "vds_adj_mm", "vds_floor", "vds_ceil",
+            "vds_adj_fc", "vds_indexation", "cf_ts",
+        ),
     ),
-    "cwd": ("cwd_amount", ("cf_freq", "cwd_amount", "cwd_tr")),
+    "cwd": ("cwd_amount", ("cf_freq", "cwd_amount", "cwd_tr", "cf_ts")),
     "time_series": ("cf_ts", ("cf_ts",)),
 }
 
@@ -44,8 +49,9 @@ def scope_cashflow_params(
     Only the active strategy's params are preserved; all others are set to None.
     A strategy whose primary flow value is 0/None produces no cash flow and is
     treated as "no strategy" (everything None, including the returned
-    "cf_strategy" key): indexation/cwd with zero amount, percentage/vds with
-    zero percent, time_series with no entries.
+    "cf_strategy" key) — unless custom cash flows (cf_ts) are present, which
+    keep the strategy active: indexation/cwd with zero amount, percentage/vds
+    with zero percent, time_series with no entries.
     """
     result = {
         "cf_strategy": None,
@@ -87,7 +93,7 @@ def scope_cashflow_params(
     if spec is None:
         return result
     primary, owned = spec
-    if values[primary] in (None, 0, ""):
+    if values[primary] in (None, 0, "") and values["cf_ts"] in (None, ""):
         return result
     result["cf_strategy"] = cf_strategy
     for key in owned:
