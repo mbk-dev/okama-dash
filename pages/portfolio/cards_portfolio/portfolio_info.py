@@ -20,15 +20,21 @@ card_assets_info = dbc.Card(
                         [
                             html.H5("Asset Allocation"),
                             dcc.Graph(id="pf-asset-allocation", style={"height": 200, "width": "100%"}),
-                        ]
+                        ],
+                        xs=12,
+                        md=6,
                     ),
                     dbc.Col(
                         [
                             html.H5("Information"),
                             html.Div(id="pf-asset-list-info", children="Start to select assets to see the information"),
-                        ]
+                        ],
+                        xs=12,
+                        md=6,
                     ),
-                ]
+                ],
+                # Single column on mobile (stacked with a vertical gap), two columns from md up.
+                class_name="gy-3",
             ),
             html.H5(children="Assets names"),
             html.Div(id="pf-assets-names", children="Start to select assets to see the information"),
