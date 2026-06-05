@@ -9,15 +9,6 @@ ef_options_tooltip_ror = dcc.Markdown(
     **Pairwise efficiency frontiers** show efficient frontiers built separately for every pair of selected assets.
     """
 )
-ef_options_tooltip_mean_type = dcc.Markdown(
-    """
-    **Geometric mean** or Compound annual growth rate (CAGR) is the rate of return
-    that would be required for an investment to grow from its initial to its
-    final value, assuming all incomes were reinvested.
-
-    **Arithmetic mean** is the annualized average return.
-    """
-)
 ef_options_tooltip_cml = dcc.Markdown(
     """
     **Capital Market Line** (CML) is the tangent line drawn from the point of

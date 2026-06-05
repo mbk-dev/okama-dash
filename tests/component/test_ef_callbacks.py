@@ -176,6 +176,19 @@ class TestEFShowHideCallbacks:
         assert show_transition_map_row(1, None, "Off") == {"display": "none"}
 
 
+class TestNoMeanTypeSelector:
+    # The Y-axis (Geometric/Arithmetic mean) selector was removed: the EF chart
+    # always plots CAGR. The MDP/CML row below must stay untouched.
+    def test_layout_has_no_mean_type_selector(self, mock_okama_symbols, null_cache):
+        from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
+
+        card = card_controls(None, None, None, None, None)
+        layout_repr = str(card)
+        assert "ef-mean-type-option" not in layout_repr
+        assert "Most diversified portfolios line" in layout_repr
+        assert "Capital Market Line (CML)" in layout_repr
+
+
 class TestUpdateLinkEf:
     # Guard for the EF "Copy link": the rebalancing period must round-trip through
     # the shareable URL (added in 3572e1e; production master lacked it until then).

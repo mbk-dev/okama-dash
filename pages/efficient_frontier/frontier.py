@@ -118,7 +118,6 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
     # Options
     State(component_id="ef-rebalancing-frequency", component_property="value"),
     State(component_id="ef-plot-options", component_property="value"),
-    State(component_id="ef-mean-type-option", component_property="value"),
     State(component_id="mdp-line-option", component_property="value"),
     State(component_id="cml-option", component_property="value"),
     State(component_id="risk-free-rate-option", component_property="value"),
@@ -143,7 +142,6 @@ def update_ef_cards(
     # Options
     rebalancing_period: str,
     plot_option: str,
-    mean_type_option: str,
     mdp_option: str,
     cml_option: str,
     rf_rate: float,
@@ -170,7 +168,8 @@ def update_ef_cards(
             effective_n_monte_carlo = n_monte_carlo
         ef_options = {
             "plot_type": plot_option,
-            "return_type": mean_type_option,
+            # The Y-axis selector was removed from the UI: the chart always plots CAGR.
+            "return_type": "Geometric",
             "mdp": mdp_option,
             "cml": cml_option,
             "rf_rate": rf_rate,

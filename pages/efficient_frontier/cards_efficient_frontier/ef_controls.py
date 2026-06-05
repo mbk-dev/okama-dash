@@ -32,11 +32,6 @@ PLOT_OPTIONS = [
     },
 ]
 
-RETURN_TYPE_OPTIONS = [
-    {"label": "Geometric mean", "value": "Geometric"},
-    {"label": "Arithmetic mean", "value": "Arithmetic"},
-]
-
 TOGGLE_OPTIONS = [
     {"label": "On", "value": "On"},
     {"label": "Off", "value": "Off"},
@@ -177,32 +172,7 @@ def card_controls(
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
-                                dbc.Col(
-                                    [
-                                        dbc.Label(
-                                            [
-                                                "Y-axis",
-                                                html.I(
-                                                    className="bi bi-info-square ms-2",
-                                                    id="info-mean-type",
-                                                ),
-                                            ]
-                                        ),
-                                        dbc.RadioItems(
-                                            options=RETURN_TYPE_OPTIONS,
-                                            value="Geometric",
-                                            id="ef-mean-type-option",
-                                        ),
-                                        dbc.Tooltip(
-                                            tl.ef_options_tooltip_mean_type,
-                                            target="info-mean-type",
-                                        ),
-                                    ],
-                                    lg=6,
-                                    md=6,
-                                    sm=12,
-                                    class_name="pt-4 pt-sm-4 pt-md-1",
-                                ),
+                                dbc.Col(lg=6, md=6, sm=12),
                             ],
                             className="p-1",
                         ),
@@ -485,14 +455,12 @@ def update_risk_free_rate(cml: str):
     Output("cml-option", "value"),
     Output("ef-sim-mode", "value"),
     Input("ef-plot-options", "value"),
-    Input("ef-mean-type-option", "value"),
     Input("mdp-line-option", "value"),
     Input("cml-option", "value"),
     Input("ef-sim-mode", "value"),
 )
-def sync_incompatible_options(plot_type, mean_type_value, mdp_value, cml_value, sim_mode):
+def sync_incompatible_options(plot_type, mdp_value, cml_value, sim_mode):
     plot_types = _normalize_plot_types(plot_type)
-    mean_type_value = mean_type_value or "Geometric"
     mdp_value = mdp_value or "Off"
     cml_value = cml_value or "Off"
     sim_mode = sim_mode or "Off"
@@ -517,9 +485,7 @@ def sync_incompatible_options(plot_type, mean_type_value, mdp_value, cml_value, 
         plot_types = ["Frontier"]
 
     pairwise_selected = "Pairwise" in plot_types
-    # TODO: remove Arithmetic-based MDP/CML disabling after EfficientFrontier in okama
-    # supports correct Mean return vs CAGR handling for MDP and CML.
-    mdp_cml_disabled = pairwise_selected or mean_type_value == "Arithmetic"
+    mdp_cml_disabled = pairwise_selected
 
     if mdp_cml_disabled:
         mdp_value = "Off"

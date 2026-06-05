@@ -49,7 +49,7 @@ class TestUpdateEfCards:
                 selected_symbols=["AAPL.US", "MSFT.US"],
                 ccy="USD", fd_value="2020-01", ld_value="2024-12",
                 rebalancing_period="month", plot_option="ef",
-                mean_type_option="Arithmetic", mdp_option="Off",
+                mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
                 sim_mode="Off", grid_step_value="Auto",
             )
@@ -67,7 +67,7 @@ class TestUpdateEfCards:
                 selected_symbols=[],
                 ccy="USD", fd_value="2020-01", ld_value="2024-12",
                 rebalancing_period="month", plot_option="ef",
-                mean_type_option="Arithmetic", mdp_option="Off",
+                mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
                 sim_mode="Off", grid_step_value="Auto",
             )
@@ -84,7 +84,7 @@ class TestUpdateEfCards:
                 selected_symbols=["AAPL.US"],
                 ccy="USD", fd_value="2020-01", ld_value="2024-12",
                 rebalancing_period="month", plot_option="ef",
-                mean_type_option="Arithmetic", mdp_option="Off",
+                mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
                 sim_mode="Off", grid_step_value="Auto",
             )
@@ -108,7 +108,7 @@ class TestUpdateEfCards:
                 selected_symbols=["AAPL.US", "MSFT.US"],
                 ccy="USD", fd_value="2020-01", ld_value="2024-12",
                 rebalancing_period="month", plot_option="ef",
-                mean_type_option="Arithmetic", mdp_option="Off",
+                mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
                 sim_mode="Off", grid_step_value="Auto",
             )
@@ -133,7 +133,7 @@ class TestUpdateEfCards:
                 selected_symbols=["AAPL.US", "MSFT.US"],
                 ccy="USD", fd_value="2020-01", ld_value="2024-12",
                 rebalancing_period="month", plot_option="ef",
-                mean_type_option="Arithmetic", mdp_option="Off",
+                mdp_option="Off",
                 cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
                 sim_mode="Off", grid_step_value="Auto",
             )
@@ -221,6 +221,35 @@ def test_customdata_serializes_as_json_lists_for_clickdata():
             )
 
 
+def test_return_type_is_always_geometric():
+    # The Y-axis (mean type) selector was removed from the EF controls:
+    # update_ef_cards takes no mean_type_option and always plots CAGR.
+    from pages.efficient_frontier.frontier import update_ef_cards
+
+    mock_ef = _make_mock_ef_object()
+    captured = {}
+
+    def fake_prepare_ef(ef, ef_object, ef_options, ef_cache_key=None):
+        captured["ef_options"] = ef_options
+        return go.Figure()
+
+    with (
+        patch(f"{FRONTIER_MODULE}.get_or_create_ef_object", return_value=(mock_ef, "test.pkl")),
+        patch(f"{FRONTIER_MODULE}.prepare_ef", side_effect=fake_prepare_ef),
+        patch(f"{FRONTIER_MODULE}.prepare_transition_map", return_value=go.Figure()),
+    ):
+        update_ef_cards(
+            screen=None, n_clicks=1,
+            selected_symbols=["AAPL.US", "MSFT.US"],
+            ccy="USD", fd_value="2020-01", ld_value="2024-12",
+            rebalancing_period="month", plot_option="Frontier",
+            mdp_option="Off", cml_option="Off", rf_rate=0.0,
+            n_monte_carlo=0, sim_mode="Off", grid_step_value="Auto",
+        )
+
+    assert captured["ef_options"]["return_type"] == "Geometric"
+
+
 def test_grid_mode_passes_resolved_step_to_prepare_ef():
     from pages.efficient_frontier.frontier import update_ef_cards
 
@@ -241,7 +270,7 @@ def test_grid_mode_passes_resolved_step_to_prepare_ef():
             selected_symbols=["A.US", "B.US", "C.US", "D.US", "E.US", "F.US"],
             ccy="USD", fd_value="2020-01", ld_value="2024-12",
             rebalancing_period="month", plot_option="Frontier",
-            mean_type_option="Geometric", mdp_option="Off",
+            mdp_option="Off",
             cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
             sim_mode="Grid", grid_step_value="Auto",
         )
@@ -270,7 +299,7 @@ def test_monte_carlo_mode_passes_n_and_no_grid_step():
             selected_symbols=["A.US", "B.US"],
             ccy="USD", fd_value="2020-01", ld_value="2024-12",
             rebalancing_period="month", plot_option="Frontier",
-            mean_type_option="Geometric", mdp_option="Off",
+            mdp_option="Off",
             cml_option="Off", rf_rate=0.0, n_monte_carlo=100,
             sim_mode="Monte Carlo", grid_step_value="Auto",
         )

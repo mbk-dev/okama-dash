@@ -44,7 +44,7 @@ def test_grid_mode_disables_pairwise():
 
     with patch.object(dash, "ctx") as mock_ctx:
         mock_ctx.triggered_id = "ef-sim-mode"
-        result = sync_incompatible_options("Frontier", "Geometric", "Off", "Off", "Grid")
+        result = sync_incompatible_options("Frontier", "Off", "Off", "Grid")
 
     plot_options = result[0]
     pairwise = next(opt for opt in plot_options if opt["value"] == "Pairwise")
@@ -56,7 +56,7 @@ def test_selecting_pairwise_resets_sim_mode():
 
     with patch.object(dash, "ctx") as mock_ctx:
         mock_ctx.triggered_id = "ef-plot-options"
-        result = sync_incompatible_options(["Frontier", "Pairwise"], "Geometric", "Off", "Off", "Grid")
+        result = sync_incompatible_options(["Frontier", "Pairwise"], "Off", "Off", "Grid")
 
     sim_mode_out = result[6]
     assert sim_mode_out == "Off"

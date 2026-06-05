@@ -584,7 +584,7 @@ def _prepare_single_ef(
             customdata=weights_array,
             hovertemplate=hovertemplate,
             mode="lines",
-            name=f"Efficient Frontier - {return_type} mean",
+            name="Efficient Frontier",
             line={"width": line_width},
         )
     )
