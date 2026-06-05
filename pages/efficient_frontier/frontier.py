@@ -19,6 +19,7 @@ from pages.efficient_frontier.cards_efficient_frontier.ef_chart import card_graf
 from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
 from pages.efficient_frontier.cards_efficient_frontier.ef_chart_transition_map import card_transition_map
 from pages.efficient_frontier.cards_efficient_frontier.ef_find_weights import card_ef_find_weights
+from pages.efficient_frontier.cards_efficient_frontier.ef_portfolio_card import build_portfolio_card
 
 from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens, is_small_screen
@@ -48,15 +49,13 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
             dbc.Row(
                 html.Div(
                     [
-                        dcc.Markdown(
-                        """
-                        **Portfolio data**
-                        Click on points to get portfolio data.
-                        """
+                        html.H4("Selected portfolio"),
+                        html.P(
+                            "Click on points to get portfolio data.",
+                            id="ef-click-hint",
+                            className="text-muted",
                         ),
-                        html.P(id="ef-click-data-return"),
-                        html.P(id="ef-click-data-risk"),
-                        html.Pre(id="ef-click-data-weights"),
+                        html.Div(id="ef-selected-portfolio"),
                         dcc.Store(id="ef-trace-names"),
                     ],
                     style={"display": "none"},
@@ -206,34 +205,40 @@ def _ef_rebalancing_period(ef_object) -> str | None:
 
 
 @callback(
-    Output("ef-click-data-risk", "children"),
-    Output("ef-click-data-return", "children"),
-    Output("ef-click-data-weights", "children"),
+    Output("ef-selected-portfolio", "children"),
     Output("ef-backtest-portfolio-button", "href"),
     Input("ef-graf", "clickData"),
     # Portfolio data
     Input(component_id="ef-submit-button-state", component_property="n_clicks"),
     State(component_id="ef-symbols-list", component_property="value"),
-    State(component_id="ef_portfolio_file_name", component_property="data")
+    State(component_id="ef_portfolio_file_name", component_property="data"),
+    State(component_id="risk-free-rate-option", component_property="value"),
+    State(component_id="ef-trace-names", component_property="data"),
 )
-def display_click_data(clickData, n_click, symbols, file_name):
+def display_click_data(clickData, n_click, symbols, file_name, rf_rate, trace_names):
     """
-    Display portfolio weights, risk and return.
+    Render the Selected portfolio card for the clicked chart point.
     """
     if not clickData:
         raise dash.exceptions.PreventUpdate
-    risk = clickData["points"][0]["x"]
-    risk_str = f"Risk: {risk:.2f}%"
-
-    ror = clickData["points"][0]["y"]
-    ror_str = f"Return: {ror:.2f}%"
-
     point_data = clickData["points"][0]
+    risk = point_data["x"]
+    ror = point_data["y"]
+    stats = _point_stats(ror, risk, rf_rate)
+    badge = _trace_badge(point_data, trace_names)
+
     weights_list = point_data.get("customdata")
     if weights_list is None:
-        return risk_str, ror_str, "Weights: unavailable for this point.", None
+        card = build_portfolio_card(
+            stats=stats,
+            symbols=symbols,
+            weights=None,
+            badge=badge,
+            note="Weights: unavailable for this point.",
+        )
+        return card, None
 
-    weights_str = "Weights:" + ",".join([f" {t}={w:.2f}% " for w, t in zip(weights_list, symbols, strict=True)])
+    card = build_portfolio_card(stats=stats, symbols=symbols, weights=weights_list, badge=badge)
     weights_for_link = common.math.round_list(weights_list, 2)
     ef_object = load_ef_object(file_name)
     link = common.create_link.create_link(
@@ -245,7 +250,24 @@ def display_click_data(clickData, n_click, symbols, file_name):
         weights_list=weights_for_link,
         rebal=_ef_rebalancing_period(ef_object),
     )
-    return risk_str, ror_str, weights_str, link
+    return card, link
+
+
+def _point_stats(ror: float, risk: float, rf_rate: float | None) -> list[tuple[str, str]]:
+    """Stat blocks for a clicked point; Sharpe is skipped when risk is zero."""
+    stats = [("CAGR", f"{ror:.2f}%"), ("Risk Σ", f"{risk:.2f}%")]
+    if abs(risk) > 1e-9:
+        sharpe = (ror - (rf_rate or 0.0)) / risk
+        stats.append(("Sharpe", f"{sharpe:.2f}"))
+    return stats
+
+
+def _trace_badge(point_data: dict, trace_names: list | None) -> str | None:
+    """Trace name for the badge, resolved from the clicked curve number."""
+    curve_number = point_data.get("curveNumber")
+    if trace_names and curve_number is not None and 0 <= curve_number < len(trace_names):
+        return trace_names[curve_number] or None
+    return None
 
 
 @callback(
@@ -262,10 +284,13 @@ def show_graf_and_portfolio_data_and_find_portfolio_rows(n_clicks, style):
 
 @callback(
     Output(component_id="ef-backtest-portfolio-button-row", component_property="style"),
-    Input(component_id="ef-click-data-risk", component_property="children"),
+    Output(component_id="ef-click-hint", component_property="style"),
+    Input(component_id="ef-selected-portfolio", component_property="children"),
 )
-def show_backtest_portfolio_button_row(text):
-    return None if text else {"display": "none"}
+def show_backtest_portfolio_button_row(children):
+    if children:
+        return None, {"display": "none"}
+    return {"display": "none"}, None
 
 
 @callback(

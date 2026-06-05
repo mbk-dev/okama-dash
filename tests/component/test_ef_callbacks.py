@@ -150,20 +150,20 @@ class TestGetCachedReturnValues:
 
 
 class TestEFShowHideCallbacks:
-    def test_show_backtest_button_visible_when_text(self):
+    def test_show_backtest_button_and_hide_hint_when_card_present(self):
         from pages.efficient_frontier.frontier import show_backtest_portfolio_button_row
 
-        assert show_backtest_portfolio_button_row("Risk: 10%") is None
+        # children is the rendered card component (any truthy children counts)
+        button_style, hint_style = show_backtest_portfolio_button_row({"type": "Div"})
+        assert button_style is None
+        assert hint_style == {"display": "none"}
 
-    def test_show_backtest_button_hidden_when_empty(self):
+    def test_hide_backtest_button_and_show_hint_when_empty(self):
         from pages.efficient_frontier.frontier import show_backtest_portfolio_button_row
 
-        assert show_backtest_portfolio_button_row("") == {"display": "none"}
-
-    def test_show_backtest_button_hidden_when_none(self):
-        from pages.efficient_frontier.frontier import show_backtest_portfolio_button_row
-
-        assert show_backtest_portfolio_button_row(None) == {"display": "none"}
+        button_style, hint_style = show_backtest_portfolio_button_row(None)
+        assert button_style == {"display": "none"}
+        assert hint_style is None
 
     def test_transition_map_on(self):
         from pages.efficient_frontier.frontier import show_transition_map_row

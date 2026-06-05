@@ -22,26 +22,55 @@ def _make_mock_ef_object(rebalancing_period: str = "month"):
     return ef
 
 
+def _walk(component):
+    """Yield the component and all its descendants (components and strings)."""
+    yield component
+    children = getattr(component, "children", None)
+    if children is None:
+        return
+    if not isinstance(children, (list, tuple)):
+        children = [children]
+    for child in children:
+        yield from _walk(child)
+
+
+def _by_class(component, css_class):
+    return [
+        node
+        for node in _walk(component)
+        if css_class in (getattr(node, "className", "") or "").split()
+    ]
+
+
+def _texts(component):
+    return [node for node in _walk(component) if isinstance(node, str)]
+
+
 class TestDisplayClickData:
     def test_no_click_data_raises_prevent_update(self):
         from pages.efficient_frontier.frontier import display_click_data
 
         with pytest.raises(dash.exceptions.PreventUpdate):
-            display_click_data(None, 1, ["SPY.US", "BND.US"], "file.pkl")
+            display_click_data(None, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, [])
 
-    def test_click_without_customdata_returns_unavailable(self):
+    def test_click_without_customdata_renders_note_card_without_link(self):
         from pages.efficient_frontier.frontier import display_click_data
 
         click_data = {"points": [{"x": 12.34, "y": 8.56}]}
-        risk, ret, weights, link = display_click_data(
-            click_data, 1, ["SPY.US", "BND.US"], "file.pkl"
+        card, link = display_click_data(
+            click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
         )
-        assert risk == "Risk: 12.34%"
-        assert ret == "Return: 8.56%"
-        assert weights == "Weights: unavailable for this point."
+
+        texts = _texts(card)
+        assert "12.34%" in texts
+        assert "8.56%" in texts
+        notes = _by_class(card, "pf-note")
+        assert len(notes) == 1
+        assert notes[0].children == "Weights: unavailable for this point."
+        assert _by_class(card, "pf-asset-row") == []
         assert link is None
 
-    def test_click_with_weights_returns_formatted_data(self):
+    def test_click_with_weights_renders_card_and_link(self):
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object()
@@ -50,14 +79,20 @@ class TestDisplayClickData:
         }
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            risk, ret, weights, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl"
+            card, link = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
             )
 
-        assert risk == "Risk: 10.00%"
-        assert ret == "Return: 7.50%"
-        assert "SPY.US=60.00%" in weights
-        assert "BND.US=40.00%" in weights
+        texts = _texts(card)
+        assert "CAGR" in texts
+        assert "7.50%" in texts
+        assert "Risk Σ" in texts
+        assert "10.00%" in texts
+        assert "SPY.US" in texts
+        assert "60.00%" in texts
+        assert "BND.US" in texts
+        assert "40.00%" in texts
+        assert len(_by_class(card, "pf-asset-row")) == 2
         assert link is not None
         assert "/portfolio/" in link
         assert "SPY.US" in link
@@ -66,6 +101,90 @@ class TestDisplayClickData:
         assert "ccy=" not in link
         assert "first_date=2020-01" in link
         assert "last_date=2024-12" in link
+
+    def test_sharpe_uses_risk_free_rate(self):
+        from pages.efficient_frontier.frontier import display_click_data
+
+        mock_ef = _make_mock_ef_object()
+        click_data = {
+            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
+        }
+
+        with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
+            card, _ = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 2.5, []
+            )
+
+        texts = _texts(card)
+        assert "Sharpe" in texts
+        assert "0.50" in texts  # (7.50 - 2.5) / 10.00
+
+    def test_sharpe_treats_none_rf_rate_as_zero(self):
+        from pages.efficient_frontier.frontier import display_click_data
+
+        mock_ef = _make_mock_ef_object()
+        click_data = {
+            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
+        }
+
+        with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
+            card, _ = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", None, []
+            )
+
+        assert "0.75" in _texts(card)  # (7.50 - 0) / 10.00
+
+    def test_sharpe_omitted_when_risk_is_zero(self):
+        from pages.efficient_frontier.frontier import display_click_data
+
+        mock_ef = _make_mock_ef_object()
+        click_data = {
+            "points": [{"x": 0.0, "y": 7.50, "customdata": [60.0, 40.0]}]
+        }
+
+        with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
+            card, _ = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
+            )
+
+        assert "Sharpe" not in _texts(card)
+
+    def test_badge_resolved_from_trace_names_by_curve_number(self):
+        from pages.efficient_frontier.frontier import display_click_data
+
+        mock_ef = _make_mock_ef_object()
+        click_data = {
+            "points": [
+                {"x": 10.0, "y": 7.5, "curveNumber": 1, "customdata": [60.0, 40.0]}
+            ]
+        }
+        trace_names = ["Efficient Frontier", "Monte-Carlo Simulation"]
+
+        with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
+            card, _ = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, trace_names
+            )
+
+        badges = _by_class(card, "pf-card-badge")
+        assert len(badges) == 1
+        assert badges[0].children == "Monte-Carlo Simulation"
+
+    def test_no_badge_when_curve_number_out_of_range(self):
+        from pages.efficient_frontier.frontier import display_click_data
+
+        mock_ef = _make_mock_ef_object()
+        click_data = {
+            "points": [
+                {"x": 10.0, "y": 7.5, "curveNumber": 5, "customdata": [60.0, 40.0]}
+            ]
+        }
+
+        with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
+            card, _ = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, ["Efficient Frontier"]
+            )
+
+        assert _by_class(card, "pf-card-badge") == []
 
     def test_link_contains_rounded_weights(self):
         from pages.efficient_frontier.frontier import display_click_data
@@ -76,8 +195,8 @@ class TestDisplayClickData:
         }
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            _, _, _, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl"
+            _, link = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
             )
 
         assert "weights=33.33,66.67" in link
@@ -91,8 +210,8 @@ class TestDisplayClickData:
         }
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            _, _, _, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl"
+            _, link = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
             )
 
         assert "rebal=year" in link
@@ -106,8 +225,8 @@ class TestDisplayClickData:
         }
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            _, _, _, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl"
+            _, link = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
             )
 
         assert "rebal=" not in link
@@ -124,8 +243,8 @@ class TestDisplayClickData:
         }
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            _, _, _, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl"
+            _, link = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
             )
 
         assert link is not None
@@ -142,13 +261,14 @@ class TestDisplayClickData:
         symbols = ["SPY.US", "BND.US", "GLD.US"]
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            _, _, weights, link = display_click_data(
-                click_data, 1, symbols, "file.pkl"
+            card, link = display_click_data(
+                click_data, 1, symbols, "file.pkl", 0.0, []
             )
 
-        assert "SPY.US=50.00%" in weights
-        assert "BND.US=30.00%" in weights
-        assert "GLD.US=20.00%" in weights
+        assert len(_by_class(card, "pf-asset-row")) == 3
+        texts = _texts(card)
+        for expected in ("SPY.US", "50.00%", "BND.US", "30.00%", "GLD.US", "20.00%"):
+            assert expected in texts
         assert link is not None
 
 
