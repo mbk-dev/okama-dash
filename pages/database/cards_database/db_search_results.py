@@ -36,7 +36,7 @@ def db_search(n_clicks: int, text_to_search: str, namespace: str) -> dag.AgGrid:
         output = dag.AgGrid(
             rowData=search_df.to_dict("records"),
             columnDefs=[{"field": c} for c in search_df.columns],
-            defaultColDef={"resizable": False},
+            defaultColDef={"resizable": False, "sortable": False},
             columnSize="responsiveSizeToFit",
             dashGridOptions={"pagination": True, "paginationPageSize": 15, "domLayout": "autoHeight"},
             style={"height": None},

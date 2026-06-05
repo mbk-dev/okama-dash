@@ -210,7 +210,7 @@ def get_al_statistics_table(al_object):
         id="al-describe-table-grid",
         rowData=statistics_df.to_dict("records"),
         columnDefs=column_defs,
-        defaultColDef={"resizable": False},
+        defaultColDef={"resizable": False, "sortable": False},
         columnSize="responsiveSizeToFit",
         # suppressFieldDotNotation: ticker column names contain dots (AAPL.US);
         # without it AG Grid resolves them as nested paths and renders empty cells.
