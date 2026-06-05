@@ -308,23 +308,22 @@ def show_transition_map_row(n_clicks, style, tr_map_option):
 
 
 @callback(
-    Output("ef-find-portfolio-mean-return", "children"),
-    Output("ef-find-portfolio-cagr", "children"),
-    Output("ef-find-portfolio-risk", "children"),
-    Output("ef-find-portfolio-weights", "children"),
+    Output("ef-find-portfolio-output", "children"),
     Output("ef-backtest-optimized-potfolio-button", "href"),
     # Target return & ef file name
     Input(component_id="ef-find-portfolio-button", component_property="n_clicks"),
     State(component_id="ef-find-portfolio-input", component_property="value"),
-    State(component_id="ef_portfolio_file_name", component_property="data")
+    State(component_id="ef_portfolio_file_name", component_property="data"),
+    State(component_id="risk-free-rate-option", component_property="value"),
 )
-def find_portfolio(n_clicks, ror, file_name):
+def find_portfolio(n_clicks, ror, file_name, rf_rate):
     """
-    Find optimized portfolio weights by rate of return (arithmetic mean).
+    Find optimized portfolio weights by rate of return and render the card.
     """
-    if n_clicks ==0 or file_name is None:
+    if n_clicks == 0 or file_name is None:
         raise dash.exceptions.PreventUpdate
     ef_object = load_ef_object(file_name)
+    no_solution = html.P("No solution was found.", className="text-muted")
     try:
         target_value = ror / 100.
         optimized_portfolio = get_minimized_risk_portfolio(file_name, target_value)
@@ -340,32 +339,49 @@ def find_portfolio(n_clicks, ror, file_name):
         }
         if not asset_weights and "Weights" in optimized_portfolio:
             asset_weights = dict(zip(ef_object.symbols, optimized_portfolio["Weights"], strict=True))
+        if not asset_weights:
+            return no_solution, None
 
-        mean_return_str = f"Mean return: {mean_return * 100:.2f}%" if mean_return is not None else ''
-        cagr_str = f"CAGR: {cagr * 100:.2f}%" if cagr is not None else ''
-        risk_str = f"Risk: {risk * 100:.2f}%" if risk is not None else ''
-        if asset_weights:
-            weights_str = "Weights:" + ",".join([f" {t}={w * 100:.2f}% " for t, w in asset_weights.items()])
-            weights_for_link = common.math.round_list([w * 100 for w in asset_weights.values()], 2)
-            link = common.create_link.create_link(
-                href='/portfolio/',
-                tickers_list=ef_object.symbols,
-                ccy=ef_object.currency,
-                first_date=ef_object.first_date.strftime('%Y-%m'),
-                last_date = ef_object.last_date.strftime('%Y-%m'),
-                weights_list=weights_for_link,
-                rebal=_ef_rebalancing_period(ef_object),
-            )
-        else:
-            weights_str = "No solution was found."
-            link = None
+        weights_percent = [w * 100 for w in asset_weights.values()]
+        card = build_portfolio_card(
+            stats=_optimized_stats(mean_return, cagr, risk, rf_rate),
+            symbols=list(asset_weights),
+            weights=weights_percent,
+            title="Optimized portfolio",
+        )
+        weights_for_link = common.math.round_list(weights_percent, 2)
+        link = common.create_link.create_link(
+            href='/portfolio/',
+            tickers_list=ef_object.symbols,
+            ccy=ef_object.currency,
+            first_date=ef_object.first_date.strftime('%Y-%m'),
+            last_date=ef_object.last_date.strftime('%Y-%m'),
+            weights_list=weights_for_link,
+            rebal=_ef_rebalancing_period(ef_object),
+        )
+        return card, link
     except RecursionError:
-        mean_return_str = ''
-        cagr_str = ''
-        risk_str = ''
-        weights_str = "No solution was found."
-        link = None
-    return mean_return_str, cagr_str, risk_str, weights_str, link
+        return no_solution, None
+
+
+def _optimized_stats(
+    mean_return: float | None,
+    cagr: float | None,
+    risk: float | None,
+    rf_rate: float | None,
+) -> list[tuple[str, str]]:
+    """Stat blocks for the optimized portfolio; None values are skipped."""
+    stats = []
+    if mean_return is not None:
+        stats.append(("Mean return", f"{mean_return * 100:.2f}%"))
+    if cagr is not None:
+        stats.append(("CAGR", f"{cagr * 100:.2f}%"))
+    if risk is not None:
+        stats.append(("Risk Σ", f"{risk * 100:.2f}%"))
+    if cagr is not None and risk is not None and abs(risk) > 1e-9:
+        sharpe = (cagr * 100 - (rf_rate or 0.0)) / (risk * 100)
+        stats.append(("Sharpe", f"{sharpe:.2f}"))
+    return stats
 
 
 @callback(

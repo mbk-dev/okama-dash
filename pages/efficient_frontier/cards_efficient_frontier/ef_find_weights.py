@@ -87,14 +87,7 @@ card_ef_find_weights = dbc.Card(
                                     dbc.Col(
                                                 [
                                                     html.H5("Optimized portfolio data"),
-                                                    html.Div(
-                                                        [
-                                                            html.P(id="ef-find-portfolio-mean-return"),
-                                                            html.P(id="ef-find-portfolio-cagr"),
-                                                            html.P(id="ef-find-portfolio-risk"),
-                                                            html.Pre(id="ef-find-portfolio-weights"),
-                                                        ],
-                                                    )
+                                                    html.Div(id="ef-find-portfolio-output"),
                                                 ]
                                     )
                                 ],

@@ -277,13 +277,13 @@ class TestFindPortfolio:
         from pages.efficient_frontier.frontier import find_portfolio
 
         with pytest.raises(dash.exceptions.PreventUpdate):
-            find_portfolio(0, 8.0, "file.pkl")
+            find_portfolio(0, 8.0, "file.pkl", 0.0)
 
     def test_none_file_name_raises_prevent_update(self):
         from pages.efficient_frontier.frontier import find_portfolio
 
         with pytest.raises(dash.exceptions.PreventUpdate):
-            find_portfolio(1, 8.0, None)
+            find_portfolio(1, 8.0, None, 0.0)
 
     def test_optimized_portfolio_with_ticker_keys(self):
         from pages.efficient_frontier.frontier import find_portfolio
@@ -301,17 +301,46 @@ class TestFindPortfolio:
             patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef),
             patch(f"{FRONTIER_MODULE}.get_minimized_risk_portfolio", return_value=optimized),
         ):
-            mean_ret, cagr, risk, weights, link = find_portfolio(1, 8.5, "file.pkl")
+            card, link = find_portfolio(1, 8.5, "file.pkl", 0.0)
 
-        assert mean_ret == "Mean return: 8.50%"
-        assert cagr == "CAGR: 8.00%"
-        assert risk == "Risk: 12.00%"
-        assert "SPY.US=60.00%" in weights
-        assert "BND.US=40.00%" in weights
+        texts = _texts(card)
+        assert "Mean return" in texts
+        assert "8.50%" in texts
+        assert "CAGR" in texts
+        assert "8.00%" in texts
+        assert "Risk Σ" in texts
+        assert "12.00%" in texts
+        assert "SPY.US" in texts
+        assert "60.00%" in texts
+        assert "BND.US" in texts
+        assert "40.00%" in texts
+        assert _by_class(card, "pf-card-title")[0].children == "Optimized portfolio"
         assert link is not None
         assert "/portfolio/" in link
         # ccy=USD is default, should be omitted
         assert "ccy=" not in link
+
+    def test_sharpe_from_cagr_risk_and_rf_rate(self):
+        from pages.efficient_frontier.frontier import find_portfolio
+
+        mock_ef = _make_mock_ef_object()
+        optimized = {
+            "Mean return": 0.085,
+            "CAGR": 0.08,
+            "Risk": 0.12,
+            "SPY.US": 0.6,
+            "BND.US": 0.4,
+        }
+
+        with (
+            patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef),
+            patch(f"{FRONTIER_MODULE}.get_minimized_risk_portfolio", return_value=optimized),
+        ):
+            card, _ = find_portfolio(1, 8.5, "file.pkl", 2.0)
+
+        texts = _texts(card)
+        assert "Sharpe" in texts
+        assert "0.50" in texts  # (8.00 - 2.0) / 12.00
 
     def test_optimized_portfolio_with_weights_list_key(self):
         from pages.efficient_frontier.frontier import find_portfolio
@@ -328,11 +357,14 @@ class TestFindPortfolio:
             patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef),
             patch(f"{FRONTIER_MODULE}.get_minimized_risk_portfolio", return_value=optimized),
         ):
-            mean_ret, cagr, risk, weights, link = find_portfolio(1, 7.0, "file.pkl")
+            card, link = find_portfolio(1, 7.0, "file.pkl", 0.0)
 
-        assert mean_ret == "Mean return: 7.00%"
-        assert "SPY.US=55.00%" in weights
-        assert "BND.US=45.00%" in weights
+        texts = _texts(card)
+        assert "7.00%" in texts
+        assert "SPY.US" in texts
+        assert "55.00%" in texts
+        assert "BND.US" in texts
+        assert "45.00%" in texts
         assert link is not None
 
     def test_no_solution_when_no_weights_in_result(self):
@@ -349,9 +381,10 @@ class TestFindPortfolio:
             patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef),
             patch(f"{FRONTIER_MODULE}.get_minimized_risk_portfolio", return_value=optimized),
         ):
-            _, _, _, weights, link = find_portfolio(1, 7.0, "file.pkl")
+            children, link = find_portfolio(1, 7.0, "file.pkl", 0.0)
 
-        assert weights == "No solution was found."
+        assert "No solution was found." in _texts(children)
+        assert _by_class(children, "pf-card") == []
         assert link is None
 
     def test_recursion_error_returns_no_solution(self):
@@ -366,15 +399,12 @@ class TestFindPortfolio:
                 side_effect=RecursionError,
             ),
         ):
-            mean_ret, cagr, risk, weights, link = find_portfolio(1, 8.0, "file.pkl")
+            children, link = find_portfolio(1, 8.0, "file.pkl", 0.0)
 
-        assert mean_ret == ""
-        assert cagr == ""
-        assert risk == ""
-        assert weights == "No solution was found."
+        assert "No solution was found." in _texts(children)
         assert link is None
 
-    def test_none_fields_produce_empty_strings(self):
+    def test_none_stats_are_skipped(self):
         from pages.efficient_frontier.frontier import find_portfolio
 
         mock_ef = _make_mock_ef_object()
@@ -387,12 +417,15 @@ class TestFindPortfolio:
             patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef),
             patch(f"{FRONTIER_MODULE}.get_minimized_risk_portfolio", return_value=optimized),
         ):
-            mean_ret, cagr, risk, weights, link = find_portfolio(1, 8.0, "file.pkl")
+            card, link = find_portfolio(1, 8.0, "file.pkl", 0.0)
 
-        assert mean_ret == ""
-        assert cagr == ""
-        assert risk == ""
-        assert "SPY.US=50.00%" in weights
+        texts = _texts(card)
+        assert "Mean return" not in texts
+        assert "CAGR" not in texts
+        assert "Sharpe" not in texts
+        assert _by_class(card, "pf-stat") == []
+        assert "SPY.US" in texts
+        assert "50.00%" in texts
         assert link is not None
 
     def test_backtest_link_carries_rebalancing_period(self):
@@ -411,7 +444,7 @@ class TestFindPortfolio:
             patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef),
             patch(f"{FRONTIER_MODULE}.get_minimized_risk_portfolio", return_value=optimized),
         ):
-            _, _, _, _, link = find_portfolio(1, 8.5, "file.pkl")
+            _, link = find_portfolio(1, 8.5, "file.pkl", 0.0)
 
         assert "rebal=quarter" in link
 
@@ -431,6 +464,6 @@ class TestFindPortfolio:
             patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef),
             patch(f"{FRONTIER_MODULE}.get_minimized_risk_portfolio", return_value=optimized) as mock_min,
         ):
-            find_portfolio(1, 8.5, "file.pkl")
+            find_portfolio(1, 8.5, "file.pkl", 0.0)
 
         mock_min.assert_called_once_with("file.pkl", 0.085)
