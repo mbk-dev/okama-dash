@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-492 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+502 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block, so the EF page in e2e
 hits the real okama API and renders an error figure — see `findings-to-fix` memory.)
@@ -129,7 +129,8 @@ tests/
 │   ├── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
 │   ├── test_ef_label_padding.py     # EF x-range label padding: centered labels reserve half width on both sides (2 tests)
 │   ├── test_chart_helpers.py        # add_return_type_annotation: CAGR note, default, no-arrow; format_points (integer points, space thousands separator) (6 tests)
-│   └── test_mc_distribution_parameters.py  # build_distribution_parameters: norm/lognorm/t mapping, empty→None, lognorm loc=-1; reactive-estimation gates: _portfolio_is_complete (sum=100, tolerance), _valid_mc_date (17 tests)
+│   ├── test_mc_distribution_parameters.py  # build_distribution_parameters: norm/lognorm/t mapping, empty→None, lognorm loc=-1; reactive-estimation gates: _portfolio_is_complete (sum=100, tolerance), _valid_mc_date (17 tests)
+│   └── test_ef_portfolio_card.py    # EF portfolio card builder: stat blocks, title/badge, allocation rows with percent + stacked bar (plotly palette colors, zero-weight segments skipped), None-weights note (9 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
 │   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
 │   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
@@ -161,7 +162,8 @@ tests/
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
     ├── conftest.py                  # Gunicorn server (TESTING=1, 2 workers) + Playwright
     ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
-    │                                # mobile viewport 375px (Portfolio + EF) (8 tests)
+    │                                # mobile viewport 375px (Portfolio + EF),
+    │                                # EF info panel renders assets names + info for URL tickers (#13 guard) (9 tests)
     ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages; Portfolio MC params prefill; URL params survive reactive auto-estimate (6 tests)
     └── test_submit_interaction.py   # Submit → chart with real traces for all 4 pages; Portfolio stats grid: dotted column renders values, percent-formatted (6 tests)
 ```
@@ -170,11 +172,11 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 187 | ~4s |
+| `poetry run pytest -m unit` | Pure logic | 196 | ~4s |
 | `poetry run pytest -m component` | Dash callbacks | 282 | ~5s |
-| `poetry run pytest -m e2e` | Playwright browser | 23 | ~50s |
-| `poetry run pytest -q` | Everything | 492 | ~60s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 469 | ~6s |
+| `poetry run pytest -m e2e` | Playwright browser | 24 | ~50s |
+| `poetry run pytest -q` | Everything | 502 | ~60s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 478 | ~6s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -188,7 +190,7 @@ to a file in `tmp/` instead of `PIPE`.
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
 | **Portfolio** | create_link (incl. MC params in URL, zero-preservation, cf_ts owned by all strategies + activity rule), symbols, build_distribution_parameters, reactive-estimation gates | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, custom cash flows in all strategies (_build_ts_dict, _apply_custom_time_series per strategy, nested accordion collapsed/expanded/force-open), MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats tables compact on mobile, xlsx export n_clicks guard + Excel number formats (describe percent, survival decimal, wealth grouped int) | load, controls, mobile, shareable link (incl. MC params round-trip), submit→traces |
-| **Efficient Frontier** | adaptive grid step (ef_grid), chart label padding (centered labels) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio (both: backtest link carries the EF object's rebalancing period, omits default month, tolerates legacy pickles), update_ef_cards (return_type hardwired to Geometric — Y-axis selector removed, chart always plots CAGR), simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace, customdata JSON-list serialization (plotly>=6 clickData regression) | load, mobile, shareable link, submit→chart |
+| **Efficient Frontier** | adaptive grid step (ef_grid), chart label padding (centered labels), portfolio card builder (stat blocks, allocation bars) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio (both: backtest link carries the EF object's rebalancing period, omits default month, tolerates legacy pickles), update_ef_cards (return_type hardwired to Geometric — Y-axis selector removed, chart always plots CAGR), simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace, customdata JSON-list serialization (plotly>=6 clickData regression) | load, mobile, shareable link, submit→chart, info panel (assets names + info, #13 guard) |
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
