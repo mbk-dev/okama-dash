@@ -314,5 +314,7 @@ def show_graf_and_statistics_table_rows(n_clicks, style):
     prevent_initial_call=True,
 )
 def export_statistics_xlsx(n_clicks, row_data):
-    from common.html_elements.grid_export import rowdata_to_xlsx_download
-    return rowdata_to_xlsx_download(n_clicks, row_data, "compare_statistics.xlsx")
+    from common.html_elements.grid_export import percent_column_formats, rowdata_to_xlsx_download
+    return rowdata_to_xlsx_download(
+        n_clicks, row_data, "compare_statistics.xlsx", column_formats=percent_column_formats(row_data)
+    )

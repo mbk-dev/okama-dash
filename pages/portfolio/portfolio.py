@@ -458,8 +458,10 @@ def show_graf_and_statistics_rows(n_clicks, style):
 )
 def export_pf_statistics_xlsx(n_clicks, row_data):
     """Trigger xlsx export for portfolio statistics grid."""
-    from common.html_elements.grid_export import rowdata_to_xlsx_download
-    return rowdata_to_xlsx_download(n_clicks, row_data, "portfolio_statistics.xlsx")
+    from common.html_elements.grid_export import percent_column_formats, rowdata_to_xlsx_download
+    return rowdata_to_xlsx_download(
+        n_clicks, row_data, "portfolio_statistics.xlsx", column_formats=percent_column_formats(row_data)
+    )
 
 
 @callback(
@@ -471,7 +473,11 @@ def export_pf_statistics_xlsx(n_clicks, row_data):
 def export_pf_survival_statistics_xlsx(n_clicks, row_data):
     """Trigger xlsx export for Monte Carlo survival statistics grid."""
     from common.html_elements.grid_export import rowdata_to_xlsx_download
-    return rowdata_to_xlsx_download(n_clicks, row_data, "survival_statistics.xlsx")
+    # Grid fields: 1/3 = labels, 2/4 = survival periods in years (desktop);
+    # the compact mobile grid only has 1/2, extra keys are simply unused.
+    return rowdata_to_xlsx_download(
+        n_clicks, row_data, "survival_statistics.xlsx", column_formats={"2": "decimal", "4": "decimal"}
+    )
 
 
 @callback(
@@ -483,7 +489,16 @@ def export_pf_survival_statistics_xlsx(n_clicks, row_data):
 def export_pf_wealth_statistics_xlsx(n_clicks, row_data):
     """Trigger xlsx export for Monte Carlo wealth statistics grid."""
     from common.html_elements.grid_export import rowdata_to_xlsx_download
-    return rowdata_to_xlsx_download(n_clicks, row_data, "wealth_statistics.xlsx")
+    # Grid fields: 1/4 = labels, 2/3/5/6 = FV/PV wealth amounts (desktop);
+    # the compact mobile grid only has 1/2/3, extra keys are simply unused.
+    # The "Discount rate" row carries a preformatted string — number formats
+    # do not affect string cells.
+    return rowdata_to_xlsx_download(
+        n_clicks,
+        row_data,
+        "wealth_statistics.xlsx",
+        column_formats={"2": "int", "3": "int", "5": "int", "6": "int"},
+    )
 
 
 def _fit_distribution_params(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution):
