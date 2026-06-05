@@ -15,6 +15,7 @@ namespaces_df = namespaces_df[[column1_name, column2_name]]
 db_namespaces_table = dag.AgGrid(
     rowData=namespaces_df.to_dict("records"),
     columnDefs=[{"field": column1_name}, {"field": column2_name}],
+    defaultColDef={"resizable": False},
     columnSize="responsiveSizeToFit",
     dashGridOptions={"domLayout": "autoHeight"},
     style={"height": None},

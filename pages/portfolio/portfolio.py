@@ -942,6 +942,7 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
                     dag.AgGrid(
                         rowData=table_list,
                         columnDefs=column_defs,
+                        defaultColDef={"resizable": False},
                         columnSize="responsiveSizeToFit",
                         dashGridOptions={"domLayout": "autoHeight"},
                         style={"height": None},
@@ -978,6 +979,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             id="pf-survival-statistics-grid",
             rowData=table_list,
             columnDefs=column_defs,
+            defaultColDef={"resizable": False},
             columnSize="responsiveSizeToFit",
             dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
             style={"height": None},
@@ -1000,6 +1002,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
     return dag.AgGrid(
         rowData=table_list,
         columnDefs=column_defs,
+        defaultColDef={"resizable": False},
         columnSize="responsiveSizeToFit",
         dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
         style={"height": None},
@@ -1104,6 +1107,7 @@ def get_forecast_wealth_statistics_table(pf_object):
             id="pf-wealth-statistics-grid",
             rowData=table_list,
             columnDefs=column_defs,
+            defaultColDef={"resizable": False},
             columnSize="responsiveSizeToFit",
             dashGridOptions={"domLayout": "autoHeight"},
             style={"height": None},
@@ -1125,6 +1129,7 @@ def get_forecast_wealth_statistics_table(pf_object):
     return dag.AgGrid(
         rowData=table_list,
         columnDefs=column_defs,
+        defaultColDef={"resizable": False},
         columnSize="responsiveSizeToFit",
         dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
         style={"height": None},
@@ -1151,6 +1156,7 @@ def get_pf_statistics_table(al_object):
         id="pf-describe-table-grid",
         rowData=statistics_dict,
         columnDefs=column_defs,
+        defaultColDef={"resizable": False},
         columnSize="responsiveSizeToFit",
         # suppressFieldDotNotation: okama column names contain dots (portfolio_XXXX.PF);
         # without it AG Grid resolves them as nested paths and renders empty cells.
