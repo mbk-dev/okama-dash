@@ -1080,6 +1080,7 @@ def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy, frequ
     Output("pf-submit-button", "disabled"),
     Output("pf-copy-link-button", "disabled"),
     Output("dynamic-add-filter", "disabled"),
+    Output("pf-go-to-ef-button", "disabled"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
     Input("pf-rolling-window", "value"),
@@ -1087,7 +1088,7 @@ def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy, frequ
 )
 def disable_submit_add_link_buttons(
     tickers_list, weights_list, rolling_window_value, mc_number_valid
-) -> Tuple[bool, bool, bool]:
+) -> Tuple[bool, bool, bool, bool]:
     """
     Disable "Add Asset", "Submit" and "Copy Link" buttons.
 
@@ -1104,6 +1105,10 @@ def disable_submit_add_link_buttons(
     disable "Copy Link" conditions:
     - "Submit"
     - number of tickers is more than allowed (in settings)
+
+    disable "Go to EF" conditions:
+    - "Copy Link"
+    - number of unique tickers is < 2 (a frontier needs at least two assets)
     """
     add_condition1 = None in tickers_list or None in weights_list
     add_condition2 = len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
@@ -1132,7 +1137,9 @@ def disable_submit_add_link_buttons(
 
     link_condition = len(tickers_list) > settings.ALLOWED_NUMBER_OF_TICKERS
     link_result = submit_result or link_condition
-    return submit_result, link_result, add_result
+    # EF needs at least two assets: a one-asset "frontier" is just a point.
+    go_to_ef_result = bool(link_result or len(set(tickers_list)) < 2)
+    return submit_result, link_result, add_result, go_to_ef_result
 
 
 @callback(

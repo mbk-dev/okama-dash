@@ -670,7 +670,7 @@ class TestWeightRangeValidation:
         """150 + -50 sums to 100 and must still be rejected."""
         from pages.portfolio.cards_portfolio.portfolio_controls import disable_submit_add_link_buttons
 
-        submit_disabled, _, _ = disable_submit_add_link_buttons(
+        submit_disabled, _, _, _ = disable_submit_add_link_buttons(
             ["AAPL.US", "MSFT.US"], [150, -50], 2, True
         )
         assert submit_disabled is True
@@ -678,7 +678,7 @@ class TestWeightRangeValidation:
     def test_submit_enabled_for_valid_weights(self):
         from pages.portfolio.cards_portfolio.portfolio_controls import disable_submit_add_link_buttons
 
-        submit_disabled, _, _ = disable_submit_add_link_buttons(
+        submit_disabled, _, _, _ = disable_submit_add_link_buttons(
             ["AAPL.US", "MSFT.US"], [60, 40], 2, True
         )
         assert submit_disabled is False

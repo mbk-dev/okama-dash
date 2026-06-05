@@ -44,3 +44,33 @@ class TestGoToEfLink:
 
         assert "tickers=AAPL.US,MSFT.US" in link
         assert "weights=60,40" in link
+
+
+class TestGoToEfGating:
+    def test_enabled_on_valid_two_asset_portfolio(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import (
+            disable_submit_add_link_buttons,
+        )
+
+        *_, go_disabled = disable_submit_add_link_buttons(
+            ["AAPL.US", "MSFT.US"], [60, 40], 12, True,
+        )
+        assert go_disabled is False
+
+    def test_disabled_with_single_ticker(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import (
+            disable_submit_add_link_buttons,
+        )
+
+        *_, go_disabled = disable_submit_add_link_buttons(["AAPL.US"], [100], 12, True)
+        assert go_disabled is True
+
+    def test_disabled_when_weights_do_not_sum_to_100(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import (
+            disable_submit_add_link_buttons,
+        )
+
+        *_, go_disabled = disable_submit_add_link_buttons(
+            ["AAPL.US", "MSFT.US"], [60, 60], 12, True,
+        )
+        assert go_disabled is True
