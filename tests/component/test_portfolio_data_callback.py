@@ -215,6 +215,28 @@ class TestGetPfFigureCumulativeReturn:
         assert not df_data.empty
 
 
+class TestStatisticsGridDotNotation:
+    def test_pf_statistics_grid_suppresses_field_dot_notation(self):
+        # Column names derived from okama contain dots (portfolio_XXXX.PF); without
+        # suppressFieldDotNotation AG Grid treats them as nested paths and renders
+        # the metric columns empty.
+        from pages.portfolio.portfolio import get_pf_statistics_table
+
+        grid = get_pf_statistics_table(make_mock_portfolio())
+        assert grid.dashGridOptions.get("suppressFieldDotNotation") is True
+
+    def test_pf_statistics_columns_use_guarded_percent_function(self):
+        # Inline typeof-guards are not supported by the dash-ag-grid function-string
+        # parser; columns must call the registered assets/dashAgGridFunctions.js helper.
+        from pages.portfolio.portfolio import get_pf_statistics_table
+
+        grid = get_pf_statistics_table(make_mock_portfolio())
+        assert all(
+            d["valueFormatter"]["function"] == "formatPercentGuarded(params.value)"
+            for d in grid.columnDefs
+        )
+
+
 class TestUpdateGrafPortfolioOuter:
     def test_exception_opens_toast_with_message(self):
         from pages.portfolio.portfolio import update_graf_portfolio

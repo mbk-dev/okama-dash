@@ -908,12 +908,7 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
         {"distribution": "Lognormal", "statistics": ks_lognorm.statistic, "p-value": ks_lognorm.pvalue},
         {"distribution": "Student's T", "statistics": ks_t.statistic, "p-value": ks_t.pvalue},
     ]
-    guarded_decimal_formatter = {
-        "function": (
-            "typeof params.value === 'number' && !isNaN(params.value) "
-            "? d3.format('.2f')(params.value) : params.value"
-        )
-    }
+    guarded_decimal_formatter = {"function": "formatDecimalGuarded(params.value)"}
     column_defs = [
         {"field": "distribution", "headerName": "distribution"},
         {"field": "statistics", "headerName": "statistics", "valueFormatter": guarded_decimal_formatter},
@@ -972,12 +967,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             {"1": "95th percentile", "2": fsp.quantile(95 / 100), "3": "-", "4": None},
             {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "-", "4": None},
         ]
-        guarded_decimal_formatter = {
-            "function": (
-                "typeof params.value === 'number' && !isNaN(params.value) "
-                "? d3.format('.2f')(params.value) : params.value"
-            )
-        }
+        guarded_decimal_formatter = {"function": "formatDecimalGuarded(params.value)"}
         column_defs = [
             {"field": "1"},
             {"field": "2", "valueFormatter": guarded_decimal_formatter},
@@ -1002,12 +992,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
     # Empty forecast branch (backtest-only): no export button (old table had none)
     backtest_survival_period = pf_object.dcf.survival_period_hist()
     table_list = [{"1": "Backtest survival period", "2": backtest_survival_period}]
-    guarded_decimal_formatter = {
-        "function": (
-            "typeof params.value === 'number' && !isNaN(params.value) "
-            "? d3.format('.2f')(params.value) : params.value"
-        )
-    }
+    guarded_decimal_formatter = {"function": "formatDecimalGuarded(params.value)"}
     column_defs = [
         {"field": "1"},
         {"field": "2", "valueFormatter": guarded_decimal_formatter},
@@ -1086,9 +1071,7 @@ def get_forecast_wealth_statistics_table(pf_object):
                 "6": None,
             },
         ]
-        guarded_integer_formatter = {
-            "function": "typeof params.value === 'number' ? d3.format(',.0f')(params.value) : params.value"
-        }
+        guarded_integer_formatter = {"function": "formatGroupedIntGuarded(params.value)"}
         column_defs = [
             {"field": "1", "headerName": ""},
             {
@@ -1134,12 +1117,7 @@ def get_forecast_wealth_statistics_table(pf_object):
         ], className="vstack gap-2")
     # Empty wealth branch: no export button (old table had none)
     table_list = [{"1": "Wealth", "2": 0}]
-    guarded_decimal_formatter = {
-        "function": (
-            "typeof params.value === 'number' && !isNaN(params.value) "
-            "? d3.format('.2f')(params.value) : params.value"
-        )
-    }
+    guarded_decimal_formatter = {"function": "formatDecimalGuarded(params.value)"}
     column_defs = [
         {"field": "1"},
         {"field": "2", "valueFormatter": guarded_decimal_formatter},
@@ -1163,12 +1141,7 @@ def get_pf_statistics_table(al_object):
     # Preserves existing quirk: Sharpe ratio (a ratio, not a percentage) is formatted with percent
     # sign for visual consistency with other statistics. This is intentional and matches the Compare
     # page convention.
-    guarded_percent_formatter = {
-        "function": (
-            "typeof params.value === 'number' && !isNaN(params.value) "
-            "? d3.format('.2%')(params.value) : params.value"
-        )
-    }
+    guarded_percent_formatter = {"function": "formatPercentGuarded(params.value)"}
     column_defs = [
         {"field": col, "headerName": col, "valueFormatter": guarded_percent_formatter}
         for col in statistics_df.columns
@@ -1179,7 +1152,9 @@ def get_pf_statistics_table(al_object):
         rowData=statistics_dict,
         columnDefs=column_defs,
         columnSize="responsiveSizeToFit",
-        dashGridOptions={"domLayout": "autoHeight"},
+        # suppressFieldDotNotation: okama column names contain dots (portfolio_XXXX.PF);
+        # without it AG Grid resolves them as nested paths and renders empty cells.
+        dashGridOptions={"domLayout": "autoHeight", "suppressFieldDotNotation": True},
         style={"height": None},
     )
 

@@ -131,6 +131,27 @@ class TestWealthAnnotationsInPoints:
             assert percent_text in texts
 
 
+class TestStatisticsGridDotNotation:
+    def test_al_statistics_grid_suppresses_field_dot_notation(self):
+        # Ticker column names contain dots (AAPL.US); without suppressFieldDotNotation
+        # AG Grid treats them as nested paths and renders the metric columns empty.
+        from pages.compare.compare import get_al_statistics_table
+
+        grid = get_al_statistics_table(make_mock_asset_list(["AAPL.US", "MSFT.US"]))
+        assert grid.dashGridOptions.get("suppressFieldDotNotation") is True
+
+    def test_al_statistics_columns_use_guarded_percent_function(self):
+        # Inline typeof-guards are not supported by the dash-ag-grid function-string
+        # parser; columns must call the registered assets/dashAgGridFunctions.js helper.
+        from pages.compare.compare import get_al_statistics_table
+
+        grid = get_al_statistics_table(make_mock_asset_list(["AAPL.US", "MSFT.US"]))
+        assert all(
+            d["valueFormatter"]["function"] == "formatPercentGuarded(params.value)"
+            for d in grid.columnDefs
+        )
+
+
 class TestUpdateGrafCompareOuter:
     def test_empty_symbols_raises_prevent_update(self):
         from pages.compare.compare import update_graf_compare

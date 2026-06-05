@@ -191,25 +191,22 @@ def get_al_statistics_table(al_object):
     statistics_df = add_sharpe_ratio_row(al_object, statistics_df)
 
     # Build columnDefs with percent formatting for all numeric columns
-    # Preserves existing quirk: all numeric values (including Sharpe) get percent formatting
-    column_defs = []
-    for col in statistics_df.columns:
-        col_def = {"field": col, "headerName": col}
-        # Apply guarded percent formatter to all columns (handles text and non-numeric cells)
-        col_def["valueFormatter"] = {
-            "function": (
-                "(typeof params.value !== 'number' || isNaN(params.value)) "
-                "? params.value : d3.format('.2%')(params.value)"
-            )
-        }
-        column_defs.append(col_def)
+    # Preserves existing quirk: all numeric values (including Sharpe) get percent formatting.
+    # The guard lives in assets/dashAgGridFunctions.js — inline typeof-guards are
+    # silently rejected by the dash-ag-grid function-string parser.
+    column_defs = [
+        {"field": col, "headerName": col, "valueFormatter": {"function": "formatPercentGuarded(params.value)"}}
+        for col in statistics_df.columns
+    ]
 
     return dag.AgGrid(
         id="al-describe-table-grid",
         rowData=statistics_df.to_dict("records"),
         columnDefs=column_defs,
         columnSize="responsiveSizeToFit",
-        dashGridOptions={"domLayout": "autoHeight"},
+        # suppressFieldDotNotation: ticker column names contain dots (AAPL.US);
+        # without it AG Grid resolves them as nested paths and renders empty cells.
+        dashGridOptions={"domLayout": "autoHeight", "suppressFieldDotNotation": True},
         style={"height": None},
     )
 

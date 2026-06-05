@@ -38,7 +38,7 @@ okama-dash/
 │   ├── crisis/              # Crisis period data (shaded chart regions)
 │   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export)
 │
-├── assets/                  # Static files served by Dash (CSS, JS, images)
+├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions)
 ├── cache-directory/         # Runtime file-system cache (Flask-Caching fallback)
 ├── tmp/                     # Scratch space for temporary files (contents gitignored)
 └── docs/                    # Specs and plans (not deployed)
