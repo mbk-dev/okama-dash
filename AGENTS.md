@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-516 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+518 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -146,7 +146,7 @@ tests/
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks,
 │   │                                # copy-link carries rebal / omits default month,
 │   │                                # layout guard: no Y-axis (mean type) selector — EF always plots CAGR (28 tests)
-│   ├── test_ef_click_find.py        # display_click_data (incl. backtest link carries the EF object's rebalancing period; clicked point renders a Selected portfolio card with trace-name badge + Sharpe from rf-rate), find_portfolio (renders an Optimized portfolio card, None stats skipped) (23 tests)
+│   ├── test_ef_click_find.py        # display_click_data (incl. backtest link carries the EF object's rebalancing period; clicked point renders a Selected portfolio card with trace-name badge + Sharpe from rf-rate; re-submit resets the section — stale clickData must not meet a changed ticker set; length-mismatch guard renders the unavailable note), find_portfolio (renders an Optimized portfolio card, None stats skipped) (25 tests)
 │   ├── test_database_callbacks.py   # db_search: search results, empty, namespace routing; dag.AgGrid assertions (6 tests)
 │   ├── test_compare_data_callback.py  # update_graf_compare: wealth/cumulative_return/annual_return(bar, CAGR annotation)/cagr/correlation, stats (dag.AgGrid), errors; wealth annotations in points vs cumulative_return percent; stats grid suppressFieldDotNotation + formatPercentGuarded wiring (13 tests)
 │   ├── test_benchmark_data_callback.py  # update_graf_benchmark: 6 plot types, bar chart, errors (10 tests)
@@ -173,10 +173,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 196 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 296 | ~5s |
+| `poetry run pytest -m component` | Dash callbacks | 298 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 24 | ~50s |
-| `poetry run pytest -q` | Everything | 516 | ~60s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 492 | ~6s |
+| `poetry run pytest -q` | Everything | 518 | ~60s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 494 | ~6s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
