@@ -208,7 +208,11 @@ run on these areas; strike items out (or remove them) when fixed.
   not patch `ok.EfficientFrontier`, and the mocked currency list is empty
   (ccy=None → 404), so the EF submit in e2e renders an error-annotation figure;
   `test_ef_submit_shows_chart` asserts only that an svg exists, which the error
-  figure satisfies. EF chart correctness is therefore not e2e-verified.
+  figure satisfies. EF chart correctness is therefore not e2e-verified. The same
+  blind spot covers the URL-portfolio star point: `get_portfolio_point`'s real
+  okama accessor arithmetic (`risk_annual.iloc[-1]`, `get_cagr().iloc[-1][symbol]`)
+  runs only against mocked shapes in CI; the star's numeric coordinates were
+  verified manually against okama 2.2.0 (2026-06-05), not regression-guarded.
 - **AG Grid client-side formatters are not executable in tests**: valueFormatter
   functions live as JS strings (`assets/dashAgGridFunctions.js`) parsed in the
   browser. Unit/component tests can only assert the wiring (function name present
