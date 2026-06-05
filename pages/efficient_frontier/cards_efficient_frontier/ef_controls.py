@@ -430,7 +430,7 @@ def card_controls(
                             color="primary",
                         ),
                     ],
-                    style={"text-align": "center"},
+                    style={"textAlign": "center"},
                     className="p-3",
                 ),
             ]

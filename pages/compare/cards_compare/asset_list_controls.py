@@ -90,7 +90,7 @@ def card_controls(
                                         hidden_div_with_url_id="al-show-url",
                                         button_id="al-copy-link-button",
                                         card_name="asset list",
-                                        style={"text-align": "right"}
+                                        style={"textAlign": "right"}
                                     )
                                 ),
                                 dbc.Col(
@@ -107,7 +107,7 @@ def card_controls(
                                                 target="_blank",
                                             ),
                                         ],
-                                        style={"text-align": "left"},
+                                        style={"textAlign": "left"},
                                     )
                                 )
                             ]
@@ -215,7 +215,7 @@ def card_controls(
                             color="primary",
                         ),
                     ],
-                    style={"text-align": "center"},
+                    style={"textAlign": "center"},
                     className="p-3",
                 ),
             ]

@@ -242,7 +242,7 @@ def card_controls(
                                         hidden_div_with_url_id="pf-show-url",
                                         button_id="pf-copy-link-button",
                                         card_name="Portfolio",
-                                        # style={"text-align": "right"}
+                                        # style={"textAlign": "right"}
                                     ),
                                 ),
                             ]
@@ -617,7 +617,7 @@ def card_controls(
                             color="primary",
                         ),
                     ],
-                    style={"text-align": "center"},
+                    style={"textAlign": "center"},
                     className="p-3",
                 ),
                 dcc.Store(id="pf_tickers_url", data=tickers_list),

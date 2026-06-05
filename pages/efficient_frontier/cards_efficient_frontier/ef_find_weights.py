@@ -76,7 +76,7 @@ card_ef_find_weights = dbc.Card(
                                                 n_clicks=0,
                                                 color="primary"
                                             )],
-                                            style={"text-align": "center"},
+                                            style={"textAlign": "center"},
                                             className="p-3",
                                         )
                                     ),
@@ -112,7 +112,7 @@ card_ef_find_weights = dbc.Card(
                                                 target="_blank",
                                                 color="primary"
                                             )],
-                                            style={"text-align": "center"},
+                                            style={"textAlign": "center"},
                                             className="p-3",
                                         )
                                     ),

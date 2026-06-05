@@ -23,7 +23,7 @@ card_graf_benchmark = dbc.Card(
                                 dcc.Store(id="benchmark-store-chart-data", storage_type='session'),
                                 dcc.Download(id="benchmark-download-dataframe-xlsx"),
                             ],
-                            style={"text-align": "right"},
+                            style={"textAlign": "right"},
                         )
                     ]
                 )

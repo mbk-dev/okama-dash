@@ -26,7 +26,7 @@ card_graf_portfolio = dbc.Card(
                                                     label="Logarithmic Y-Scale",
                                                     labelPosition="bottom",
                                                 ),
-                                                style={"text-align": "right"},
+                                                style={"textAlign": "right"},
                                                 id="pf-logarithmic-scale-switch-div",
                                             ),
                                         ),
@@ -45,7 +45,7 @@ card_graf_portfolio = dbc.Card(
                                                     dcc.Store(id="pf-store-chart-data", storage_type='session'),
                                                     dcc.Download(id="pf-download-dataframe-xlsx"),
                                                 ],
-                                                style={"text-align": "center"},
+                                                style={"textAlign": "center"},
                                             )],
                                             lg=2, md=2, sm=12,
                                         )

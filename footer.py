@@ -20,7 +20,7 @@ def footer():
                     ]
                 ),
             ],
-            style={"text-align": "center"},
+            style={"textAlign": "center"},
             className="p-3",
         ),
     )

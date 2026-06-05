@@ -72,7 +72,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
                                 target="_blank",
                                 color="primary"
                             )],
-                            style={"text-align": "center"},
+                            style={"textAlign": "center"},
                             className="p-3",
                         )
                     ),

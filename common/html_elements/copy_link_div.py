@@ -9,7 +9,7 @@ def create_copy_link_div(
         card_name: str,
         style: dict | None = None):
     if style is None:
-        style = {"text-align": "center"}
+        style = {"textAlign": "center"}
     div = html.Div(
         [
             # the URL bar, doesn't render anything

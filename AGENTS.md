@@ -322,8 +322,10 @@ so prefer fixing the shared stylesheet/convention over per-component patches.
   `pages/portfolio/cards_portfolio/portfolio_controls.py`.
 - **Buttons never sit flush against the control above them.** Two button roles:
   - *Primary action* (Submit / Compare / Search / Find portfolio / Backtest): centered and
-    wrapped in `html.Div([button], className="p-3", style={"text-align": "center"})` for
+    wrapped in `html.Div([button], className="p-3", style={"textAlign": "center"})` for
     breathing room. This is the existing convention on every page except where noted — keep it.
+    Inline `style` dict keys are always camelCase (`textAlign`, not `"text-align"`) — React
+    warns on kebab-case keys and only applies them by browser leniency.
   - *Inline / list action* (Add Asset / Add Entry / Add Threshold): left-aligned inside its
     form block and spaced by the block's vertical rhythm (`vstack gap-2`, or `mt-2` on its
     row) — at minimum a `0.5rem` gap, never `0`.
