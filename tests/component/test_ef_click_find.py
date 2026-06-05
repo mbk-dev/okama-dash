@@ -10,12 +10,15 @@ pytestmark = pytest.mark.component
 FRONTIER_MODULE = "pages.efficient_frontier.frontier"
 
 
-def _make_mock_ef_object():
+def _make_mock_ef_object(rebalancing_period: str = "month"):
     ef = MagicMock()
     ef.symbols = ["SPY.US", "BND.US"]
     ef.currency = "USD"
     ef.first_date = date(2020, 1, 1)
     ef.last_date = date(2024, 12, 1)
+    # Mirrors the real okama contract: EfficientFrontier is built with
+    # ok.Rebalance(period=...) exposed as .rebalancing_strategy.period.
+    ef.rebalancing_strategy.period = rebalancing_period
     return ef
 
 
@@ -78,6 +81,55 @@ class TestDisplayClickData:
             )
 
         assert "weights=33.33,66.67" in link
+
+    def test_backtest_link_carries_rebalancing_period(self):
+        from pages.efficient_frontier.frontier import display_click_data
+
+        mock_ef = _make_mock_ef_object(rebalancing_period="year")
+        click_data = {
+            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
+        }
+
+        with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
+            _, _, _, link = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl"
+            )
+
+        assert "rebal=year" in link
+
+    def test_backtest_link_omits_default_month_rebalancing(self):
+        from pages.efficient_frontier.frontier import display_click_data
+
+        mock_ef = _make_mock_ef_object(rebalancing_period="month")
+        click_data = {
+            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
+        }
+
+        with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
+            _, _, _, link = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl"
+            )
+
+        assert "rebal=" not in link
+
+    def test_backtest_link_omits_rebal_when_ef_object_lacks_strategy(self):
+        # Cached EF pickles created before the rebalancing_strategy era (or with an
+        # older okama lacking the kwarg) must not break the click handler.
+        from pages.efficient_frontier.frontier import display_click_data
+
+        mock_ef = _make_mock_ef_object()
+        del mock_ef.rebalancing_strategy
+        click_data = {
+            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
+        }
+
+        with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
+            _, _, _, link = display_click_data(
+                click_data, 1, ["SPY.US", "BND.US"], "file.pkl"
+            )
+
+        assert link is not None
+        assert "rebal=" not in link
 
     def test_three_asset_weights(self):
         from pages.efficient_frontier.frontier import display_click_data
@@ -222,6 +274,26 @@ class TestFindPortfolio:
         assert risk == ""
         assert "SPY.US=50.00%" in weights
         assert link is not None
+
+    def test_backtest_link_carries_rebalancing_period(self):
+        from pages.efficient_frontier.frontier import find_portfolio
+
+        mock_ef = _make_mock_ef_object(rebalancing_period="quarter")
+        optimized = {
+            "Mean return": 0.085,
+            "CAGR": 0.08,
+            "Risk": 0.12,
+            "SPY.US": 0.6,
+            "BND.US": 0.4,
+        }
+
+        with (
+            patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef),
+            patch(f"{FRONTIER_MODULE}.get_minimized_risk_portfolio", return_value=optimized),
+        ):
+            _, _, _, _, link = find_portfolio(1, 8.5, "file.pkl")
+
+        assert "rebal=quarter" in link
 
     def test_target_value_divided_by_100(self):
         from pages.efficient_frontier.frontier import find_portfolio

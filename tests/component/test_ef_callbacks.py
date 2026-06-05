@@ -174,3 +174,35 @@ class TestEFShowHideCallbacks:
         from pages.efficient_frontier.frontier import show_transition_map_row
 
         assert show_transition_map_row(1, None, "Off") == {"display": "none"}
+
+
+class TestUpdateLinkEf:
+    # Guard for the EF "Copy link": the rebalancing period must round-trip through
+    # the shareable URL (added in 3572e1e; production master lacked it until then).
+    def test_copy_link_carries_rebalancing_period(self):
+        from pages.efficient_frontier.cards_efficient_frontier.ef_controls import update_link_ef
+
+        link = update_link_ef(
+            "http://localhost:8050/",
+            ["SPY.US", "BND.US"],
+            "USD",
+            "2020-01",
+            "2024-06",
+            "year",
+        )
+
+        assert "rebal=year" in link
+
+    def test_copy_link_omits_default_month_rebalancing(self):
+        from pages.efficient_frontier.cards_efficient_frontier.ef_controls import update_link_ef
+
+        link = update_link_ef(
+            "http://localhost:8050/",
+            ["SPY.US", "BND.US"],
+            "USD",
+            "2020-01",
+            "2024-06",
+            "month",
+        )
+
+        assert "rebal=" not in link

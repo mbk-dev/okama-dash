@@ -193,6 +193,16 @@ def update_ef_cards(
         return alert_fig, go.Figure(), {}, {}, None
 
 
+def _ef_rebalancing_period(ef_object) -> str | None:
+    """Rebalancing period the frontier was computed with, for backtest links.
+
+    Falls back to None (link omits rebal) for cached EF pickles created before
+    the rebalancing_strategy era or with an older okama lacking the kwarg.
+    """
+    strategy = getattr(ef_object, "rebalancing_strategy", None)
+    return getattr(strategy, "period", None)
+
+
 @callback(
     Output("ef-click-data-risk", "children"),
     Output("ef-click-data-return", "children"),
@@ -230,7 +240,8 @@ def display_click_data(clickData, n_click, symbols, file_name):
         ccy=ef_object.currency,
         first_date=ef_object.first_date.strftime('%Y-%m'),
         last_date=ef_object.last_date.strftime('%Y-%m'),
-        weights_list=weights_for_link
+        weights_list=weights_for_link,
+        rebal=_ef_rebalancing_period(ef_object),
     )
     return risk_str, ror_str, weights_str, link
 
@@ -315,7 +326,8 @@ def find_portfolio(n_clicks, ror, file_name):
                 ccy=ef_object.currency,
                 first_date=ef_object.first_date.strftime('%Y-%m'),
                 last_date = ef_object.last_date.strftime('%Y-%m'),
-                weights_list=weights_for_link
+                weights_list=weights_for_link,
+                rebal=_ef_rebalancing_period(ef_object),
             )
         else:
             weights_str = "No solution was found."
