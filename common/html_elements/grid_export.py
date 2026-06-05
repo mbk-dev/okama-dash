@@ -30,6 +30,7 @@ def create_xlsx_export_button(button_id: str) -> dbc.Button:
 
 
 def rowdata_to_xlsx_download(
+    n_clicks: int | None,
     row_data: list[dict] | None,
     filename: str,
     sheet_name: str = "okama_data",
@@ -38,6 +39,10 @@ def rowdata_to_xlsx_download(
     Convert AG Grid rowData to xlsx download object for dcc.Download.
 
     Args:
+        n_clicks: Export button n_clicks. Guarded because Dash fires the
+            callback when a dynamically created button first renders
+            (prevent_initial_call does not apply to components inserted
+            after page load), and that must not trigger a download.
         row_data: List of dicts from AG Grid's rowData prop.
         filename: Output filename (must end with .xlsx).
         sheet_name: Excel sheet name.
@@ -46,9 +51,10 @@ def rowdata_to_xlsx_download(
         dcc.send_data_frame result for dcc.Download.
 
     Raises:
-        dash.exceptions.PreventUpdate: If row_data is empty or None.
+        dash.exceptions.PreventUpdate: If the button was never clicked,
+            or row_data is empty or None.
     """
-    if not row_data:
+    if not n_clicks or not row_data:
         raise dash.exceptions.PreventUpdate
 
     df = pd.DataFrame(row_data)

@@ -2,6 +2,7 @@ import logging
 import re
 import time
 import typing
+from itertools import zip_longest
 
 import dash
 import dash_ag_grid as dag
@@ -30,7 +31,7 @@ from common.chart_helpers import (
     add_return_type_annotation,
     format_points,
 )
-from common.mobile_screens import adopt_small_screens
+from common.mobile_screens import adopt_small_screens, is_small_screen
 from common.object_cache import get_or_create, TTL_PORTFOLIO
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
 from pages.portfolio.cards_portfolio.portfolio_description import card_portfolio_description
@@ -58,6 +59,9 @@ def _parse_pair_csv(csv_str):
             pairs.append((parts[0].strip(), parts[1].strip()))
     return pairs or None
 
+
+# Percentiles shown in the MC forecast statistics tables: (quantile, ordinal suffix).
+PERCENTILES = [(1, "st"), (5, "th"), (25, "th"), (50, "th"), (75, "th"), (95, "th"), (99, "th")]
 
 _MC_DATE_RE = re.compile(r"^\d{4}-\d{2}$")
 
@@ -451,7 +455,7 @@ def show_graf_and_statistics_rows(n_clicks, style):
 def export_pf_statistics_xlsx(n_clicks, row_data):
     """Trigger xlsx export for portfolio statistics grid."""
     from common.html_elements.grid_export import rowdata_to_xlsx_download
-    return rowdata_to_xlsx_download(row_data, "portfolio_statistics.xlsx")
+    return rowdata_to_xlsx_download(n_clicks, row_data, "portfolio_statistics.xlsx")
 
 
 @callback(
@@ -463,7 +467,7 @@ def export_pf_statistics_xlsx(n_clicks, row_data):
 def export_pf_survival_statistics_xlsx(n_clicks, row_data):
     """Trigger xlsx export for Monte Carlo survival statistics grid."""
     from common.html_elements.grid_export import rowdata_to_xlsx_download
-    return rowdata_to_xlsx_download(row_data, "survival_statistics.xlsx")
+    return rowdata_to_xlsx_download(n_clicks, row_data, "survival_statistics.xlsx")
 
 
 @callback(
@@ -475,7 +479,7 @@ def export_pf_survival_statistics_xlsx(n_clicks, row_data):
 def export_pf_wealth_statistics_xlsx(n_clicks, row_data):
     """Trigger xlsx export for Monte Carlo wealth statistics grid."""
     from common.html_elements.grid_export import rowdata_to_xlsx_download
-    return rowdata_to_xlsx_download(row_data, "wealth_statistics.xlsx")
+    return rowdata_to_xlsx_download(n_clicks, row_data, "wealth_statistics.xlsx")
 
 
 def _fit_distribution_params(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution):
@@ -712,12 +716,16 @@ def _update_graf_portfolio_inner(
         statistics_ag_grid = get_pf_statistics_table(pf_object)
     # Monte Carlo statistics
     if n_monte_carlo != 0 and plot_type == "wealth":
+        compact_tables = is_small_screen(screen)
         forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
             df_forecast,
             df_backtest,
             pf_object,
+            compact=compact_tables,
         )
-        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(pf_object)
+        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(
+            pf_object, compact=compact_tables
+        )
     else:
         forecast_survival_statistics_datatable = dag.AgGrid()
         forecast_wealth_statistics_datatable = dag.AgGrid()
@@ -954,27 +962,30 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
     return statistics_html
 
 
-def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio):
+def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio, compact: bool = False):
     if not df_forecast.empty:
         backtest_survival_period = 0 if df_backtsest.empty else pf_object.dcf.survival_period_hist()
         fsp = pf_object.dcf.monte_carlo_survival_period(threshold=0)
         fsp += backtest_survival_period
-        table_list = [
-            {"1": "1st percentile", "2": fsp.quantile(1 / 100), "3": "Min", "4": fsp.min()},
-            {"1": "5th percentile", "2": fsp.quantile(5 / 100), "3": "Max", "4": fsp.max()},
-            {"1": "25th percentile", "2": fsp.quantile(25 / 100), "3": "Mean", "4": fsp.mean()},
-            {"1": "50th percentile", "2": fsp.quantile(50 / 100), "3": "Std", "4": fsp.std()},
-            {"1": "75th percentile", "2": fsp.quantile(75 / 100), "3": "-", "4": None},
-            {"1": "95th percentile", "2": fsp.quantile(95 / 100), "3": "-", "4": None},
-            {"1": "99th percentile", "2": fsp.quantile(99 / 100), "3": "-", "4": None},
-        ]
+        percentiles = [(f"{q}{suffix} percentile", fsp.quantile(q / 100)) for q, suffix in PERCENTILES]
+        moments = [("Min", fsp.min()), ("Max", fsp.max()), ("Mean", fsp.mean()), ("Std", fsp.std())]
         guarded_decimal_formatter = {"function": "formatDecimalGuarded(params.value)"}
-        column_defs = [
-            {"field": "1"},
-            {"field": "2", "valueFormatter": guarded_decimal_formatter},
-            {"field": "3"},
-            {"field": "4", "valueFormatter": guarded_decimal_formatter},
-        ]
+        if compact:
+            # Mobile: one pair per row — the two-pane layout doesn't fit narrow screens.
+            table_list = [{"1": label, "2": value} for label, value in percentiles + moments]
+            column_defs = [
+                {"field": "1"},
+                {"field": "2", "valueFormatter": guarded_decimal_formatter},
+            ]
+        else:
+            rows = zip_longest(percentiles, moments, fillvalue=("-", None))
+            table_list = [{"1": p[0], "2": p[1], "3": m[0], "4": m[1]} for p, m in rows]
+            column_defs = [
+                {"field": "1"},
+                {"field": "2", "valueFormatter": guarded_decimal_formatter},
+                {"field": "3"},
+                {"field": "4", "valueFormatter": guarded_decimal_formatter},
+            ]
         grid = dag.AgGrid(
             id="pf-survival-statistics-grid",
             rowData=table_list,
@@ -1009,100 +1020,57 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
     )
 
 
-def get_forecast_wealth_statistics_table(pf_object):
+def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
     wealth_fv = pf_object.dcf.monte_carlo_wealth(discounting="fv")
     if not wealth_fv.empty:
         wealth = wealth_fv.iloc[-1, :]
         wealth_pv = pf_object.dcf.monte_carlo_wealth(discounting="pv").iloc[-1, :]
 
         rate = f"{pf_object.dcf.discount_rate * 100:.2f}%"
-        table_list = [
-            {
-                "1": "1st percentile",
-                "2": wealth.quantile(1 / 100),
-                "3": wealth_pv.quantile(1 / 100),
-                "4": "Min",
-                "5": wealth.min(),
-                "6": wealth_pv.min(),
-            },
-            {
-                "1": "5th percentile",
-                "2": wealth.quantile(5 / 100),
-                "3": wealth_pv.quantile(5 / 100),
-                "4": "Max",
-                "5": wealth.max(),
-                "6": wealth_pv.max(),
-            },
-            {
-                "1": "25th percentile",
-                "2": wealth.quantile(25 / 100),
-                "3": wealth_pv.quantile(25 / 100),
-                "4": "Mean",
-                "5": wealth.mean(),
-                "6": wealth_pv.mean(),
-            },
-            {
-                "1": "50th percentile",
-                "2": wealth.quantile(50 / 100),
-                "3": wealth_pv.quantile(50 / 100),
-                "4": "Std",
-                "5": wealth.std(),
-                "6": wealth_pv.std(),
-            },
-            {
-                "1": "75th percentile",
-                "2": wealth.quantile(75 / 100),
-                "3": wealth_pv.quantile(75 / 100),
-                "4": "Discount rate",
-                "5": None,
-                "6": rate,
-            },
-            {
-                "1": "95th percentile",
-                "2": wealth.quantile(95 / 100),
-                "3": wealth_pv.quantile(95 / 100),
-                "4": "-",
-                "5": None,
-                "6": None,
-            },
-            {
-                "1": "99th percentile",
-                "2": wealth.quantile(99 / 100),
-                "3": wealth_pv.quantile(99 / 100),
-                "4": "-",
-                "5": None,
-                "6": None,
-            },
+        percentiles = [
+            (f"{q}{suffix} percentile", wealth.quantile(q / 100), wealth_pv.quantile(q / 100))
+            for q, suffix in PERCENTILES
+        ]
+        moments = [
+            ("Min", wealth.min(), wealth_pv.min()),
+            ("Max", wealth.max(), wealth_pv.max()),
+            ("Mean", wealth.mean(), wealth_pv.mean()),
+            ("Std", wealth.std(), wealth_pv.std()),
+            ("Discount rate", None, rate),
         ]
         guarded_integer_formatter = {"function": "formatGroupedIntGuarded(params.value)"}
-        column_defs = [
-            {"field": "1", "headerName": ""},
-            {
-                "field": "2",
-                "headerName": "FV",
-                "headerTooltip": "Future Value (not discounted)",
-                "valueFormatter": guarded_integer_formatter,
-            },
-            {
-                "field": "3",
-                "headerName": "PV",
-                "headerTooltip": "Present Value (discounted)",
-                "valueFormatter": guarded_integer_formatter,
-            },
-            {"field": "4", "headerName": ""},
-            {
-                "field": "5",
-                "headerName": "FV",
-                "headerTooltip": "Future Value (not discounted)",
-                "valueFormatter": guarded_integer_formatter,
-            },
-            {
-                "field": "6",
-                "headerName": "PV",
-                "headerTooltip": "Present Value (discounted)",
-                "valueFormatter": guarded_integer_formatter,
-            },
-        ]
+        fv_column = {
+            "headerName": "FV",
+            "headerTooltip": "Future Value (not discounted)",
+            "valueFormatter": guarded_integer_formatter,
+        }
+        pv_column = {
+            "headerName": "PV",
+            "headerTooltip": "Present Value (discounted)",
+            "valueFormatter": guarded_integer_formatter,
+        }
+        if compact:
+            # Mobile: one metric per row — the two-pane layout doesn't fit narrow screens.
+            # minWidth keeps "1st percentile" / "Discount rate" labels from truncating.
+            table_list = [{"1": label, "2": fv, "3": pv} for label, fv, pv in percentiles + moments]
+            column_defs = [
+                {"field": "1", "headerName": "", "minWidth": 130},
+                {"field": "2", **fv_column},
+                {"field": "3", **pv_column},
+            ]
+        else:
+            rows = zip_longest(percentiles, moments, fillvalue=("-", None, None))
+            table_list = [
+                {"1": p[0], "2": p[1], "3": p[2], "4": m[0], "5": m[1], "6": m[2]} for p, m in rows
+            ]
+            column_defs = [
+                {"field": "1", "headerName": ""},
+                {"field": "2", **fv_column},
+                {"field": "3", **pv_column},
+                {"field": "4", "headerName": ""},
+                {"field": "5", **fv_column},
+                {"field": "6", **pv_column},
+            ]
         grid = dag.AgGrid(
             id="pf-wealth-statistics-grid",
             rowData=table_list,
@@ -1202,7 +1170,7 @@ def _get_distribution_figure(pf_object: ok.Portfolio) -> go.Figure:
         )
     )
     fig.update_layout(
-        title={"text": "Rate of return distribution", "y": 0.9, "x": 0.5, "xanchor": "center", "yanchor": "top"},
+        title={"text": "Rate of return distribution", "x": 0.5, "xanchor": "center"},
         legend_title="Legend",
     )
     fig.update_xaxes(title_text=None)

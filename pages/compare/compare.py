@@ -149,21 +149,24 @@ def _update_graf_compare_inner(
     log_scale = log_on if plot_type in ("wealth", "cumulative_return") else False
     fig, df_data = get_al_figure(al_object, plot_type, inflation_on, rolling_window, log_scale)
     json_data = df_data.to_json(orient="split", default_handler=str)
-    if plot_type == "correlation":
-        fig.update(layout_showlegend=False)
-        fig.update(layout_coloraxis_showscale=False)
-        fig.update_xaxes(side="top")
-    elif plot_type == "wealth":
+    if plot_type == "wealth":
         fig.update_yaxes(title_text="Wealth Index")
     elif plot_type == "cumulative_return":
         fig.update_yaxes(title_text="Cumulative Return")
     elif plot_type == "annual_return":
         fig.update_yaxes(title_text="Annual Return, %")
-    else:
+    elif plot_type in ("cagr", "real_cagr"):
         fig.update_yaxes(title_text="CAGR")
 
-    # Change layout for mobile screens (except correlation matrix)
+    # Change layout for mobile screens
     fig, config = adopt_small_screens(fig, screen)
+    if plot_type == "correlation":
+        fig.update(layout_showlegend=False)
+        fig.update(layout_coloraxis_showscale=False)
+        fig.update_xaxes(side="top")
+        # Heatmap tick labels are ticker names: keep them outside the plot
+        # (mobile mode moves y ticks inside, which would overlay the cells).
+        fig.update_yaxes(ticklabelposition="outside")
     fig.update_xaxes(
         # ticks='outside',
         rangeslider_visible=plot_type not in ("correlation", "annual_return"),
@@ -308,4 +311,4 @@ def show_graf_and_statistics_table_rows(n_clicks, style):
 )
 def export_statistics_xlsx(n_clicks, row_data):
     from common.html_elements.grid_export import rowdata_to_xlsx_download
-    return rowdata_to_xlsx_download(row_data, "compare_statistics.xlsx")
+    return rowdata_to_xlsx_download(n_clicks, row_data, "compare_statistics.xlsx")

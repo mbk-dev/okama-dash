@@ -148,6 +148,94 @@ class TestUpdateGrafPortfolioInner:
         assert patched_pf_inner.dcf.discount_rate is None
 
 
+class TestForecastStatisticsTablesCompact:
+    # On small screens (in_width < 800) the two-pane Survival/Wealth statistics
+    # tables reflow into a single column of pairs so every cell stays readable.
+    PERCENTILE_LABELS = [
+        "1st percentile", "5th percentile", "25th percentile", "50th percentile",
+        "75th percentile", "95th percentile", "99th percentile",
+    ]
+
+    @staticmethod
+    def _pf_with_mc_stats():
+        pf = make_mock_portfolio()
+        pf.dcf.monte_carlo_survival_period.return_value = pd.Series([20.0, 25.0, 30.0])
+        wealth_fv = pd.DataFrame({0: [100.0, 200.0], 1: [150.0, 250.0]})
+        wealth_pv = wealth_fv / 2
+        pf.dcf.monte_carlo_wealth = MagicMock(
+            side_effect=lambda discounting="fv": wealth_fv if discounting == "fv" else wealth_pv
+        )
+        return pf
+
+    def test_survival_compact_stacks_pairs_in_single_column(self):
+        from pages.portfolio.portfolio import get_forecast_survival_statistics_table
+
+        pf = self._pf_with_mc_stats()
+        result = get_forecast_survival_statistics_table(
+            pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True
+        )
+        grid = result.children[1]
+        assert [row["1"] for row in grid.rowData] == self.PERCENTILE_LABELS + ["Min", "Max", "Mean", "Std"]
+        assert all(set(row) == {"1", "2"} for row in grid.rowData)
+        assert len(grid.columnDefs) == 2
+
+    def test_survival_desktop_keeps_two_pane_layout(self):
+        from pages.portfolio.portfolio import get_forecast_survival_statistics_table
+
+        pf = self._pf_with_mc_stats()
+        result = get_forecast_survival_statistics_table(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf)
+        grid = result.children[1]
+        assert len(grid.rowData) == 7
+        assert all(set(row) == {"1", "2", "3", "4"} for row in grid.rowData)
+        assert len(grid.columnDefs) == 4
+
+    def test_wealth_compact_stacks_pairs_with_fv_pv_columns(self):
+        from pages.portfolio.portfolio import get_forecast_wealth_statistics_table
+
+        pf = self._pf_with_mc_stats()
+        result = get_forecast_wealth_statistics_table(pf, compact=True)
+        grid = result.children[1]
+        labels = [row["1"] for row in grid.rowData]
+        assert labels == self.PERCENTILE_LABELS + ["Min", "Max", "Mean", "Std", "Discount rate"]
+        assert all(set(row) == {"1", "2", "3"} for row in grid.rowData)
+        assert [col["headerName"] for col in grid.columnDefs] == ["", "FV", "PV"]
+        discount_row = grid.rowData[-1]
+        assert discount_row["2"] is None
+        assert discount_row["3"] == "5.00%"
+
+    def test_wealth_desktop_keeps_two_pane_layout(self):
+        from pages.portfolio.portfolio import get_forecast_wealth_statistics_table
+
+        pf = self._pf_with_mc_stats()
+        result = get_forecast_wealth_statistics_table(pf)
+        grid = result.children[1]
+        assert len(grid.rowData) == 7
+        assert all(set(row) == {"1", "2", "3", "4", "5", "6"} for row in grid.rowData)
+        assert len(grid.columnDefs) == 6
+
+    def test_inner_builds_compact_tables_on_small_screen(self, patched_pf_inner):
+        from pages.portfolio.portfolio import _update_graf_portfolio_inner
+
+        patched_pf_inner.dcf.monte_carlo_survival_period.return_value = pd.Series([20.0, 25.0, 30.0])
+        wealth_fv = pd.DataFrame({0: [100.0, 200.0], 1: [150.0, 250.0]})
+        patched_pf_inner.dcf.monte_carlo_wealth = MagicMock(
+            side_effect=lambda discounting="fv": wealth_fv if discounting == "fv" else wealth_fv / 2
+        )
+        args = _default_args()
+        args["screen"] = {"in_width": 375}
+        args["n_monte_carlo"] = 2
+        non_empty_forecast = pd.DataFrame({0: [1.0]})
+        with patch(
+            f"{PF_MODULE}.get_pf_figure",
+            return_value=(go.Figure(), pd.DataFrame(), non_empty_forecast, pd.DataFrame()),
+        ):
+            result = _update_graf_portfolio_inner(**args)
+        survival_grid = result[3].children[1]
+        wealth_grid = result[4].children[1]
+        assert len(survival_grid.rowData) == 11  # 7 percentiles + Min/Max/Mean/Std
+        assert len(wealth_grid.rowData) == 12  # + Discount rate
+
+
 class TestGetPfFigureAnnualReturn:
     def test_annual_return_renders_bar_chart(self):
         from pages.portfolio.portfolio import get_pf_figure

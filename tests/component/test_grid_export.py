@@ -29,7 +29,7 @@ class TestRowdataToXlsxDownload:
             {"col1": "value1", "col2": 10},
             {"col1": "value2", "col2": 20},
         ]
-        result = rowdata_to_xlsx_download(row_data, "test.xlsx", "test_sheet")
+        result = rowdata_to_xlsx_download(1, row_data, "test.xlsx", "test_sheet")
 
         # dcc.send_data_frame returns a dict with base64 content
         assert isinstance(result, dict)
@@ -41,13 +41,19 @@ class TestRowdataToXlsxDownload:
         from common.html_elements.grid_export import rowdata_to_xlsx_download
 
         with pytest.raises(dash.exceptions.PreventUpdate):
-            rowdata_to_xlsx_download([], "test.xlsx")
+            rowdata_to_xlsx_download(1, [], "test.xlsx")
 
     def test_with_none_row_data_raises_prevent_update(self):
         from common.html_elements.grid_export import rowdata_to_xlsx_download
 
         with pytest.raises(dash.exceptions.PreventUpdate):
-            rowdata_to_xlsx_download(None, "test.xlsx")
+            rowdata_to_xlsx_download(1, None, "test.xlsx")
+
+    def test_without_click_raises_prevent_update(self):
+        from common.html_elements.grid_export import rowdata_to_xlsx_download
+
+        with pytest.raises(dash.exceptions.PreventUpdate):
+            rowdata_to_xlsx_download(None, [{"col1": "value1"}], "test.xlsx")
 
 
 class TestComparePageExportCallback:
@@ -102,3 +108,19 @@ class TestPortfolioPageExportCallbacks:
         assert isinstance(result, dict)
         assert "filename" in result
         assert result["filename"] == "wealth_statistics.xlsx"
+
+    # The survival/wealth export buttons are created dynamically on Submit;
+    # Dash fires their callbacks on first render (prevent_initial_call does not
+    # apply to components inserted after page load), so n_clicks=None must not
+    # trigger a download — otherwise every MC Submit auto-downloads two files.
+    def test_survival_statistics_export_prevents_update_without_click(self):
+        from pages.portfolio.portfolio import export_pf_survival_statistics_xlsx
+
+        with pytest.raises(dash.exceptions.PreventUpdate):
+            export_pf_survival_statistics_xlsx(None, [{"probability": 0.95, "years": 25}])
+
+    def test_wealth_statistics_export_prevents_update_without_click(self):
+        from pages.portfolio.portfolio import export_pf_wealth_statistics_xlsx
+
+        with pytest.raises(dash.exceptions.PreventUpdate):
+            export_pf_wealth_statistics_xlsx(None, [{"percentile": 50, "wealth": 100000}])
