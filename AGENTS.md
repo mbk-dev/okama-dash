@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-439 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+473 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -120,7 +120,7 @@ tests/
 │   ├── conftest.py                  # session-scoped Dash app (for unit tests importing pages/ modules)
 │   ├── test_validators.py           # validate_integer bounds, types, error messages (8 tests)
 │   ├── test_math.py                 # round_list sum preservation (4 tests)
-│   ├── test_create_link.py          # URL builder, filename builder, list size check; MC params in Portfolio link (tickers+weights+MC 11 params); zero-valued MC params (t_loc=0) preserved in URL (45 tests)
+│   ├── test_create_link.py          # URL builder, filename builder, list size check; MC params in Portfolio link (tickers+weights+MC 11 params); zero-valued MC params (t_loc=0) preserved in URL; cf_ts owned by every strategy + zero-primary-with-cf_ts counts as active (73 tests)
 │   ├── test_symbols.py              # symbol search (prefix, name-token, case-insensitive) (9 tests)
 │   ├── test_symbols_cache_isolation.py  # mocked (TESTING) symbol index must not poison real cache (4 tests)
 │   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup, filename-length guard; TESTING flag isolation (env poisoning guard) (25 tests)
@@ -134,7 +134,12 @@ tests/
 │   │                                # _resolve_indexation + _resolve_discount_rate (percent ÷100),
 │   │                                # survival stats visibility,
 │   │                                # CWD threshold validation, disable Add button logic,
-│   │                                # percentage input lives in cash-flow frequency row (71 tests)
+│   │                                # percentage input lives in cash-flow frequency row,
+│   │                                # custom cash flows in all strategies: _build_ts_dict parsing,
+│   │                                # _apply_custom_time_series on every strategy, nested accordion
+│   │                                # (collapsed default, closed on switch to non-TS, expanded for TS/URL
+│   │                                # prefill, ts-plain chrome-less mode for the TS strategy; row container
+│   │                                # empty while collapsed, one example withdrawal row on expand) (90 tests)
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks (13 tests)
 │   ├── test_ef_click_find.py        # display_click_data (5 tests), find_portfolio (8 tests)
@@ -161,11 +166,11 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 181 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 235 | ~5s |
-| `poetry run pytest -m e2e` | Playwright browser | 23 | ~70s |
-| `poetry run pytest -q` | Everything | 439 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 416 | ~6s |
+| `poetry run pytest -m unit` | Pure logic | 187 | ~4s |
+| `poetry run pytest -m component` | Dash callbacks | 263 | ~5s |
+| `poetry run pytest -m e2e` | Playwright browser | 23 | ~50s |
+| `poetry run pytest -q` | Everything | 473 | ~60s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 450 | ~6s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -178,7 +183,7 @@ to a file in `tmp/` instead of `PIPE`.
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link (incl. MC params in URL, zero-preservation), symbols, build_distribution_parameters, reactive-estimation gates | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats tables compact on mobile, xlsx export n_clicks guard | load, controls, mobile, shareable link (incl. MC params round-trip), submit→traces |
+| **Portfolio** | create_link (incl. MC params in URL, zero-preservation, cf_ts owned by all strategies + activity rule), symbols, build_distribution_parameters, reactive-estimation gates | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, custom cash flows in all strategies (_build_ts_dict, _apply_custom_time_series per strategy, nested accordion collapsed/expanded/force-open), MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats tables compact on mobile, xlsx export n_clicks guard | load, controls, mobile, shareable link (incl. MC params round-trip), submit→traces |
 | **Efficient Frontier** | adaptive grid step (ef_grid), chart label padding (centered labels) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio, update_ef_cards, simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace | load, mobile, shareable link, submit→chart |
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
