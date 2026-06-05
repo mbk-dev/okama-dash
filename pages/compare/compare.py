@@ -23,6 +23,7 @@ from common.chart_helpers import (
     add_last_value_annotations,
     add_sharpe_ratio_row,
     add_return_type_annotation,
+    format_points,
     make_error_alert,
 )
 import plotly.graph_objects as go
@@ -241,7 +242,7 @@ def get_al_figure(
         return fig, df
     if plot_type == "wealth":
         df = al_object.wealth_indexes
-        return_series = al_object.get_cumulative_return(real=False).iloc[-1]
+        return_series = None  # annotations show the final index value in points
     elif plot_type == "cumulative_return":
         df = al_object.get_cumulative_return(real=False)
         return_series = df.iloc[-1]
@@ -260,8 +261,11 @@ def get_al_figure(
     chart_last_date = ind[-1]
 
     annotations_xy = [(ind[-1], y) for y in df.iloc[-1].to_numpy()]
-    annotation_series = (return_series * 100).map("{:,.2f}%".format)
-    annotations_text = list(annotation_series)
+    if plot_type == "wealth":
+        # Wealth chart labels show the final index value in points, not a return percent.
+        annotations_text = list(df.iloc[-1].map(format_points))
+    else:
+        annotations_text = list((return_series * 100).map("{:,.2f}%".format))
 
     # inflation must not be in the chart for "Real CAGR"
     plot_inflation_condition = inflation_on and plot_type != "real_cagr"

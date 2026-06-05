@@ -130,6 +130,13 @@ class TestHideMonteCarloRows:
         assert len(result) == 6
         assert all(style == {"display": "none"} for style in result)
 
+    def test_cumulative_return_hides_all_six(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import hide_monte_carlo_rows
+
+        result = hide_monte_carlo_rows("cumulative_return", 100)
+        assert len(result) == 6
+        assert all(style == {"display": "none"} for style in result)
+
     def test_wealth_zero_mc_hides_params_row(self):
         from pages.portfolio.cards_portfolio.portfolio_controls import hide_monte_carlo_rows
 

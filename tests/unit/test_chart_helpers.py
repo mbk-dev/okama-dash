@@ -6,6 +6,23 @@ from common.chart_helpers import add_return_type_annotation
 pytestmark = pytest.mark.unit
 
 
+class TestFormatPoints:
+    def test_rounds_to_integer_and_separates_thousands_with_space(self):
+        from common.chart_helpers import format_points
+
+        assert format_points(13456.78) == "13 457"
+
+    def test_value_below_thousand_has_no_separator(self):
+        from common.chart_helpers import format_points
+
+        assert format_points(999.4) == "999"
+
+    def test_millions_get_two_separators(self):
+        from common.chart_helpers import format_points
+
+        assert format_points(1234567.89) == "1 234 568"
+
+
 class TestAddReturnTypeAnnotation:
     def test_adds_cagr_note(self):
         fig = go.Figure()

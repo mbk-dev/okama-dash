@@ -267,6 +267,7 @@ def card_controls(
                                         dbc.RadioItems(
                                             options=[
                                                 {"label": "Wealth Index", "value": "wealth"},
+                                                {"label": "Cumulative return", "value": "cumulative_return"},
                                                 {"label": "Annual Return", "value": "annual_return"},
                                                 {"label": "Rolling CAGR", "value": "cagr"},
                                                 {"label": "Rolling Real CAGR", "value": "real_cagr"},
@@ -634,7 +635,7 @@ def card_controls(
     Input(component_id="pf-plot-option", component_property="value"),
 )
 def disable_rolling_input(plot_options: str) -> bool:
-    return plot_options in {"wealth", "drawdowns", "distribution", "annual_return"}
+    return plot_options in {"wealth", "cumulative_return", "drawdowns", "distribution", "annual_return"}
 
 
 @callback(

@@ -97,6 +97,14 @@ class TestUpdateGrafPortfolioInner:
         fig = _update_graf_portfolio_inner(**args)[0]
         assert fig.layout.yaxis.title.text == "Annual Return, %"
 
+    def test_cumulative_return_plot_sets_y_title(self, patched_pf_inner):
+        from pages.portfolio.portfolio import _update_graf_portfolio_inner
+
+        args = _default_args()
+        args["plot_type"] = "cumulative_return"
+        fig = _update_graf_portfolio_inner(**args)[0]
+        assert fig.layout.yaxis.title.text == "Cumulative Return"
+
     def test_no_monte_carlo_returns_empty_forecast_tables(self, patched_pf_inner):
         from pages.portfolio.portfolio import _update_graf_portfolio_inner
 
@@ -171,7 +179,8 @@ class TestGetPfFigureAnnualReturn:
 
 
 class TestGetPfFigureWealthAnnotations:
-    def test_wealth_plot_annotates_each_trace_with_cumulative_return(self):
+    def test_wealth_plot_annotates_each_trace_with_balance_points(self):
+        from common.chart_helpers import format_points
         from pages.portfolio.portfolio import get_pf_figure
 
         pf = make_mock_portfolio()
@@ -181,9 +190,29 @@ class TestGetPfFigureWealthAnnotations:
             show_backtest="no", log_scale=False, cf_strategy="indexation",
         )
         wealth = pf.wealth_index_with_assets
-        expected = list(((wealth.iloc[-1] / wealth.iloc[0] - 1) * 100).map("{:,.2f}%".format))
-        percent_annotations = [a.text for a in fig.layout.annotations if a.text and a.text.endswith("%")]
-        assert percent_annotations == expected
+        texts = [a.text for a in fig.layout.annotations if a.text]
+        for value in wealth.iloc[-1]:
+            assert format_points(value) in texts
+        assert not any(t.endswith("%") for t in texts)
+
+
+class TestGetPfFigureCumulativeReturn:
+    def test_cumulative_return_plots_ts_with_percent_annotations(self):
+        from pages.portfolio.portfolio import get_pf_figure
+
+        pf = make_mock_portfolio()
+        fig, df_backtest, df_forecast, df_data = get_pf_figure(
+            pf, plot_type="cumulative_return", inflation_on=False, rolling_window=2,
+            n_monte_carlo=0, years_monte_carlo=0, distribution_monte_carlo="norm",
+            show_backtest="no", log_scale=False, cf_strategy="indexation",
+        )
+        assert fig.layout.title.text == "Portfolio Cumulative Return"
+        cum = pf.get_cumulative_return(real=False)
+        texts = [a.text for a in fig.layout.annotations if a.text]
+        for percent_text in (cum.iloc[-1] * 100).map("{:,.2f}%".format):
+            assert percent_text in texts
+        assert df_backtest.empty and df_forecast.empty
+        assert not df_data.empty
 
 
 class TestUpdateGrafPortfolioOuter:

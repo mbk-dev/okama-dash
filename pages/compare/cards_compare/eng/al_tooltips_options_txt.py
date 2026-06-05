@@ -15,6 +15,9 @@ al_options_tooltip_cagr = dcc.Markdown(
     Cumulative income depends on the price and dividend (coupon) yield reinvested every month.
     The starting investment for each asset is 1000 in the base currency.
 
+    **Cumulative return** - chart of the total compounded return of each asset accumulated
+    since the start of the period, in percent.
+
     **Annual Return** - bar chart of the calendar-year rate of return for each asset.
     Each year's value is calculated as CAGR (Compound Annual Growth Rate) from the monthly returns within the year.
 

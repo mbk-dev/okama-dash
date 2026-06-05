@@ -41,6 +41,11 @@ def add_crisis_rectangles(fig: go.Figure, chart_first_date, chart_last_date) -> 
             )
 
 
+def format_points(value: float) -> str:
+    """Format a wealth-index value as integer points with space thousands separators."""
+    return f"{value:,.0f}".replace(",", " ")
+
+
 def add_last_value_annotations(fig: go.Figure, annotations_xy, annotations_text) -> None:
     for (x, y), text in zip(annotations_xy, annotations_text, strict=True):
         fig.add_annotation(

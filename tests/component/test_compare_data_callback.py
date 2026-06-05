@@ -108,6 +108,29 @@ class TestUpdateGrafCompareInner:
         assert len(table.rowData) > 0
 
 
+class TestWealthAnnotationsInPoints:
+    def test_wealth_annotations_show_balance_points(self):
+        from common.chart_helpers import format_points
+        from pages.compare.compare import get_al_figure
+
+        al = make_mock_asset_list(["AAPL.US", "MSFT.US"])
+        fig, _ = get_al_figure(al, "wealth", inflation_on=False, rolling_window=2, log_scale=False)
+        texts = [a.text for a in fig.layout.annotations if a.text]
+        for value in al.wealth_indexes.iloc[-1]:
+            assert format_points(value) in texts
+        assert not any(t.endswith("%") for t in texts)
+
+    def test_cumulative_return_annotations_stay_percent(self):
+        from pages.compare.compare import get_al_figure
+
+        al = make_mock_asset_list(["AAPL.US", "MSFT.US"])
+        fig, _ = get_al_figure(al, "cumulative_return", inflation_on=False, rolling_window=2, log_scale=False)
+        expected = list((al.get_cumulative_return(real=False).iloc[-1] * 100).map("{:,.2f}%".format))
+        texts = [a.text for a in fig.layout.annotations if a.text]
+        for percent_text in expected:
+            assert percent_text in texts
+
+
 class TestUpdateGrafCompareOuter:
     def test_empty_symbols_raises_prevent_update(self):
         from pages.compare.compare import update_graf_compare

@@ -57,6 +57,11 @@ class TestPortfolioRollingInputDisabled:
 
         assert disable_rolling_input("annual_return") is True
 
+    def test_cumulative_return_disables_rolling_window(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import disable_rolling_input
+
+        assert disable_rolling_input("cumulative_return") is True
+
     def test_cagr_enables_rolling_window(self):
         from pages.portfolio.cards_portfolio.portfolio_controls import disable_rolling_input
 

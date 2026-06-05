@@ -28,6 +28,7 @@ from common.chart_helpers import (
     add_last_value_annotations,
     add_sharpe_ratio_row,
     add_return_type_annotation,
+    format_points,
 )
 from common.mobile_screens import adopt_small_screens
 from common.object_cache import get_or_create, TTL_PORTFOLIO
@@ -692,6 +693,8 @@ def _update_graf_portfolio_inner(
     json_data = df_data.to_json(orient="split", default_handler=str)
     if plot_type == "wealth":
         fig.update_yaxes(title_text="Wealth Indexes")
+    elif plot_type == "cumulative_return":
+        fig.update_yaxes(title_text="Cumulative Return")
     elif plot_type in {"cagr", "real_cagr"}:
         fig.update_yaxes(title_text="CAGR")
     elif plot_type == "drawdowns":
@@ -1245,12 +1248,9 @@ def _get_wealth_data(
         )
         if has_cashflow:
             _nullify_after_first_zero(df, pf_object.symbol)
-            return_series = None  # annotations are not drawn for cash-flow charts
-        else:
-            # Full-period cumulative return of every plotted trace
-            # (portfolio, assets, inflation), aligned with df columns.
-            return_series = df.iloc[-1] / df.iloc[0] - 1
-        return df, df_backtest, df_forecast, return_series
+        # Wealth annotations are built from the wealth index itself (points)
+        # in _build_timeseries_figure; no return series is needed.
+        return df, df_backtest, df_forecast, None
 
     df_backtest = (
         pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)[[pf_object.symbol]]
@@ -1309,7 +1309,11 @@ def _build_timeseries_figure(
 
     if not condition_monte_carlo and not has_cashflow:
         annotations_xy = [(ind[-1], y) for y in df.iloc[-1].to_numpy()]
-        annotations_text = list((return_series * 100).map("{:,.2f}%".format))
+        if plot_type == "wealth":
+            # Wealth chart labels show the final balance in points, not a return percent.
+            annotations_text = list(df.iloc[-1].map(format_points))
+        else:
+            annotations_text = list((return_series * 100).map("{:,.2f}%".format))
         add_last_value_annotations(fig, annotations_xy, annotations_text)
     else:
         fig.update_traces(showlegend=False)
@@ -1344,6 +1348,7 @@ def get_pf_figure(
 
     titles = {
         "wealth": "Portfolio Wealth Index",
+        "cumulative_return": "Portfolio Cumulative Return",
         "cagr": f"Rolling CAGR (window={rolling_window} years)",
         "real_cagr": f"Rolling real CAGR (window={rolling_window} years)",
         "drawdowns": "Portfolio Drawdowns",
@@ -1364,6 +1369,9 @@ def get_pf_figure(
             pf_object, has_cashflow, n_monte_carlo, show_backtest_bool, distribution_monte_carlo, years_monte_carlo,
             distribution_parameters_monte_carlo,
         )
+    elif plot_type == "cumulative_return":
+        df = pf_object.get_cumulative_return(real=False)
+        return_series = df.iloc[-1]
     elif plot_type in {"cagr", "real_cagr"}:
         df = pf_object.get_rolling_cagr(window=rolling_window * settings.MONTHS_PER_YEAR, real=plot_type != "cagr")
         return_series = df.iloc[-1, :]
