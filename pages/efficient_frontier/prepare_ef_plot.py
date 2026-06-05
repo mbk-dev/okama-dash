@@ -429,7 +429,9 @@ def _add_assets_trace(
     df *= 100
     df.columns = ["Return", "Risk"]
     df = df.reset_index(drop=False)
-    assets_weights = np.eye(len(df)) * 100
+    # Plain lists, not numpy: plotly>=6 serializes numpy as base64 typed arrays,
+    # which never reach clickData["points"][0]["customdata"] (plotly/plotly.py#5119).
+    assets_weights = (np.eye(len(df)) * 100).tolist()
     fig.add_trace(
         go.Scatter(
             x=df["Risk"],
@@ -570,7 +572,9 @@ def _prepare_single_ef(
     return_type = ef_options["return_type"]
     y_column = _resolve_return_column(ef, return_type)
     ef_asset_columns = _get_asset_columns(ef, ef_object)
-    weights_array = ef[ef_asset_columns].to_numpy()
+    # Plain lists, not numpy: plotly>=6 serializes numpy as base64 typed arrays,
+    # which never reach clickData["points"][0]["customdata"] (plotly/plotly.py#5119).
+    weights_array = ef[ef_asset_columns].to_numpy().tolist()
     hovertemplate = "<b>Return: %{y:.2f}%<br>Risk: %{x:.2f}%</b>" + "<extra></extra>"
     fig = fig or go.Figure()
     fig.add_trace(

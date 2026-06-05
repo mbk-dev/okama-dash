@@ -5,4 +5,4 @@ dash_daq
 dash-bootstrap-components
 plotly
 flask_caching
-okama @ git+ssh://git@github.com/mbk-dev/okama.git@dev
+okama>=2.2.0

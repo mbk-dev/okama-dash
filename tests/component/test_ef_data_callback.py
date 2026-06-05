@@ -178,6 +178,49 @@ def test_grid_trace_added_when_grid_step_set():
     )
 
 
+def test_customdata_serializes_as_json_lists_for_clickdata():
+    # Regression: plotly>=6 serializes numpy arrays as base64 typed-array objects
+    # ({"dtype": ..., "bdata": ...}), which never reach clickData["points"][0]["customdata"]
+    # in the browser (plotly/plotly.py#5119) — display_click_data then shows
+    # "Weights: unavailable". Every trace must carry customdata as plain lists so it
+    # serializes to a JSON array and survives into the click event.
+    import json
+
+    import plotly.io as pio
+
+    from pages.efficient_frontier.prepare_ef_plot import _prepare_single_ef
+
+    ef = pd.DataFrame({
+        "Risk": [0.05, 0.10],
+        "CAGR": [0.04, 0.08],
+        "A.US": [1.0, 0.0],
+        "B.US": [0.0, 1.0],
+    })
+    ef_object = MagicMock()
+    ef_object.symbols = ["A.US", "B.US"]
+    ef_object.get_cagr.return_value = pd.Series([0.08, 0.10], index=["A.US", "B.US"])
+    ef_object.risk_annual = pd.DataFrame({"A.US": [0.15], "B.US": [0.20]})
+    ef_options = {
+        "return_type": "Geometric",
+        "mdp": "Off",
+        "cml": "Off",
+        "n_monte_carlo": 0,
+        "grid_step": None,
+    }
+
+    fig = _prepare_single_ef(
+        ef, ef_object, ef_options, fig=go.Figure(), include_assets=True, ef_cache_key=None
+    )
+
+    serialized_traces = json.loads(pio.to_json(fig))["data"]
+    for trace in serialized_traces:
+        if "customdata" in trace:
+            assert isinstance(trace["customdata"], list), (
+                f"customdata of trace {trace.get('name')!r} serialized as"
+                f" {type(trace['customdata']).__name__} — clickData would lose it"
+            )
+
+
 def test_grid_mode_passes_resolved_step_to_prepare_ef():
     from pages.efficient_frontier.frontier import update_ef_cards
 
