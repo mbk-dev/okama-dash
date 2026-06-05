@@ -108,8 +108,7 @@ Rules for this repo:
 
 502 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
-`ok.EfficientFrontier` is not patched by the TESTING block, so the EF page in e2e
-hits the real okama API and renders an error figure — see `findings-to-fix` memory.)
+`ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
 ### Structure
 
@@ -195,6 +194,29 @@ to a file in `tmp/` instead of `PIPE`.
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
 | **common/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_annotation, format_points) | change_style_for_hidden_row, grid_export (xlsx via dcc.Download + rowdata_to_xlsx_download; Excel number formats mirror the on-page grid formatters) | — |
+
+### Known gaps
+
+Blind spots the suite is known not to cover. Check here before trusting a green
+run on these areas; strike items out (or remove them) when fixed.
+
+- **EF e2e runs against the real okama API**
+  ([#12](https://github.com/mbk-dev/okama-dash/issues/12)): the TESTING block does
+  not patch `ok.EfficientFrontier`, and the mocked currency list is empty
+  (ccy=None → 404), so the EF submit in e2e renders an error-annotation figure;
+  `test_ef_submit_shows_chart` asserts only that an svg exists, which the error
+  figure satisfies. EF chart correctness is therefore not e2e-verified.
+- **AG Grid client-side formatters are not executable in tests**: valueFormatter
+  functions live as JS strings (`assets/dashAgGridFunctions.js`) parsed in the
+  browser. Unit/component tests can only assert the wiring (function name present
+  in columnDefs); actual formatting regressions are caught only by e2e DOM
+  assertions.
+- **Interrupted e2e runs leak Gunicorn masters**: the server teardown in
+  `tests/e2e/conftest.py` does not run when pytest is killed mid-session. After an
+  aborted e2e run, check `pgrep -f 'gunicorn run_gunicorn'` and kill leftovers.
+- **`test_corrupt_file_reconstructs` (test_object_cache.py) flakes under
+  concurrent pytest runs** — suspected shared `cache-directory/` contention
+  between simultaneous pytest processes. Passes solo and in normal runs.
 
 ### okama mock strategy
 
