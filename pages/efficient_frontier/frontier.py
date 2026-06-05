@@ -56,10 +56,13 @@ def _parse_url_portfolio(tickers_list, weights, symbol) -> dict | None:
     return {"tickers": tickers_list, "weights": weights_list, "symbol": symbol}
 
 
-def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, **kwargs):
+def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, weights=None, symbol=None, **kwargs):
     tickers_list = make_list_from_string(tickers)
     page = dbc.Container(
         [
+            # Portfolio handed off from the Portfolio page via URL; None for
+            # ordinary share links without a portfolio section.
+            dcc.Store(id="ef-url-portfolio", data=_parse_url_portfolio(tickers_list, weights, symbol)),
             dbc.Row(
                 [
                     dbc.Col(card_controls(tickers_list, first_date, last_date, ccy, rebal), lg=7),
