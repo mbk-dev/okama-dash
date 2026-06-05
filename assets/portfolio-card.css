@@ -60,11 +60,17 @@
     height: 100%;
 }
 
+/* The wrapper owns the vertical rhythm between asset rows. */
+.pf-asset-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 .pf-asset-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 0.5rem;
 }
 
 .pf-asset-dot {
@@ -96,4 +102,9 @@
     font-family: var(--bs-font-monospace);
     min-width: 4.5rem;
     text-align: right;
+}
+
+/* Note shown instead of the allocation block when weights are unavailable. */
+.pf-note {
+    margin-bottom: 0;
 }
