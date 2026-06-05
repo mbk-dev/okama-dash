@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from playwright.sync_api import expect
 
@@ -72,3 +74,28 @@ class TestShareableLinks:
         # expect() polls until the reactive callback round-trip fills the field
         expect(page.locator("#pf-mc-norm-mu")).to_have_value("0.007", timeout=10_000)
         assert page.locator("#pf-mc-norm-sigma").input_value() == "0.04"
+
+    def test_portfolio_go_to_ef_link_prefills_ef_form(self, page, dash_server_url):
+        """The Go to EF button carries the portfolio; its link prefills the EF form.
+
+        No EF Submit here: EF e2e runs against the real okama API (known gap #12),
+        so the assertion stops at the prefilled form.
+        """
+        page.goto(
+            f"{dash_server_url}/portfolio?tickers=AAPL.US,MSFT.US&weights=60,40",
+            wait_until="domcontentloaded",
+        )
+        button = page.locator("#pf-go-to-ef-button")
+        button.wait_for(state="visible", timeout=10_000)
+        expect(button).to_have_attribute("href", re.compile(r"weights="), timeout=10_000)
+
+        href = button.get_attribute("href")
+        assert re.search(r"weights=60(\.0)?,40(\.0)?", href)
+        assert "tickers=AAPL.US,MSFT.US" in href
+
+        page.goto(f"{dash_server_url}{href}", wait_until="domcontentloaded")
+        pills = page.locator(PILL_LABEL)
+        pills.first.wait_for(state="visible", timeout=10_000)
+        texts = pills.all_text_contents()
+        assert "AAPL.US" in texts
+        assert "MSFT.US" in texts
