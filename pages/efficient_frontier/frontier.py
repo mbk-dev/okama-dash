@@ -57,6 +57,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
                         html.P(id="ef-click-data-return"),
                         html.P(id="ef-click-data-risk"),
                         html.Pre(id="ef-click-data-weights"),
+                        dcc.Store(id="ef-trace-names"),
                     ],
                     style={"display": "none"},
                     id="ef-portfolio-data-row",
@@ -107,6 +108,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
     Output(component_id="ef-graf", component_property="config"),
     Output(component_id="ef-transition-map-graf", component_property="config"),
     Output(component_id="ef_portfolio_file_name", component_property="data"),  # save ef file name to session
+    Output(component_id="ef-trace-names", component_property="data"),  # trace names for the click badge
     # Inputs
     Input(component_id="store", component_property="data"),
     # Main input for EF
@@ -185,11 +187,12 @@ def update_ef_cards(
             fig1 = compact_ef_for_small_screens(fig1)
         fig1, config1 = adopt_small_screens(fig1, screen)
         fig2, config2 = adopt_small_screens(fig2, screen)
-        return fig1, fig2, config1, config2, ef_file_name
+        trace_names = [getattr(trace, "name", "") or "" for trace in fig1.data]
+        return fig1, fig2, config1, config2, ef_file_name, trace_names
     except Exception as e:
         alert_fig = go.Figure()
         alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
-        return alert_fig, go.Figure(), {}, {}, None
+        return alert_fig, go.Figure(), {}, {}, None, []
 
 
 def _ef_rebalancing_period(ef_object) -> str | None:

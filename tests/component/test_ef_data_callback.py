@@ -44,7 +44,7 @@ class TestUpdateEfCards:
             patch(f"{FRONTIER_MODULE}.prepare_ef", return_value=fig1),
             patch(f"{FRONTIER_MODULE}.prepare_transition_map", return_value=fig2),
         ):
-            r_fig1, r_fig2, config1, config2, file_name = update_ef_cards(
+            r_fig1, r_fig2, config1, config2, file_name, trace_names = update_ef_cards(
                 screen=None, n_clicks=1,
                 selected_symbols=["AAPL.US", "MSFT.US"],
                 ccy="USD", fd_value="2020-01", ld_value="2024-12",
@@ -79,7 +79,7 @@ class TestUpdateEfCards:
             f"{FRONTIER_MODULE}.get_or_create_ef_object",
             side_effect=ValueError("EF failed"),
         ):
-            fig1, fig2, c1, c2, fname = update_ef_cards(
+            fig1, fig2, c1, c2, fname, trace_names = update_ef_cards(
                 screen=None, n_clicks=1,
                 selected_symbols=["AAPL.US"],
                 ccy="USD", fd_value="2020-01", ld_value="2024-12",
@@ -91,6 +91,7 @@ class TestUpdateEfCards:
 
         assert isinstance(fig1, go.Figure)
         assert fname is None
+        assert trace_names == []
 
     def test_ef_points_multiplied_by_100(self):
         from pages.efficient_frontier.frontier import update_ef_cards
@@ -139,6 +140,33 @@ class TestUpdateEfCards:
             )
 
         mock_compact.assert_called_once()
+
+    def test_trace_names_stored_for_click_badge(self):
+        # display_click_data resolves the badge from clickData["curveNumber"]
+        # via this list — the figure itself never travels back to the server.
+        from pages.efficient_frontier.frontier import update_ef_cards
+
+        mock_ef = _make_mock_ef_object()
+        fig1 = go.Figure()
+        fig1.add_trace(go.Scatter(x=[1], y=[1], name="Efficient Frontier"))
+        fig1.add_trace(go.Scatter(x=[2], y=[2], name="Assets"))
+
+        with (
+            patch(f"{FRONTIER_MODULE}.get_or_create_ef_object", return_value=(mock_ef, "test.pkl")),
+            patch(f"{FRONTIER_MODULE}.prepare_ef", return_value=fig1),
+            patch(f"{FRONTIER_MODULE}.prepare_transition_map", return_value=go.Figure()),
+        ):
+            *_, trace_names = update_ef_cards(
+                screen=None, n_clicks=1,
+                selected_symbols=["AAPL.US", "MSFT.US"],
+                ccy="USD", fd_value="2020-01", ld_value="2024-12",
+                rebalancing_period="month", plot_option="Frontier",
+                mdp_option="Off",
+                cml_option="Off", rf_rate=0.0, n_monte_carlo=0,
+                sim_mode="Off", grid_step_value="Auto",
+            )
+
+        assert trace_names == ["Efficient Frontier", "Assets"]
 
 
 def test_grid_trace_added_when_grid_step_set():
