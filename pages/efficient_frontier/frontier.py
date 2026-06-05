@@ -20,6 +20,7 @@ from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_c
 from pages.efficient_frontier.cards_efficient_frontier.ef_chart_transition_map import card_transition_map
 from pages.efficient_frontier.cards_efficient_frontier.ef_find_weights import card_ef_find_weights
 
+from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens, is_small_screen
 from pages.efficient_frontier.prepare_ef_plot import prepare_transition_map, prepare_ef, compact_ef_for_small_screens
 from pages.efficient_frontier.ef_cache import get_minimized_risk_portfolio, get_or_create_ef_object, load_ef_object
@@ -126,6 +127,9 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
     # Simulation mode + grid step
     State(component_id="ef-sim-mode", component_property="value"),
     State(component_id="ef-grid-step", component_property="value"),
+    # Show the spinner under the Submit button while computing (the chart's
+    # own dcc.Loading spinner is below the fold on mobile).
+    running=submit_spinner_running("ef-submit-spinner"),
     prevent_initial_call=True,
 )
 def update_ef_cards(

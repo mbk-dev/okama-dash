@@ -28,6 +28,7 @@ from common.chart_helpers import (
 )
 import plotly.graph_objects as go
 
+from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens
 from pages.compare.cards_compare.asset_list_controls import card_controls
 from pages.compare.cards_compare.assets_info import card_assets_info
@@ -85,6 +86,9 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="al-plot-option", component_property="value"),
     State(component_id="al-inflation-switch", component_property="value"),
     State(component_id="al-rolling-window", component_property="value"),
+    # Show the spinner under the Compare button while computing (the chart's
+    # own dcc.Loading spinner is below the fold on mobile).
+    running=submit_spinner_running("al-submit-spinner"),
     prevent_initial_call=True,
 )
 def update_graf_compare(

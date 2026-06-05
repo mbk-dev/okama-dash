@@ -14,6 +14,7 @@ import common.settings as settings
 from common.object_cache import get_or_create, TTL_ASSET_LIST
 import common.update_style
 from common.chart_helpers import add_last_value_annotations
+from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens
 import plotly.graph_objects as go
 from pages.benchmark.cards_benchmark.benchmark_chart import card_graf_benchmark
@@ -74,6 +75,9 @@ def layout(benchmark=None, tickers=None, first_date=None, last_date=None, ccy=No
     State("benchmark-plot-option", "value"),
     State("benchmark-chart-expanding-rolling", "value"),
     State("benchmark-rolling-window", "value"),
+    # Show the spinner under the Compare button while computing (the chart's
+    # own dcc.Loading spinner is below the fold on mobile).
+    running=submit_spinner_running("benchmark-submit-spinner"),
     prevent_initial_call=True,
 )
 def update_graf_benchmark(

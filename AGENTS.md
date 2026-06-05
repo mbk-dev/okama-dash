@@ -36,7 +36,7 @@ okama-dash/
 │   ├── inflation.py         # Inflation data helpers
 │   ├── xlsx.py              # Excel export utilities
 │   ├── crisis/              # Crisis period data (shaded chart regions)
-│   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export)
+│   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export, submit spinner)
 │
 ├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards)
 ├── cache-directory/         # Runtime file-system cache (Flask-Caching fallback)
@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-435 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+439 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible.
 
 ### Structure
@@ -146,6 +146,7 @@ tests/
 │   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner: figure, y-titles (incl. annual_return, cumulative_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (bars + CAGR return_type/annotation); cumulative_return ts plot (percent annotations, title); wealth last-value annotations in balance points (zip-strict guard); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit); MC forecast scenarios end at zero then break; statistics grid: dag.AgGrid, suppressFieldDotNotation, formatPercentGuarded wiring; MC survival/wealth stats tables: compact single column on mobile (is_small_screen), desktop two-pane preserved (30 tests)
 │   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows, incl. cumulative_return), reactive auto_estimate_distribution_parameters (gates, norm/lognorm/t fit, VaR-level df optimize + reset-on-clear, errors), df>2 validation; URL params prefill and survive reactive auto-estimate, dcc.Store round-trip (25 tests)
 │   ├── test_grid_export.py           # xlsx export: button, rowdata_to_xlsx_download (PreventUpdate on empty rows AND on n_clicks=None — dynamically rendered export buttons fire their callback on first mount, must not auto-download), page callbacks return dcc.send_data_frame dict (11 tests)
+│   ├── test_submit_spinner.py        # all 4 main data callbacks toggle the submit-button spinner via the `running` spec (chart's dcc.Loading is below the fold on mobile) (4 tests)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types), rolling-window disabled for annual_return + cumulative_return (compare + portfolio) (21 tests)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
@@ -161,10 +162,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 181 | ~4s |
-| `poetry run pytest -m component` | Dash callbacks | 231 | ~5s |
+| `poetry run pytest -m component` | Dash callbacks | 235 | ~5s |
 | `poetry run pytest -m e2e` | Playwright browser | 23 | ~70s |
-| `poetry run pytest -q` | Everything | 435 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 412 | ~6s |
+| `poetry run pytest -q` | Everything | 439 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 416 | ~6s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the

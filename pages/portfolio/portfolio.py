@@ -31,6 +31,7 @@ from common.chart_helpers import (
     add_return_type_annotation,
     format_points,
 )
+from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens, is_small_screen
 from common.object_cache import get_or_create, TTL_PORTFOLIO
 from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
@@ -330,6 +331,9 @@ def layout(
     State(component_id="pf-mc-t-df", component_property="value"),
     State(component_id="pf-mc-t-loc", component_property="value"),
     State(component_id="pf-mc-t-scale", component_property="value"),
+    # Show the spinner under the Submit button while computing (the chart's
+    # own dcc.Loading spinner is below the fold on mobile).
+    running=submit_spinner_running("pf-submit-spinner"),
     prevent_initial_call=True,
 )
 def update_graf_portfolio(

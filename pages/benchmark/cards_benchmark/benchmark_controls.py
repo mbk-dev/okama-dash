@@ -13,6 +13,7 @@ from common import settings as settings, inflation as inflation
 from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
+from common.html_elements.submit_spinner import create_submit_spinner
 from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
 import common.validators as validators
@@ -226,6 +227,7 @@ def benchmark_card_controls(
                             n_clicks=0,
                             color="primary",
                         ),
+                        create_submit_spinner("benchmark-submit-spinner"),
                     ],
                     style={"textAlign": "center"},
                     className="p-3",

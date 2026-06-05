@@ -16,6 +16,7 @@ import pandas as pd
 from dash.exceptions import PreventUpdate
 
 from common import settings as settings, inflation as inflation
+from common.html_elements.submit_spinner import create_submit_spinner
 from common.mantine import search_provider
 from common.create_link import create_link, scope_cashflow_params
 from common.html_elements.copy_link_div import create_copy_link_div
@@ -616,6 +617,7 @@ def card_controls(
                             n_clicks=0,
                             color="primary",
                         ),
+                        create_submit_spinner("pf-submit-spinner"),
                     ],
                     style={"textAlign": "center"},
                     className="p-3",
