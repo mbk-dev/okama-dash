@@ -12,7 +12,7 @@ card_graf = dbc.Card(
             )
         ],
         id="ef-graf-div")]),
-    class_name="mb-3",
+    class_name="chart-card mb-3",
 )
 
 

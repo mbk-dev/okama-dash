@@ -340,6 +340,11 @@ def _accumulate_label_padding(fig: go.Figure, base_padding: float, char_padding:
                 left_padding = max(left_padding, label_padding)
             if "right" in position:
                 right_padding = max(right_padding, label_padding)
+            if "center" in position:
+                # Horizontally centered labels hang half their width over
+                # each side of the data point.
+                left_padding = max(left_padding, label_padding / 2)
+                right_padding = max(right_padding, label_padding / 2)
     return left_padding, right_padding
 
 
@@ -352,8 +357,10 @@ def _estimate_horizontal_text_padding(fig: go.Figure, compact: bool = False) -> 
     x_max = max(x_values)
     x_span = max(x_max - x_min, max(abs(x_min), abs(x_max), 1.0) * 0.1)
 
+    # char_padding ~ one character width as a fraction of the plot width
+    # (~7px per char at a 375px-wide compact plot, ~800px desktop plot).
     base_padding = x_span * (0.01 if compact else 0.02)
-    char_padding = x_span * (0.004 if compact else 0.009)
+    char_padding = x_span * (0.019 if compact else 0.009)
 
     return _accumulate_label_padding(fig, base_padding, char_padding)
 

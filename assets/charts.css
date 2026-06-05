@@ -1,0 +1,22 @@
+/* Full-bleed charts on mobile.
+ *
+ * Below 800px (same breakpoint as the in_width < 800 check in
+ * common/mobile_screens.py) a chart card escapes the column/container
+ * horizontal padding with a negative half-gutter margin and drops its own
+ * side padding and borders, so the plot area sticks to the screen edges.
+ * Pairs with margin l/r = 0 and inside y-tick labels set in
+ * common/mobile_screens.py.
+ */
+@media (max-width: 799.98px) {
+  .chart-card {
+    margin-left: calc(var(--bs-gutter-x, 1.5rem) * -0.5);
+    margin-right: calc(var(--bs-gutter-x, 1.5rem) * -0.5);
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+  .chart-card > .card-body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}

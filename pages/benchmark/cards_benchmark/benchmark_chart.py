@@ -29,7 +29,8 @@ card_graf_benchmark = dbc.Card(
                 )
             ], id="benchmark_graf_div"),
         class_name="mb-3",
-    )
+    ),
+    class_name="chart-card",
 )
 
 

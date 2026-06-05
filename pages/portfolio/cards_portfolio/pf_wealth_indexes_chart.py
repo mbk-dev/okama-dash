@@ -60,7 +60,7 @@ card_graf_portfolio = dbc.Card(
             )
         ]
     ),
-    class_name="mb-3",
+    class_name="chart-card mb-3",
 )
 
 

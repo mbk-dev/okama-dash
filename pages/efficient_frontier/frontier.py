@@ -20,7 +20,7 @@ from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_c
 from pages.efficient_frontier.cards_efficient_frontier.ef_chart_transition_map import card_transition_map
 from pages.efficient_frontier.cards_efficient_frontier.ef_find_weights import card_ef_find_weights
 
-from common.mobile_screens import adopt_small_screens
+from common.mobile_screens import adopt_small_screens, is_small_screen
 from pages.efficient_frontier.prepare_ef_plot import prepare_transition_map, prepare_ef, compact_ef_for_small_screens
 from pages.efficient_frontier.ef_cache import get_minimized_risk_portfolio, get_or_create_ef_object, load_ef_object
 
@@ -178,7 +178,7 @@ def update_ef_cards(
         fig1 = prepare_ef(ef, ef_object, ef_options, ef_cache_key=ef_file_name)
         fig2 = prepare_transition_map(ef)
 
-        if screen and screen["in_width"] < 800:
+        if is_small_screen(screen):
             fig1 = compact_ef_for_small_screens(fig1)
         fig1, config1 = adopt_small_screens(fig1, screen)
         fig2, config2 = adopt_small_screens(fig2, screen)
