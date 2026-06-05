@@ -347,7 +347,7 @@ def find_portfolio(n_clicks, ror, file_name):
 )
 def show_max_min_return(n_clicks, file_name):
     """
-    Show max and min annual rate of return (arithmetic mean).
+    Show max and min annual rate of return (CAGR).
     """
     if n_clicks ==0 or file_name is None:
         raise dash.exceptions.PreventUpdate
