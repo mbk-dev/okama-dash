@@ -107,6 +107,7 @@ def cashflow_accordion_item(
                                 value=cf_strategy if cf_strategy else "indexation",
                                 multi=False,
                                 clearable=False,
+                                searchable=False,
                                 id="pf-cf-strategy-type",
                             ),
                             dbc.FormText(
@@ -204,6 +205,7 @@ def cashflow_accordion_item(
                                 value=cf_freq if cf_freq else "month",
                                 multi=False,
                                 clearable=False,
+                                searchable=False,
                                 id="pf-cf-frequency",
                             ),
                         ],
