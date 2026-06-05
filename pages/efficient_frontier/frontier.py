@@ -35,6 +35,27 @@ dash.register_page(
 )
 
 
+def _parse_url_portfolio(tickers_list, weights, symbol) -> dict | None:
+    """Parse the portfolio section of the URL (weights + symbol) into store data.
+
+    Returns None when the section is absent or invalid (unparseable weights,
+    count mismatch with tickers, sum far from 100): the portfolio overlay must
+    never break the frontier or the form prefill.
+    """
+    if not tickers_list or not weights:
+        return None
+    try:
+        weights_list = make_list_from_string(weights, char_type="float")
+    except (ValueError, TypeError):
+        return None
+    if not weights_list or len(weights_list) != len(tickers_list):
+        return None
+    # Inverted comparison so a NaN sum (empty CSV field) also fails the check.
+    if not abs(sum(weights_list) - 100.0) < 1e-6:
+        return None
+    return {"tickers": tickers_list, "weights": weights_list, "symbol": symbol}
+
+
 def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, **kwargs):
     tickers_list = make_list_from_string(tickers)
     page = dbc.Container(
