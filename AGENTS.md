@@ -407,6 +407,16 @@ so prefer fixing the shared stylesheet/convention over per-component patches.
   `#dynamic-container` (asset rows) **and** to the outer block `Div` so the header and the
   "Add Asset" button get the same gap. Reference implementation:
   `pages/portfolio/cards_portfolio/portfolio_controls.py`.
+- **Moving an element changes its neighbors — re-check every gap.** Whenever a button or
+  any design element is inserted, moved, or re-parented, verify its spacing against ALL
+  adjacent elements (above, below, sides) by eye on the live local site, desktop and
+  mobile widths — not just the element's own styling. The trap (produced #20): an element
+  that moves into a different container — especially as its first or last child — loses
+  the margin it used to inherit from the old markup, and the container boundary lands
+  flush against the container's *outside* neighbor. So check the first/last-child
+  boundaries of the new container against what sits around it. The "wrapper owns the
+  rhythm" rule above says *how* to fix a missing gap; this rule says *when to look*:
+  every insertion or move.
 - **Buttons never sit flush against the control above them.** Two button roles:
   - *Primary action* (Submit / Compare / Search / Find portfolio / Backtest): centered and
     wrapped in `html.Div([button], className="p-3", style={"textAlign": "center"})` for
