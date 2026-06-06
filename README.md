@@ -97,4 +97,5 @@ The e2e tests run in a real browser; install it once with `poetry run playwright
 ## Related projects
 
 - [okama](https://github.com/mbk-dev/okama) — Python package for investment portfolio analysis, the engine behind these widgets
+- [okama-mcp](https://github.com/mbk-dev/okama-mcp) — MCP server providing investment analysis tools backed by the okama library
 - [okama.io](https://okama.io) — live instance of the widgets
