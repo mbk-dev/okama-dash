@@ -1,10 +1,12 @@
 import dash
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash import html, dcc, callback, ALL, MATCH
 from dash.dependencies import Input, Output, State
 
 from common import settings as settings
 from common.date_input import register_date_validation
+from common.mantine import search_provider
 import pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt as tl
 
 STRATEGY_OPTIONS = [
@@ -37,6 +39,20 @@ MAX_TIMESERIES_ENTRIES = 50
 # past-dated withdrawal the user can edit (mirrors the CWD default thresholds).
 TS_DEFAULT_DATE = "2020-01"
 TS_DEFAULT_AMOUNT = -1000
+
+
+def _prefill_amount(value, fallback):
+    """Coerce a URL-prefill string to a number for dmc.NumberInput.
+
+    Query params arrive as strings; NumberInput needs a real number to apply
+    the thousands separator. Unset (falsy) or unparseable input falls back."""
+    if not value:
+        return fallback
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return int(number) if number.is_integer() else number
 
 
 def _build_initial_ts_rows(cf_ts):
@@ -158,11 +174,15 @@ def cashflow_accordion_item(
                                     ),
                                 ]
                             ),
-                            dbc.Input(
-                                id="pf-initial-amount",
-                                value=initial_amount if initial_amount else settings.INITIAL_INVESTMENT_DEFAULT,
-                                type="number",
-                                min=1,
+                            # NumberInput instead of dbc.Input: an HTML
+                            # input[type=number] cannot group digits (#17).
+                            search_provider(
+                                dmc.NumberInput(
+                                    id="pf-initial-amount",
+                                    value=_prefill_amount(initial_amount, settings.INITIAL_INVESTMENT_DEFAULT),
+                                    min=1,
+                                    thousandSeparator=" ",
+                                )
                             ),
                             dbc.FormText("Positive number"),
                             dbc.Tooltip(
@@ -305,10 +325,12 @@ def cashflow_accordion_item(
                                             ),
                                         ]
                                     ),
-                                    dbc.Input(
-                                        id="pf-cf-amount",
-                                        value=cf_amount if cf_amount else (cashflow if cashflow else 0),
-                                        type="number",
+                                    search_provider(
+                                        dmc.NumberInput(
+                                            id="pf-cf-amount",
+                                            value=_prefill_amount(cf_amount, _prefill_amount(cashflow, 0)),
+                                            thousandSeparator=" ",
+                                        )
                                     ),
                                     dbc.FormText("Negative = withdrawal"),
                                     dbc.Tooltip(

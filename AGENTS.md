@@ -137,7 +137,7 @@ Rules for this repo:
 
 ## Test suite
 
-575 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+584 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -152,7 +152,7 @@ tests/
 │   ├── conftest.py                  # session-scoped Dash app (for unit tests importing pages/ modules)
 │   ├── test_validators.py           # validate_integer bounds, types, error messages; validate_integer_bool (21 tests)
 │   ├── test_math.py                 # round_list rounding & sum preservation (8 tests)
-│   ├── test_create_link.py          # URL builder, filename builder, list size check; param grouping (base→identity→rebal→cashflow); inactive-strategy params omitted; scope_cashflow_params; cf_ts owned by every strategy + zero-primary-with-cf_ts counts as active. NOTE: MC params are deliberately NOT in shareable links — none are emitted/parsed (73 tests)
+│   ├── test_create_link.py          # URL builder, filename builder, list size check; param grouping (base→identity→rebal→cashflow); inactive-strategy params omitted; scope_cashflow_params; cf_ts owned by every strategy + zero-primary-with-cf_ts counts as active; "" (cleared dmc.NumberInput) treated as unset by skip_if_default. NOTE: MC params are deliberately NOT in shareable links — none are emitted/parsed (74 tests)
 │   ├── test_symbols.py              # symbol lists, search index, search (prefix, name-token, case-insensitive) (23 tests)
 │   ├── test_symbols_cache_isolation.py  # mocked (TESTING) symbol index must not poison real cache (4 tests)
 │   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup, filename-length guard; TESTING flag isolation (env poisoning guard) (25 tests)
@@ -177,7 +177,10 @@ tests/
 │   │                                # empty while collapsed, one example withdrawal row on expand),
 │   │                                # MC limits validation: check_validity_monte_carlo (n≤MC_PORTFOLIO_MAX,
 │   │                                # years 1..MC_PORTFOLIO_YEARS_MAX, n×years≤MC_PORTFOLIO_BUDGET, out-of-range
-│   │                                # string flagged not crashed) + submit gated on mc-years validity (100 tests)
+│   │                                # string flagged not crashed) + submit gated on mc-years validity,
+│   │                                # amount inputs (#17): Initial/Cash flow amount are dmc.NumberInput
+│   │                                # (thousandSeparator=" ", min=1 kept, MantineProvider wrap, URL string
+│   │                                # prefill coerced to number, bad prefill → default) (108 tests)
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks,
 │   │                                # copy-link carries rebal / omits default month,
@@ -212,11 +215,11 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 211 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 339 | ~7s |
+| `poetry run pytest -m unit` | Pure logic | 212 | ~2s |
+| `poetry run pytest -m component` | Dash callbacks | 347 | ~7s |
 | `poetry run pytest -m e2e` | Playwright browser | 25 | ~75s |
-| `poetry run pytest -q` | Everything | 575 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 550 | ~9s |
+| `poetry run pytest -q` | Everything | 584 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 559 | ~9s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -229,7 +232,7 @@ to a file in `tmp/` instead of `PIPE`.
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link (cf_ts owned by all strategies + activity rule, inactive-strategy omission; MC params deliberately NOT in links), symbols, build_distribution_parameters, reactive-estimation gates, MC limits validation (n/years/budget) | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, custom cash flows in all strategies (_build_ts_dict, _apply_custom_time_series per strategy, nested accordion collapsed/expanded/force-open), MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats tables compact on mobile, xlsx export n_clicks guard + Excel number formats (describe percent, survival decimal, wealth grouped int), Go to EF link (href params + gating) | load, controls, mobile, shareable link (no MC params; reactive auto-estimate fills MC fields), submit→traces, Go to EF link → EF prefill |
+| **Portfolio** | create_link (cf_ts owned by all strategies + activity rule, inactive-strategy omission; MC params deliberately NOT in links), symbols, build_distribution_parameters, reactive-estimation gates, MC limits validation (n/years/budget) | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, amount inputs as dmc.NumberInput with space thousands separator (#17: type, min, provider wrap, URL prefill coercion), custom cash flows in all strategies (_build_ts_dict, _apply_custom_time_series per strategy, nested accordion collapsed/expanded/force-open), MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats tables compact on mobile, xlsx export n_clicks guard + Excel number formats (describe percent, survival decimal, wealth grouped int), Go to EF link (href params + gating) | load, controls, mobile, shareable link (no MC params; reactive auto-estimate fills MC fields), submit→traces, Go to EF link → EF prefill |
 | **Efficient Frontier** | adaptive grid step (ef_grid), chart label padding (centered labels), portfolio card builder (stat blocks, allocation bars) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio (both render portfolio cards — Selected with trace-name badge / Optimized with None-stat skipping — Sharpe from the rf-rate input; backtest link carries the EF object's rebalancing period, omits default month, tolerates legacy pickles), update_ef_cards (return_type hardwired to Geometric — Y-axis selector removed, chart always plots CAGR), simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace, customdata JSON-list serialization (plotly>=6 clickData regression), URL portfolio handoff (store parse, cached point, star trace, ticker-match rule, error isolation) | load, mobile, shareable link, submit→chart, info panel (assets names + info, #13 guard) |
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
@@ -391,9 +394,10 @@ are enforced globally in `assets/forms.css` (Dash auto-serves any CSS in `assets
 so prefer fixing the shared stylesheet/convention over per-component patches.
 
 - **Equal height in a row.** Every interactive control is **38px** tall. `dbc.Input`/
-  `dbc.Select` are 38px by default; `dcc.Dropdown` (34px) and `dmc.Select` (36px) are
-  normalized up to 38px in `assets/forms.css`. When you place a dropdown/select next to
-  an input in the same `dbc.Row`, you don't need extra styling — they already line up.
+  `dbc.Select` are 38px by default; `dcc.Dropdown` (34px), `dmc.Select` and
+  `dmc.NumberInput` (36px) are normalized up to 38px in `assets/forms.css`. When you place
+  a dropdown/select next to an input in the same `dbc.Row`, you don't need extra styling —
+  they already line up.
 - **Vertical rhythm — rows never touch.** A container that stacks form rows must own the
   vertical gap, not the rows. Use Bootstrap's **`vstack gap-2`** (0.5rem) on the container
   (`html.Div(..., className="vstack gap-2")`), or `class_name="mb-2"` on each row. This

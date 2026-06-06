@@ -1,7 +1,13 @@
 import pandas as pd
 import pytest
 
-from common.create_link import check_if_list_empty_or_big, create_filename, create_link, scope_cashflow_params
+from common.create_link import (
+    _format_query_param,
+    check_if_list_empty_or_big,
+    create_filename,
+    create_link,
+    scope_cashflow_params,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -653,3 +659,11 @@ class TestCheckIfListEmptyOrBig:
 
     def test_list_with_some_nones(self):
         assert check_if_list_empty_or_big(["AAPL.US", None, "MSFT.US"]) is False
+
+
+class TestFormatQueryParamEmptyString:
+    """A cleared dmc.NumberInput reports "" where dbc.Input reported None (issue #17)."""
+
+    def test_skip_if_default_treats_empty_string_as_unset(self):
+        # An emptied Initial amount must not leak "initial_amount=" into the link.
+        assert _format_query_param("initial_amount", "", ("skip_if_default", 1000)) is None

@@ -28,6 +28,12 @@
     min-height: 38px;
 }
 
+/* Rule 1: dmc.NumberInput (Initial amount / Cash flow amount, #17) -> 38px
+   so it lines up with the dbc.Input neighbours (Discount/Indexation rate). */
+.mantine-NumberInput-input {
+    min-height: 38px;
+}
+
 /* Custom cash flows (Portfolio, #pf-cf-ts-accordion): when the time_series
    strategy is selected the nested accordion header would just repeat the
    strategy name picked in the dropdown. `ts-plain` (set by the

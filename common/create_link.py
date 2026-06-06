@@ -122,6 +122,8 @@ def _format_query_param(name, value, rule) -> str | None:
 
     Rules: "if_not_none" | "skip_if_zero" (0 means "unset" for cash-flow amounts)
     | ("skip_if_default", default) — equality covers numerics (1000.0 == 1000).
+    Every rule treats "" as unset: a cleared dmc.NumberInput reports "" where
+    dbc.Input reported None.
     """
     if rule == "if_not_none":
         if value is None or value == "":
@@ -134,7 +136,7 @@ def _format_query_param(name, value, rule) -> str | None:
         return f"{name}={value}"
     # ("skip_if_default", default)
     default = rule[1]
-    if value is None or value == default:
+    if value is None or value == "" or value == default:
         return None
     return f"{name}={_quote_value(value) if isinstance(value, str) else value}"
 

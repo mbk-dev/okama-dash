@@ -926,3 +926,68 @@ class TestManageTsRows:
 
         assert len(result) == 1
         assert self._row_values(result[0]) == ("2031-05", -500)
+
+
+class TestCashflowAmountNumberInputs:
+    """Issue #17: Initial amount / Cash flow amount group digits with a space.
+
+    An HTML input[type=number] cannot display thousands separators, so both
+    fields are dmc.NumberInput(thousandSeparator=" "). URL prefill arrives as
+    a string and must be coerced to a number, or Mantine renders the raw
+    string without grouping.
+    """
+
+    def _build(self, **kwargs):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        return cashflow_accordion_item(**kwargs)
+
+    def test_initial_amount_is_number_input_with_space_separator(self):
+        node = _find_by_id(self._build(), "pf-initial-amount")
+        assert type(node).__name__ == "NumberInput"
+        assert node.thousandSeparator == " "
+
+    def test_cf_amount_is_number_input_with_space_separator(self):
+        node = _find_by_id(self._build(), "pf-cf-amount")
+        assert type(node).__name__ == "NumberInput"
+        assert node.thousandSeparator == " "
+
+    def test_initial_amount_keeps_min_one(self):
+        assert _find_by_id(self._build(), "pf-initial-amount").min == 1
+
+    def test_amount_inputs_render_inside_mantine_provider(self):
+        # dmc components fail to render without a MantineProvider ancestor.
+        item = self._build()
+        for target in ("pf-initial-amount", "pf-cf-amount"):
+            assert any(
+                type(node).__name__ == "MantineProvider" and _find_by_id(node, target) is not None
+                for node in _walk_components(item)
+            ), f"{target} must be wrapped in a MantineProvider"
+
+    def test_url_prefill_strings_become_numbers(self):
+        item = self._build(initial_amount="5000", cf_amount="-2000")
+
+        initial_value = _find_by_id(item, "pf-initial-amount").value
+        cf_value = _find_by_id(item, "pf-cf-amount").value
+        assert initial_value == 5000 and not isinstance(initial_value, str)
+        assert cf_value == -2000 and not isinstance(cf_value, str)
+
+    def test_unparseable_prefill_falls_back_to_defaults(self):
+        from common import settings
+
+        item = self._build(initial_amount="abc", cf_amount="abc")
+
+        assert _find_by_id(item, "pf-initial-amount").value == settings.INITIAL_INVESTMENT_DEFAULT
+        assert _find_by_id(item, "pf-cf-amount").value == 0
+
+    def test_legacy_cashflow_param_prefills_cf_amount(self):
+        value = _find_by_id(self._build(cashflow="-500"), "pf-cf-amount").value
+        assert value == -500 and not isinstance(value, str)
+
+    def test_defaults_without_prefill(self):
+        from common import settings
+
+        item = self._build()
+
+        assert _find_by_id(item, "pf-initial-amount").value == settings.INITIAL_INVESTMENT_DEFAULT
+        assert _find_by_id(item, "pf-cf-amount").value == 0
