@@ -1,6 +1,6 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-brightgreen.svg)](https://www.python.org/)
 [![License](https://img.shields.io/github/license/mbk-dev/okama-dash)](https://github.com/mbk-dev/okama-dash/blob/master/LICENSE.md)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 # Okama widgets
 

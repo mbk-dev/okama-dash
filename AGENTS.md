@@ -9,7 +9,7 @@ okama-dash/
 ├── navigation.py            # Top navigation bar component
 ├── footer.py                # Footer component
 ├── clear_redis_cache.py     # Redis cache flush utility
-├── pyproject.toml           # Poetry config, ruff/black settings, dependencies
+├── pyproject.toml           # Poetry config, ruff settings, dependencies
 ├── requirements.txt         # Pip fallback (keep in sync with pyproject.toml)
 ├── .python-version          # Python 3.14
 │
