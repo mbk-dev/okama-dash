@@ -1,4 +1,3 @@
-
 import dash
 import dash_bootstrap_components as dbc
 from dash import html, dcc, callback, ALL, MATCH
@@ -672,8 +671,7 @@ def cashflow_accordion_item(
                                 class_name="mt-1",
                             ),
                             dbc.FormText(
-                                "e.g. 20% threshold, 40% reduction = "
-                                "if drawdown > 20%, reduce withdrawal by 40%"
+                                "e.g. 20% threshold, 40% reduction = if drawdown > 20%, reduce withdrawal by 40%"
                             ),
                         ],
                         className="border rounded p-3 bg-body-tertiary mt-3",
@@ -736,6 +734,7 @@ def cashflow_accordion_item(
 
 # --- Callbacks ---
 
+
 @callback(
     Output("pf-cf-strategy-description", "children"),
     Output("pf-cf-indexation-panel", "style"),
@@ -789,8 +788,6 @@ def lock_frequency_for_strategy(strategy, current_freq):
     return current_freq, False, None
 
 
-
-
 @callback(
     Output("pf-withdrawal-rate-col", "style"),
     Input("pf-cf-strategy-type", "value"),
@@ -802,6 +799,7 @@ def toggle_withdrawal_rate(strategy):
 
 
 # --- TimeSeries dynamic rows ---
+
 
 def _ts_row(index, date_val=None, amount_val=None):
     return dbc.Row(
@@ -886,6 +884,7 @@ register_date_validation({"type": "pf-cf-ts-date", "index": MATCH})
 
 
 # --- CWD dynamic rows ---
+
 
 def next_cwd_placeholder(
     prev_threshold: float | None,

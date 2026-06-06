@@ -13,22 +13,45 @@ PF_MODULE = "pages.portfolio.portfolio"
 
 def _outer_default_args():
     return {
-        "screen": None, "log_on": False,
-        "assets": ["AAPL.US", "MSFT.US"], "weights": [50, 50],
-        "ccy": "USD", "rebalancing_period": "month",
-        "rebal_abs_deviation": None, "rebal_rel_deviation": None,
-        "fd_value": "2020-01", "ld_value": "2024-12",
-        "initial_amount": 1000, "discount_rate": 0, "symbol": "TestPF",
-        "cf_strategy": "indexation", "cf_frequency": "month",
-        "cf_amount": 0, "cf_indexation": 0, "cf_percentage": 0,
-        "vds_percentage": 0, "vds_min_withdrawal": 0, "vds_max_withdrawal": 0,
-        "vds_adjust_minmax": True, "vds_floor": 0, "vds_ceiling": 0,
-        "vds_adjust_fc": False, "vds_indexation": 0,
-        "cwd_amount": 0, "cwd_indexation": 0, "cwd_thresholds": [], "cwd_reductions": [],
-        "ts_dates": [], "ts_amounts": [],
-        "plot_type": "wealth", "inflation_on": False, "rolling_window": 2,
-        "n_monte_carlo": 100, "years_monte_carlo": 10,
-        "distribution_monte_carlo": "t", "show_backtest": "no",
+        "screen": None,
+        "log_on": False,
+        "assets": ["AAPL.US", "MSFT.US"],
+        "weights": [50, 50],
+        "ccy": "USD",
+        "rebalancing_period": "month",
+        "rebal_abs_deviation": None,
+        "rebal_rel_deviation": None,
+        "fd_value": "2020-01",
+        "ld_value": "2024-12",
+        "initial_amount": 1000,
+        "discount_rate": 0,
+        "symbol": "TestPF",
+        "cf_strategy": "indexation",
+        "cf_frequency": "month",
+        "cf_amount": 0,
+        "cf_indexation": 0,
+        "cf_percentage": 0,
+        "vds_percentage": 0,
+        "vds_min_withdrawal": 0,
+        "vds_max_withdrawal": 0,
+        "vds_adjust_minmax": True,
+        "vds_floor": 0,
+        "vds_ceiling": 0,
+        "vds_adjust_fc": False,
+        "vds_indexation": 0,
+        "cwd_amount": 0,
+        "cwd_indexation": 0,
+        "cwd_thresholds": [],
+        "cwd_reductions": [],
+        "ts_dates": [],
+        "ts_amounts": [],
+        "plot_type": "wealth",
+        "inflation_on": False,
+        "rolling_window": 2,
+        "n_monte_carlo": 100,
+        "years_monte_carlo": 10,
+        "distribution_monte_carlo": "t",
+        "show_backtest": "no",
     }
 
 
@@ -46,9 +69,16 @@ class TestDistributionParametersWiring:
         pf.dcf.monte_carlo_wealth = MagicMock(return_value=mc_df)
 
         get_pf_figure(
-            pf, plot_type="wealth", inflation_on=False, rolling_window=2,
-            n_monte_carlo=100, years_monte_carlo=10, distribution_monte_carlo="t",
-            show_backtest="no", log_scale=False, cf_strategy="indexation",
+            pf,
+            plot_type="wealth",
+            inflation_on=False,
+            rolling_window=2,
+            n_monte_carlo=100,
+            years_monte_carlo=10,
+            distribution_monte_carlo="t",
+            show_backtest="no",
+            log_scale=False,
+            cf_strategy="indexation",
             distribution_parameters_monte_carlo=(3.4, 0.006, 0.038),
         )
 
@@ -70,10 +100,15 @@ class TestSubmitBuildsParameters:
         ):
             mock_ctx.triggered_id = "pf-submit-button"
             update_graf_portfolio(
-                **_outer_default_args(), n_clicks=1,
-                mc_norm_mu=None, mc_norm_sigma=None,
-                mc_lognorm_shape=None, mc_lognorm_scale=None,
-                mc_t_df=3.4, mc_t_loc=0.006, mc_t_scale=0.038,
+                **_outer_default_args(),
+                n_clicks=1,
+                mc_norm_mu=None,
+                mc_norm_sigma=None,
+                mc_lognorm_shape=None,
+                mc_lognorm_scale=None,
+                mc_t_df=3.4,
+                mc_t_loc=0.006,
+                mc_t_scale=0.038,
             )
 
         passed = mock_inner.call_args.kwargs["distribution_parameters_monte_carlo"]
@@ -173,10 +208,16 @@ class TestCallbackRegistration:
 class TestAutoEstimateDistributionParameters:
     def _form_state(self, **overrides):
         state = {
-            "assets": ["AAPL.US", "MSFT.US"], "weights": [50, 50], "ccy": "USD",
-            "fd": "2020-01", "ld": "2024-12", "rebal": "month",
-            "abs_dev": None, "rel_dev": None,
-            "distribution": "norm", "var_level": None,
+            "assets": ["AAPL.US", "MSFT.US"],
+            "weights": [50, 50],
+            "ccy": "USD",
+            "fd": "2020-01",
+            "ld": "2024-12",
+            "rebal": "month",
+            "abs_dev": None,
+            "rel_dev": None,
+            "distribution": "norm",
+            "var_level": None,
         }
         state.update(overrides)
         return state

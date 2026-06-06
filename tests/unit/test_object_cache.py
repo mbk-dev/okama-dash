@@ -33,14 +33,20 @@ class TestBuildCacheKey:
     def test_sorted_symbols_with_weights(self, cache_dir):
         from common.object_cache import _build_cache_key
 
-        key1 = _build_cache_key("portfolio", {
-            "symbols": ["SPY.US", "TLT.US"],
-            "weights": [0.6, 0.4],
-        })
-        key2 = _build_cache_key("portfolio", {
-            "symbols": ["TLT.US", "SPY.US"],
-            "weights": [0.4, 0.6],
-        })
+        key1 = _build_cache_key(
+            "portfolio",
+            {
+                "symbols": ["SPY.US", "TLT.US"],
+                "weights": [0.6, 0.4],
+            },
+        )
+        key2 = _build_cache_key(
+            "portfolio",
+            {
+                "symbols": ["TLT.US", "SPY.US"],
+                "weights": [0.4, 0.6],
+            },
+        )
         assert key1 == key2
 
     def test_includes_okama_version(self, cache_dir):
@@ -213,9 +219,7 @@ class TestGetOrCreate:
             return {"data": "test"}
 
         get_or_create("portfolio", constructor, _LONG_PORTFOLIO_PARAMS, ttl_seconds=3600)
-        obj, key = get_or_create(
-            "portfolio", constructor, _LONG_PORTFOLIO_PARAMS, ttl_seconds=3600
-        )
+        obj, key = get_or_create("portfolio", constructor, _LONG_PORTFOLIO_PARAMS, ttl_seconds=3600)
 
         assert obj == {"data": "test"}
         assert len(calls) == 1

@@ -16,7 +16,11 @@ card_graf_compare = dbc.Card(
                             html.Div(
                                 dbc.Row(
                                     [
-                                        dbc.Col(lg=2, md=2, sm=0,),
+                                        dbc.Col(
+                                            lg=2,
+                                            md=2,
+                                            sm=0,
+                                        ),
                                         dbc.Col(
                                             html.Div(
                                                 daq.BooleanSwitch(
@@ -25,28 +29,32 @@ card_graf_compare = dbc.Card(
                                                     label="Logarithmic Y-Scale",
                                                     labelPosition="bottom",
                                                 ),
-                                            id="al-logarithmic-scale-switch-div",
+                                                id="al-logarithmic-scale-switch-div",
                                             )
                                         ),
                                         dbc.Col(
                                             # download data button
-                                            [html.Div(
-                                                [
-                                                    dbc.Button(
-                                                        "Download data",
-                                                        id="al-download-data-button",
-                                                        className="position-relative",
-                                                        color="link",
-                                                        outline=False,
-                                                        external_link=False,
-                                                    ),
-                                                    dcc.Store(id="al-store-chart-data", storage_type='session'),
-                                                    dcc.Download(id="al-download-dataframe-xlsx"),
-                                                ],
-                                                style={"textAlign": "center"},
-                                            )],
-                                            lg=2, md=2, sm=12,
-                                        )
+                                            [
+                                                html.Div(
+                                                    [
+                                                        dbc.Button(
+                                                            "Download data",
+                                                            id="al-download-data-button",
+                                                            className="position-relative",
+                                                            color="link",
+                                                            outline=False,
+                                                            external_link=False,
+                                                        ),
+                                                        dcc.Store(id="al-store-chart-data", storage_type="session"),
+                                                        dcc.Download(id="al-download-dataframe-xlsx"),
+                                                    ],
+                                                    style={"textAlign": "center"},
+                                                )
+                                            ],
+                                            lg=2,
+                                            md=2,
+                                            sm=12,
+                                        ),
                                     ]
                                 )
                             ),

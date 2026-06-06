@@ -73,9 +73,7 @@ def format_callback_map(callback_map: dict[str, dict[str, Any]], root: Path) -> 
         file, line = _location(entry, root)
         return ("", 0) if file is None else (str(file), line)  # clientside entries first
 
-    return "\n".join(
-        format_entry(entry, root) for entry in sorted(callback_map.values(), key=sort_key)
-    )
+    return "\n".join(format_entry(entry, root) for entry in sorted(callback_map.values(), key=sort_key))
 
 
 def main() -> None:

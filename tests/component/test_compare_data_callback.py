@@ -23,10 +23,15 @@ class TestUpdateGrafCompareInner:
         from pages.compare.compare import _update_graf_compare_inner
 
         fig, config, table, json_data = _update_graf_compare_inner(
-            screen=None, log_on=False,
+            screen=None,
+            log_on=False,
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type="wealth", inflation_on=False, rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="wealth",
+            inflation_on=False,
+            rolling_window=2,
         )
         assert isinstance(fig, go.Figure)
         assert isinstance(config, dict)
@@ -38,10 +43,15 @@ class TestUpdateGrafCompareInner:
         from pages.compare.compare import _update_graf_compare_inner
 
         fig, _, _, _ = _update_graf_compare_inner(
-            screen=None, log_on=False,
+            screen=None,
+            log_on=False,
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type="cagr", inflation_on=False, rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="cagr",
+            inflation_on=False,
+            rolling_window=2,
         )
         assert isinstance(fig, go.Figure)
         assert fig.layout.yaxis.title.text == "CAGR"
@@ -50,10 +60,15 @@ class TestUpdateGrafCompareInner:
         from pages.compare.compare import _update_graf_compare_inner
 
         fig, _, _, _ = _update_graf_compare_inner(
-            screen=None, log_on=False,
+            screen=None,
+            log_on=False,
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type="correlation", inflation_on=False, rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="correlation",
+            inflation_on=False,
+            rolling_window=2,
         )
         assert isinstance(fig, go.Figure)
         assert fig.layout.showlegend is False
@@ -62,10 +77,15 @@ class TestUpdateGrafCompareInner:
         from pages.compare.compare import _update_graf_compare_inner
 
         fig, _, _, _ = _update_graf_compare_inner(
-            screen=None, log_on=False,
+            screen=None,
+            log_on=False,
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type="cumulative_return", inflation_on=False, rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="cumulative_return",
+            inflation_on=False,
+            rolling_window=2,
         )
         assert isinstance(fig, go.Figure)
         assert fig.layout.yaxis.title.text == "Cumulative Return"
@@ -74,10 +94,15 @@ class TestUpdateGrafCompareInner:
         from pages.compare.compare import _update_graf_compare_inner
 
         fig, _, _, _ = _update_graf_compare_inner(
-            screen=None, log_on=False,
+            screen=None,
+            log_on=False,
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type="annual_return", inflation_on=False, rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="annual_return",
+            inflation_on=False,
+            rolling_window=2,
         )
         assert isinstance(fig, go.Figure)
         assert fig.layout.yaxis.title.text == "Annual Return, %"
@@ -88,10 +113,15 @@ class TestUpdateGrafCompareInner:
         from pages.compare.compare import _update_graf_compare_inner
 
         fig, *_ = _update_graf_compare_inner(
-            screen=None, log_on=False,
+            screen=None,
+            log_on=False,
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type="annual_return", inflation_on=False, rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="annual_return",
+            inflation_on=False,
+            rolling_window=2,
         )
         annotation_texts = [a.text for a in fig.layout.annotations]
         assert any("CAGR" in t for t in annotation_texts)
@@ -100,10 +130,15 @@ class TestUpdateGrafCompareInner:
         from pages.compare.compare import _update_graf_compare_inner
 
         _, _, table, _ = _update_graf_compare_inner(
-            screen=None, log_on=False,
+            screen=None,
+            log_on=False,
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type="wealth", inflation_on=False, rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="wealth",
+            inflation_on=False,
+            rolling_window=2,
         )
         assert len(table.rowData) > 0
 
@@ -146,10 +181,7 @@ class TestStatisticsGridDotNotation:
         from pages.compare.compare import get_al_statistics_table
 
         grid = get_al_statistics_table(make_mock_asset_list(["AAPL.US", "MSFT.US"]))
-        assert all(
-            d["valueFormatter"]["function"] == "formatPercentGuarded(params.value)"
-            for d in grid.columnDefs
-        )
+        assert all(d["valueFormatter"]["function"] == "formatPercentGuarded(params.value)" for d in grid.columnDefs)
 
 
 class TestUpdateGrafCompareOuter:
@@ -161,10 +193,16 @@ class TestUpdateGrafCompareOuter:
             mock_ctx.triggered_id = "al-submit-button"
             with pytest.raises(dash.exceptions.PreventUpdate):
                 update_graf_compare(
-                    screen=None, n_clicks=1, log_on=False,
+                    screen=None,
+                    n_clicks=1,
+                    log_on=False,
                     selected_symbols=[],
-                    ccy="USD", fd_value="2020-01", ld_value="2024-12",
-                    plot_type="wealth", inflation_on=False, rolling_window=2,
+                    ccy="USD",
+                    fd_value="2020-01",
+                    ld_value="2024-12",
+                    plot_type="wealth",
+                    inflation_on=False,
+                    rolling_window=2,
                 )
 
     def test_exception_returns_empty_figure(self):
@@ -176,10 +214,16 @@ class TestUpdateGrafCompareOuter:
         ):
             mock_ctx.triggered_id = "al-submit-button"
             fig, config, alert, json_data = update_graf_compare(
-                screen=None, n_clicks=1, log_on=False,
+                screen=None,
+                n_clicks=1,
+                log_on=False,
                 selected_symbols=["AAPL.US"],
-                ccy="USD", fd_value="2020-01", ld_value="2024-12",
-                plot_type="wealth", inflation_on=False, rolling_window=2,
+                ccy="USD",
+                fd_value="2020-01",
+                ld_value="2024-12",
+                plot_type="wealth",
+                inflation_on=False,
+                rolling_window=2,
             )
         assert isinstance(fig, go.Figure)
         assert len(fig.data) == 0

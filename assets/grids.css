@@ -1,0 +1,12 @@
+/* AG Grid tweaks (Dash auto-serves every CSS file in assets/). */
+
+/* Compact line wrapping in wrapText columns (the shared Information and
+   Assets names tables): the AG Grid theme sets the cell line-height equal
+   to the row height, so every wrapped line renders with a paragraph-sized
+   gap (<p>-like instead of <br>-like). Flex keeps single-line cells
+   vertically centered after the line-height override. */
+.ag-cell-wrap-text {
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+}

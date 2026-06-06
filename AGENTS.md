@@ -9,7 +9,7 @@ okama-dash/
 ├── navigation.py            # Top navigation bar component
 ├── footer.py                # Footer component
 ├── clear_redis_cache.py     # Redis cache flush utility
-├── pyproject.toml           # Poetry config, ruff/black settings, dependencies
+├── pyproject.toml           # Poetry config, ruff settings, dependencies
 ├── requirements.txt         # Pip fallback (keep in sync with pyproject.toml)
 ├── .python-version          # Python 3.14
 │
@@ -39,7 +39,7 @@ okama-dash/
 │   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export, submit spinner)
 │
 ├── tools/                   # Dev-only scripts, not deployed (dump_callbacks.py — greppable callback wiring map)
-├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards)
+├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards; grids.css — compact wrapText line-height in AG Grid cells)
 ├── cache-directory/         # Runtime file-system cache (Flask-Caching fallback)
 ├── tmp/                     # Scratch space for temporary files (contents gitignored)
 ├── docs/                    # Specs and plans (not deployed)
@@ -119,6 +119,10 @@ Cycle: **RED → verify RED → GREEN → verify GREEN → REFACTOR**.
 
 Rules for this repo:
 - Tests run via: `poetry run pytest -q`.
+- Before writing a new test, look for existing tests, fixtures, and mock factories with an
+  explicit path — `rg <pattern> tests/` — because the default search skips `tests/` (see
+  "Searching the codebase"). An empty default-search result does NOT mean the fixture or
+  test doesn't exist.
 - Before writing code, see the test fail for a real reason (`AssertionError` / missing function),
   not a typo/import error.
 - For bugfix: first a test reproducing the bug, then the fix. Without a reproducing test

@@ -15,8 +15,15 @@ _STRATEGY_PARAMS = {
     "vds": (
         "vds_pct",
         (
-            "vds_pct", "vds_min", "vds_max", "vds_adj_mm", "vds_floor", "vds_ceil",
-            "vds_adj_fc", "vds_indexation", "cf_ts",
+            "vds_pct",
+            "vds_min",
+            "vds_max",
+            "vds_adj_mm",
+            "vds_floor",
+            "vds_ceil",
+            "vds_adj_fc",
+            "vds_indexation",
+            "cf_ts",
         ),
     ),
     "cwd": ("cwd_amount", ("cf_freq", "cwd_amount", "cwd_tr", "cf_ts")),

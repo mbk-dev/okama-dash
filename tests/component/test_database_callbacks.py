@@ -10,12 +10,14 @@ SEARCH_MODULE = "pages.database.cards_database.db_search_results"
 
 
 def _make_search_df(n_rows: int = 3) -> pd.DataFrame:
-    return pd.DataFrame({
-        "symbol": [f"TICK{i}.US" for i in range(n_rows)],
-        "ticker": [f"TICK{i}" for i in range(n_rows)],
-        "name": [f"Company {i}" for i in range(n_rows)],
-        "isin": [f"US000000000{i}" for i in range(n_rows)],
-    })
+    return pd.DataFrame(
+        {
+            "symbol": [f"TICK{i}.US" for i in range(n_rows)],
+            "ticker": [f"TICK{i}" for i in range(n_rows)],
+            "name": [f"Company {i}" for i in range(n_rows)],
+            "isin": [f"US000000000{i}" for i in range(n_rows)],
+        }
+    )
 
 
 class TestDbSearch:

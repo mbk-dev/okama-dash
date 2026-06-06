@@ -35,8 +35,8 @@ def test_grid_step_options_disables_oversized_steps():
     options = grid_step_options(7)
     by_value = {opt["value"]: opt for opt in options}
     assert by_value[AUTO_STEP]["disabled"] is False
-    assert by_value["0.1"]["disabled"] is True   # 8008 > 5000
-    assert by_value["0.2"]["disabled"] is False   # 462 <= 5000
+    assert by_value["0.1"]["disabled"] is True  # 8008 > 5000
+    assert by_value["0.2"]["disabled"] is False  # 462 <= 5000
 
 
 def test_grid_step_options_all_enabled_for_two_assets():

@@ -111,8 +111,7 @@ def _get_minimized_risk_portfolio_cached(cache_version: str, file_name: str, tar
     ef_object = load_cached(file_name)
     optimized_portfolio = ef_object.minimize_risk(target_value=target_value)
     return {
-        key: value.tolist() if isinstance(value, np.ndarray) else value
-        for key, value in optimized_portfolio.items()
+        key: value.tolist() if isinstance(value, np.ndarray) else value for key, value in optimized_portfolio.items()
     }
 
 

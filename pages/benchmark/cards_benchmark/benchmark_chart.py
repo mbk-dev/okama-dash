@@ -20,14 +20,16 @@ card_graf_benchmark = dbc.Card(
                                     outline=False,
                                     external_link=False,
                                 ),
-                                dcc.Store(id="benchmark-store-chart-data", storage_type='session'),
+                                dcc.Store(id="benchmark-store-chart-data", storage_type="session"),
                                 dcc.Download(id="benchmark-download-dataframe-xlsx"),
                             ],
                             style={"textAlign": "right"},
-                        )
+                        ),
                     ]
                 )
-            ], id="benchmark_graf_div"),
+            ],
+            id="benchmark_graf_div",
+        ),
         class_name="mb-3",
     ),
     class_name="chart-card",

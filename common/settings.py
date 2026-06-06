@@ -12,6 +12,7 @@ default_currency = "USD"
 def get_namespaces() -> list[str]:
     return okama.assets_namespaces
 
+
 MONTHS_PER_YEAR = 12
 MC_EF_MAX = 5000  # Max points in Monte-Carlo simulation in Efficient Frontier
 MC_PORTFOLIO_MAX = 1000  # Max wealth time series in Monte-Carlo simulation in Portfolio

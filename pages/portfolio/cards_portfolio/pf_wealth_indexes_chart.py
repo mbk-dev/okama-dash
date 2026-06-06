@@ -16,7 +16,11 @@ card_graf_portfolio = dbc.Card(
                             html.Div(
                                 dbc.Row(
                                     [
-                                        dbc.Col(lg=2, md=2, sm=0,),
+                                        dbc.Col(
+                                            lg=2,
+                                            md=2,
+                                            sm=0,
+                                        ),
                                         dbc.Col(
                                             # logarithmic scale button
                                             html.Div(
@@ -32,26 +36,29 @@ card_graf_portfolio = dbc.Card(
                                         ),
                                         dbc.Col(
                                             # download data button
-                                            [html.Div(
-                                                [
-                                                    dbc.Button(
-                                                        "Download data",
-                                                        id="pf-download-data-button",
-                                                        className="position-relative",
-                                                        color="link",
-                                                        outline=False,
-                                                        external_link=False,
-                                                    ),
-                                                    dcc.Store(id="pf-store-chart-data", storage_type='session'),
-                                                    dcc.Download(id="pf-download-dataframe-xlsx"),
-                                                ],
-                                                style={"textAlign": "center"},
-                                            )],
-                                            lg=2, md=2, sm=12,
-                                        )
+                                            [
+                                                html.Div(
+                                                    [
+                                                        dbc.Button(
+                                                            "Download data",
+                                                            id="pf-download-data-button",
+                                                            className="position-relative",
+                                                            color="link",
+                                                            outline=False,
+                                                            external_link=False,
+                                                        ),
+                                                        dcc.Store(id="pf-store-chart-data", storage_type="session"),
+                                                        dcc.Download(id="pf-download-dataframe-xlsx"),
+                                                    ],
+                                                    style={"textAlign": "center"},
+                                                )
+                                            ],
+                                            lg=2,
+                                            md=2,
+                                            sm=12,
+                                        ),
                                     ]
                                 ),
-
                             ),
                         ],
                     )

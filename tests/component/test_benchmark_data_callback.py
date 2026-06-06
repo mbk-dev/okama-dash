@@ -23,11 +23,16 @@ class TestUpdateGrafBenchmark:
         from pages.benchmark.benchmark import update_graf_benchmark
 
         fig, config, json_data = update_graf_benchmark(
-            screen=None, n_clicks=1,
+            screen=None,
+            n_clicks=1,
             benchmark="SP500TR.INDX",
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type=plot_type, expanding_rolling="rolling", rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type=plot_type,
+            expanding_rolling="rolling",
+            rolling_window=2,
         )
         assert isinstance(fig, go.Figure)
         assert isinstance(config, dict)
@@ -37,11 +42,16 @@ class TestUpdateGrafBenchmark:
         from pages.benchmark.benchmark import update_graf_benchmark
 
         fig, _, _ = update_graf_benchmark(
-            screen=None, n_clicks=1,
+            screen=None,
+            n_clicks=1,
             benchmark="SP500TR.INDX",
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type="annual_td_bar", expanding_rolling="rolling", rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="annual_td_bar",
+            expanding_rolling="rolling",
+            rolling_window=2,
         )
         assert isinstance(fig, go.Figure)
         assert any(isinstance(t, go.Bar) for t in fig.data)
@@ -52,11 +62,16 @@ class TestUpdateGrafBenchmark:
 
         with pytest.raises(dash.exceptions.PreventUpdate):
             update_graf_benchmark(
-                screen=None, n_clicks=1,
+                screen=None,
+                n_clicks=1,
                 benchmark="SP500TR.INDX",
                 selected_symbols=[],
-                ccy="USD", fd_value="2020-01", ld_value="2024-12",
-                plot_type="td", expanding_rolling="rolling", rolling_window=2,
+                ccy="USD",
+                fd_value="2020-01",
+                ld_value="2024-12",
+                plot_type="td",
+                expanding_rolling="rolling",
+                rolling_window=2,
             )
 
     def test_no_benchmark_raises_prevent_update(self):
@@ -65,11 +80,16 @@ class TestUpdateGrafBenchmark:
 
         with pytest.raises(dash.exceptions.PreventUpdate):
             update_graf_benchmark(
-                screen=None, n_clicks=1,
+                screen=None,
+                n_clicks=1,
                 benchmark=None,
                 selected_symbols=["AAPL.US"],
-                ccy="USD", fd_value="2020-01", ld_value="2024-12",
-                plot_type="td", expanding_rolling="rolling", rolling_window=2,
+                ccy="USD",
+                fd_value="2020-01",
+                ld_value="2024-12",
+                plot_type="td",
+                expanding_rolling="rolling",
+                rolling_window=2,
             )
 
     def test_exception_returns_error_figure(self):
@@ -77,11 +97,16 @@ class TestUpdateGrafBenchmark:
 
         with patch(f"{BENCHMARK_MODULE}.ok.AssetList", side_effect=ValueError("bad")):
             fig, config, json_data = update_graf_benchmark(
-                screen=None, n_clicks=1,
+                screen=None,
+                n_clicks=1,
                 benchmark="SP500TR.INDX",
                 selected_symbols=["AAPL.US"],
-                ccy="USD", fd_value="2020-01", ld_value="2024-12",
-                plot_type="td", expanding_rolling="rolling", rolling_window=2,
+                ccy="USD",
+                fd_value="2020-01",
+                ld_value="2024-12",
+                plot_type="td",
+                expanding_rolling="rolling",
+                rolling_window=2,
             )
         assert isinstance(fig, go.Figure)
         assert json_data is None
@@ -90,10 +115,15 @@ class TestUpdateGrafBenchmark:
         from pages.benchmark.benchmark import update_graf_benchmark
 
         update_graf_benchmark(
-            screen=None, n_clicks=1,
+            screen=None,
+            n_clicks=1,
             benchmark="SP500TR.INDX",
             selected_symbols=["AAPL.US", "MSFT.US"],
-            ccy="USD", fd_value="2020-01", ld_value="2024-12",
-            plot_type="td", expanding_rolling="expanding", rolling_window=2,
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="td",
+            expanding_rolling="expanding",
+            rolling_window=2,
         )
         mock_al.tracking_difference.assert_called_with(rolling_window=None)

@@ -37,6 +37,7 @@ def get_names_by_symbol() -> dict[str, str]:
 # Picklable mock classes (for E2E tests that go through pickle.dump)
 # ---------------------------------------------------------------------------
 
+
 class _RebalanceStrategy:
     def __init__(self, period: str = "month"):
         self.period = period
@@ -50,6 +51,7 @@ class _CashflowParameters:
 
 class _MC:
     """Picklable mock for okama MonteCarlo object."""
+
     def __init__(self):
         self.distribution = "norm"
         self.distribution_parameters = None
@@ -117,7 +119,9 @@ class PicklablePortfolio:
 
         wealth_data = np.cumprod(1 + rng.normal(0.005, 0.03, (n, 3)), axis=0) * 1000
         self.wealth_index_with_assets = pd.DataFrame(
-            wealth_data, index=dates, columns=["TestPF.PF", "AAPL.US", "MSFT.US"],
+            wealth_data,
+            index=dates,
+            columns=["TestPF.PF", "AAPL.US", "MSFT.US"],
         )
         self.ror = pd.Series(rng.normal(0.005, 0.03, n), index=dates)
         self.drawdowns = pd.Series(rng.uniform(-0.2, 0, n), index=dates, name="TestPF.PF")
@@ -133,11 +137,13 @@ class PicklablePortfolio:
         self._rng = rng
 
     def describe(self) -> pd.DataFrame:
-        return pd.DataFrame({
-            "property": ["CAGR", "Risk", "CVAR"],
-            "period": ["annually", "annually", "annually"],
-            "TestPF.PF": [0.08, 0.12, -0.15],
-        })
+        return pd.DataFrame(
+            {
+                "property": ["CAGR", "Risk", "CVAR"],
+                "period": ["annually", "annually", "annually"],
+                "TestPF.PF": [0.08, 0.12, -0.15],
+            }
+        )
 
     def get_cumulative_return(self, real: bool = False) -> pd.DataFrame:
         # Mirrors okama 2.1.1: Portfolio.get_cumulative_return returns an expanding
@@ -148,7 +154,8 @@ class PicklablePortfolio:
     def get_rolling_cagr(self, window: int | None = None, real: bool = False) -> pd.DataFrame:
         return pd.DataFrame(
             self._rng.normal(0.08, 0.02, (self._n, 3)),
-            index=self._dates, columns=["TestPF.PF", "AAPL.US", "MSFT.US"],
+            index=self._dates,
+            columns=["TestPF.PF", "AAPL.US", "MSFT.US"],
         )
 
     def get_sharpe_ratio(self, rf_return: float = 0.0) -> float:
@@ -209,19 +216,27 @@ class PicklableAssetList:
 
         # AssetList.annual_return_ts is a property returning a DataFrame (one column per asset)
         self.annual_return_ts = pd.DataFrame(
-            rng.normal(0.05, 0.1, (len(annual_dates), n_assets)), index=annual_dates, columns=symbols,
+            rng.normal(0.05, 0.1, (len(annual_dates), n_assets)),
+            index=annual_dates,
+            columns=symbols,
         )
 
         self._corr_data = pd.DataFrame(
-            rng.uniform(0.8, 1.0, (n, max(n_assets - 1, 1))), index=dates, columns=ts_cols,
+            rng.uniform(0.8, 1.0, (n, max(n_assets - 1, 1))),
+            index=dates,
+            columns=ts_cols,
         )
         self._beta_data = pd.DataFrame(
-            rng.uniform(0.8, 1.2, (n, max(n_assets - 1, 1))), index=dates, columns=ts_cols,
+            rng.uniform(0.8, 1.2, (n, max(n_assets - 1, 1))),
+            index=dates,
+            columns=ts_cols,
         )
         cum_return_data = np.cumprod(1 + ror_data, axis=0) - 1.0
         self._cum_return = pd.DataFrame(cum_return_data, index=dates, columns=symbols)
         self._rolling_cagr = pd.DataFrame(
-            rng.normal(0.08, 0.02, (n, n_assets)), index=dates, columns=symbols,
+            rng.normal(0.08, 0.02, (n, n_assets)),
+            index=dates,
+            columns=symbols,
         )
         self._sharpe = pd.Series(rng.uniform(0.3, 1.0, n_assets), index=symbols)
         self._describe = self._build_describe(symbols, rng)
@@ -230,8 +245,14 @@ class PicklableAssetList:
     def _build_describe(symbols, rng):
         data = {
             "property": [
-                "CAGR", "Risk", "CVAR", "Max drawdown",
-                "Max dd date start", "Max dd date end", "Max dd days", "Dividend yield",
+                "CAGR",
+                "Risk",
+                "CVAR",
+                "Max drawdown",
+                "Max dd date start",
+                "Max dd date end",
+                "Max dd days",
+                "Dividend yield",
             ],
             "period": ["annually"] * 8,
         }
@@ -271,6 +292,7 @@ class PicklableAssetList:
 # MagicMock-based factories (used by component tests that don't pickle)
 # ---------------------------------------------------------------------------
 
+
 def make_mock_asset_list(symbols: list[str] | None = None) -> MagicMock:
     if symbols is None:
         symbols = ["AAPL.US", "MSFT.US"]
@@ -291,20 +313,22 @@ def make_mock_asset_list(symbols: list[str] | None = None) -> MagicMock:
     mock.assets_ror = pd.DataFrame(ror_data, index=dates, columns=symbols)
 
     cum_return_data = np.cumprod(1 + ror_data, axis=0) - 1.0
-    mock.get_cumulative_return = MagicMock(
-        return_value=pd.DataFrame(cum_return_data, index=dates, columns=symbols)
-    )
+    mock.get_cumulative_return = MagicMock(return_value=pd.DataFrame(cum_return_data, index=dates, columns=symbols))
     mock.get_rolling_cagr = MagicMock(
         return_value=pd.DataFrame(rng.normal(0.08, 0.02, (n, n_assets)), index=dates, columns=symbols)
     )
-    mock.get_sharpe_ratio = MagicMock(
-        return_value=pd.Series(rng.uniform(0.3, 1.0, n_assets), index=symbols)
-    )
+    mock.get_sharpe_ratio = MagicMock(return_value=pd.Series(rng.uniform(0.3, 1.0, n_assets), index=symbols))
 
     describe_data = {
         "property": [
-            "CAGR", "Risk", "CVAR", "Max drawdown",
-            "Max dd date start", "Max dd date end", "Max dd days", "Dividend yield",
+            "CAGR",
+            "Risk",
+            "CVAR",
+            "Max drawdown",
+            "Max dd date start",
+            "Max dd date end",
+            "Max dd days",
+            "Dividend yield",
         ],
         "period": ["annually"] * 8,
     }
@@ -316,12 +340,8 @@ def make_mock_asset_list(symbols: list[str] | None = None) -> MagicMock:
 
     ts_data = rng.normal(0.0, 0.02, (n, max(n_assets - 1, 1)))
     ts_cols = symbols[1:] if n_assets > 1 else symbols
-    mock.tracking_difference = MagicMock(
-        return_value=pd.DataFrame(ts_data, index=dates, columns=ts_cols)
-    )
-    mock.tracking_difference_annualized = MagicMock(
-        return_value=pd.DataFrame(ts_data, index=dates, columns=ts_cols)
-    )
+    mock.tracking_difference = MagicMock(return_value=pd.DataFrame(ts_data, index=dates, columns=ts_cols))
+    mock.tracking_difference_annualized = MagicMock(return_value=pd.DataFrame(ts_data, index=dates, columns=ts_cols))
 
     annual_dates = pd.period_range("2020", "2024", freq="Y")
     annual_data = rng.normal(0.0, 0.03, (len(annual_dates), max(n_assets - 1, 1)))
@@ -329,12 +349,12 @@ def make_mock_asset_list(symbols: list[str] | None = None) -> MagicMock:
 
     # AssetList.annual_return_ts is a property returning a DataFrame (one column per asset)
     mock.annual_return_ts = pd.DataFrame(
-        rng.normal(0.05, 0.1, (len(annual_dates), n_assets)), index=annual_dates, columns=symbols,
+        rng.normal(0.05, 0.1, (len(annual_dates), n_assets)),
+        index=annual_dates,
+        columns=symbols,
     )
 
-    mock.tracking_error = MagicMock(
-        return_value=pd.DataFrame(np.abs(ts_data), index=dates, columns=ts_cols)
-    )
+    mock.tracking_error = MagicMock(return_value=pd.DataFrame(np.abs(ts_data), index=dates, columns=ts_cols))
     mock.index_corr = MagicMock(
         return_value=pd.DataFrame(rng.uniform(0.8, 1.0, (n, max(n_assets - 1, 1))), index=dates, columns=ts_cols)
     )
@@ -390,7 +410,9 @@ def make_mock_portfolio() -> MagicMock:
     # time series with the portfolio column only (plus inflation if enabled).
     cum_return_data = np.cumprod(1 + rng.normal(0.005, 0.03, (n, 1)), axis=0) - 1.0
     mock.get_cumulative_return.return_value = pd.DataFrame(
-        cum_return_data, index=dates, columns=["TestPF.PF"],
+        cum_return_data,
+        index=dates,
+        columns=["TestPF.PF"],
     )
     mock.get_rolling_cagr.return_value = pd.DataFrame(
         rng.normal(0.08, 0.02, (n, 3)),
@@ -402,7 +424,9 @@ def make_mock_portfolio() -> MagicMock:
     # Portfolio.annual_return_ts is a method returning a Series (one value per year)
     annual_dates = pd.period_range("2020", "2024", freq="Y")
     mock.annual_return_ts.return_value = pd.Series(
-        rng.normal(0.05, 0.1, len(annual_dates)), index=annual_dates, name="TestPF.PF",
+        rng.normal(0.05, 0.1, len(annual_dates)),
+        index=annual_dates,
+        name="TestPF.PF",
     )
 
     inflation_ts = pd.Series(rng.normal(0.002, 0.001, n), index=dates)

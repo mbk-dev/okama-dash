@@ -136,13 +136,15 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, rebal=None, 
                 [
                     dbc.Col(
                         html.Div(
-                            [dbc.Button(
-                                "Backtest portfolio",
-                                id="ef-backtest-portfolio-button",
-                                external_link=True,
-                                target="_blank",
-                                color="primary"
-                            )],
+                            [
+                                dbc.Button(
+                                    "Backtest portfolio",
+                                    id="ef-backtest-portfolio-button",
+                                    external_link=True,
+                                    target="_blank",
+                                    color="primary",
+                                )
+                            ],
                             style={"textAlign": "center"},
                             className="p-3",
                         )
@@ -324,11 +326,11 @@ def display_click_data(clickData, n_click, symbols, file_name, rf_rate, trace_na
     weights_for_link = common.math.round_list(weights_list, 2)
     ef_object = load_ef_object(file_name)
     link = common.create_link.create_link(
-        href='/portfolio/',
+        href="/portfolio/",
         tickers_list=ef_object.symbols,
         ccy=ef_object.currency,
-        first_date=ef_object.first_date.strftime('%Y-%m'),
-        last_date=ef_object.last_date.strftime('%Y-%m'),
+        first_date=ef_object.first_date.strftime("%Y-%m"),
+        last_date=ef_object.last_date.strftime("%Y-%m"),
         weights_list=weights_for_link,
         rebal=_ef_rebalancing_period(ef_object),
     )
@@ -416,17 +418,15 @@ def find_portfolio(n_clicks, ror, file_name, rf_rate):
     ef_object = load_ef_object(file_name)
     no_solution = html.P("No solution was found.", className="text-muted")
     try:
-        target_value = ror / 100.
+        target_value = ror / 100.0
         optimized_portfolio = get_minimized_risk_portfolio(file_name, target_value)
 
-        mean_return = optimized_portfolio.get('Mean return')
-        cagr = optimized_portfolio.get('CAGR')
-        risk = optimized_portfolio.get('Risk')
+        mean_return = optimized_portfolio.get("Mean return")
+        cagr = optimized_portfolio.get("CAGR")
+        risk = optimized_portfolio.get("Risk")
 
         asset_weights = {
-            ticker: optimized_portfolio[ticker]
-            for ticker in ef_object.symbols
-            if ticker in optimized_portfolio
+            ticker: optimized_portfolio[ticker] for ticker in ef_object.symbols if ticker in optimized_portfolio
         }
         if not asset_weights and "Weights" in optimized_portfolio:
             asset_weights = dict(zip(ef_object.symbols, optimized_portfolio["Weights"], strict=True))
@@ -442,11 +442,11 @@ def find_portfolio(n_clicks, ror, file_name, rf_rate):
         )
         weights_for_link = common.math.round_list(weights_percent, 2)
         link = common.create_link.create_link(
-            href='/portfolio/',
+            href="/portfolio/",
             tickers_list=ef_object.symbols,
             ccy=ef_object.currency,
-            first_date=ef_object.first_date.strftime('%Y-%m'),
-            last_date=ef_object.last_date.strftime('%Y-%m'),
+            first_date=ef_object.first_date.strftime("%Y-%m"),
+            last_date=ef_object.last_date.strftime("%Y-%m"),
             weights_list=weights_for_link,
             rebal=_ef_rebalancing_period(ef_object),
         )
@@ -478,13 +478,13 @@ def _optimized_stats(
 @callback(
     Output(component_id="ef-find-portfolio-info-return-range", component_property="children"),
     Input(component_id="ef-submit-button-state", component_property="n_clicks"),
-    Input(component_id="ef_portfolio_file_name", component_property="data")
+    Input(component_id="ef_portfolio_file_name", component_property="data"),
 )
 def show_max_min_return(n_clicks, file_name):
     """
     Show max and min annual rate of return (CAGR).
     """
-    if n_clicks ==0 or file_name is None:
+    if n_clicks == 0 or file_name is None:
         raise dash.exceptions.PreventUpdate
     ef_object = load_ef_object(file_name)
     ef_points = ef_object.ef_points
