@@ -38,7 +38,7 @@ okama-dash/
 │   ├── crisis/              # Crisis period data (shaded chart regions)
 │   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export, submit spinner)
 │
-├── tools/                   # Dev-only scripts, not deployed (dump_callbacks.py — greppable callback wiring map)
+├── tools/                   # Dev-only scripts, not deployed (dump_callbacks.py — greppable callback wiring map; bench_server.py — server load/timing benchmark, see .claude/skills/test_server_load)
 ├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards; grids.css — compact wrapText line-height in AG Grid cells)
 ├── cache-directory/         # Runtime file-system cache (Flask-Caching fallback)
 ├── tmp/                     # Scratch space for temporary files (contents gitignored)
@@ -137,7 +137,7 @@ Rules for this repo:
 
 ## Test suite
 
-565 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+575 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -152,7 +152,7 @@ tests/
 │   ├── conftest.py                  # session-scoped Dash app (for unit tests importing pages/ modules)
 │   ├── test_validators.py           # validate_integer bounds, types, error messages; validate_integer_bool (21 tests)
 │   ├── test_math.py                 # round_list rounding & sum preservation (8 tests)
-│   ├── test_create_link.py          # URL builder, filename builder, list size check; MC params in Portfolio link (tickers+weights+MC 11 params); zero-valued MC params (t_loc=0) preserved in URL; cf_ts owned by every strategy + zero-primary-with-cf_ts counts as active (73 tests)
+│   ├── test_create_link.py          # URL builder, filename builder, list size check; param grouping (base→identity→rebal→cashflow); inactive-strategy params omitted; scope_cashflow_params; cf_ts owned by every strategy + zero-primary-with-cf_ts counts as active. NOTE: MC params are deliberately NOT in shareable links — none are emitted/parsed (73 tests)
 │   ├── test_symbols.py              # symbol lists, search index, search (prefix, name-token, case-insensitive) (23 tests)
 │   ├── test_symbols_cache_isolation.py  # mocked (TESTING) symbol index must not poison real cache (4 tests)
 │   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup, filename-length guard; TESTING flag isolation (env poisoning guard) (25 tests)
@@ -174,7 +174,10 @@ tests/
 │   │                                # _apply_custom_time_series on every strategy, nested accordion
 │   │                                # (collapsed default, closed on switch to non-TS, expanded for TS/URL
 │   │                                # prefill, ts-plain chrome-less mode for the TS strategy; row container
-│   │                                # empty while collapsed, one example withdrawal row on expand) (90 tests)
+│   │                                # empty while collapsed, one example withdrawal row on expand),
+│   │                                # MC limits validation: check_validity_monte_carlo (n≤MC_PORTFOLIO_MAX,
+│   │                                # years 1..MC_PORTFOLIO_YEARS_MAX, n×years≤MC_PORTFOLIO_BUDGET, out-of-range
+│   │                                # string flagged not crashed) + submit gated on mc-years validity (100 tests)
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks,
 │   │                                # copy-link carries rebal / omits default month,
@@ -201,7 +204,7 @@ tests/
     ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
     │                                # mobile viewport 375px (Portfolio + EF),
     │                                # EF info panel renders assets names + info for URL tickers (#13 guard) (9 tests)
-    ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages; Portfolio MC params prefill; Portfolio Go to EF link → EF prefill; URL params survive reactive auto-estimate (7 tests)
+    ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages; Portfolio fresh link (no MC URL params) → reactive estimation auto-fills the MC distribution fields (dead-callback regression guard); Portfolio Go to EF link → EF prefill (6 tests)
     └── test_submit_interaction.py   # Submit → chart with real traces for all 4 pages; Portfolio stats grid: dotted column renders values, percent-formatted (6 tests)
 ```
 
@@ -210,10 +213,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 211 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 329 | ~7s |
+| `poetry run pytest -m component` | Dash callbacks | 339 | ~7s |
 | `poetry run pytest -m e2e` | Playwright browser | 25 | ~75s |
-| `poetry run pytest -q` | Everything | 565 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 540 | ~9s |
+| `poetry run pytest -q` | Everything | 575 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 550 | ~9s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -226,7 +229,7 @@ to a file in `tmp/` instead of `PIPE`.
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link (incl. MC params in URL, zero-preservation, cf_ts owned by all strategies + activity rule), symbols, build_distribution_parameters, reactive-estimation gates | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, custom cash flows in all strategies (_build_ts_dict, _apply_custom_time_series per strategy, nested accordion collapsed/expanded/force-open), MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats tables compact on mobile, xlsx export n_clicks guard + Excel number formats (describe percent, survival decimal, wealth grouped int), Go to EF link (href params + gating) | load, controls, mobile, shareable link (incl. MC params round-trip), submit→traces, Go to EF link → EF prefill |
+| **Portfolio** | create_link (cf_ts owned by all strategies + activity rule, inactive-strategy omission; MC params deliberately NOT in links), symbols, build_distribution_parameters, reactive-estimation gates, MC limits validation (n/years/budget) | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, custom cash flows in all strategies (_build_ts_dict, _apply_custom_time_series per strategy, nested accordion collapsed/expanded/force-open), MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats tables compact on mobile, xlsx export n_clicks guard + Excel number formats (describe percent, survival decimal, wealth grouped int), Go to EF link (href params + gating) | load, controls, mobile, shareable link (no MC params; reactive auto-estimate fills MC fields), submit→traces, Go to EF link → EF prefill |
 | **Efficient Frontier** | adaptive grid step (ef_grid), chart label padding (centered labels), portfolio card builder (stat blocks, allocation bars) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio (both render portfolio cards — Selected with trace-name badge / Optimized with None-stat skipping — Sharpe from the rf-rate input; backtest link carries the EF object's rebalancing period, omits default month, tolerates legacy pickles), update_ef_cards (return_type hardwired to Geometric — Y-axis selector removed, chart always plots CAGR), simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace, customdata JSON-list serialization (plotly>=6 clickData regression), URL portfolio handoff (store parse, cached point, star trace, ticker-match rule, error isolation) | load, mobile, shareable link, submit→chart, info panel (assets names + info, #13 guard) |
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |

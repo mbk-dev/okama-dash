@@ -670,14 +670,85 @@ class TestWeightRangeValidation:
         """150 + -50 sums to 100 and must still be rejected."""
         from pages.portfolio.cards_portfolio.portfolio_controls import disable_submit_add_link_buttons
 
-        submit_disabled, _, _, _ = disable_submit_add_link_buttons(["AAPL.US", "MSFT.US"], [150, -50], 2, True)
+        submit_disabled, _, _, _ = disable_submit_add_link_buttons(["AAPL.US", "MSFT.US"], [150, -50], 2, True, True)
         assert submit_disabled is True
 
     def test_submit_enabled_for_valid_weights(self):
         from pages.portfolio.cards_portfolio.portfolio_controls import disable_submit_add_link_buttons
 
-        submit_disabled, _, _, _ = disable_submit_add_link_buttons(["AAPL.US", "MSFT.US"], [60, 40], 2, True)
+        submit_disabled, _, _, _ = disable_submit_add_link_buttons(["AAPL.US", "MSFT.US"], [60, 40], 2, True, True)
         assert submit_disabled is False
+
+
+class TestMonteCarloLimitsValidation:
+    """MC inputs validation: n ≤ MC_PORTFOLIO_MAX, years 1..MC_PORTFOLIO_YEARS_MAX, n × years ≤ budget."""
+
+    def test_mc_number_at_max_is_valid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import check_validity_monte_carlo
+
+        number_valid, number_invalid, years_valid, years_invalid = check_validity_monte_carlo(500, 10)
+        assert (number_valid, number_invalid) == (True, False)
+        assert (years_valid, years_invalid) == (True, False)
+
+    def test_mc_number_above_max_is_invalid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import check_validity_monte_carlo
+
+        number_valid, number_invalid, _, _ = check_validity_monte_carlo(501, 10)
+        assert (number_valid, number_invalid) == (False, True)
+        # the old 1000 limit must no longer be accepted
+        number_valid, number_invalid, _, _ = check_validity_monte_carlo(1000, 10)
+        assert (number_valid, number_invalid) == (False, True)
+
+    def test_mc_years_above_max_is_invalid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import check_validity_monte_carlo
+
+        _, _, years_valid, years_invalid = check_validity_monte_carlo(100, 51)
+        assert (years_valid, years_invalid) == (False, True)
+
+    def test_mc_years_below_min_is_invalid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import check_validity_monte_carlo
+
+        _, _, years_valid, years_invalid = check_validity_monte_carlo(100, 0)
+        assert (years_valid, years_invalid) == (False, True)
+
+    def test_mc_years_out_of_range_string_is_invalid(self):
+        """Out-of-range typed values reach Dash as strings — flag them instead of crashing the data callback."""
+        from pages.portfolio.cards_portfolio.portfolio_controls import check_validity_monte_carlo
+
+        _, _, years_valid, years_invalid = check_validity_monte_carlo(100, "200")
+        assert (years_valid, years_invalid) == (False, True)
+
+    def test_mc_budget_exceeded_marks_both_fields_invalid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import check_validity_monte_carlo
+
+        number_valid, number_invalid, years_valid, years_invalid = check_validity_monte_carlo(500, 31)
+        assert (number_valid, number_invalid) == (False, True)
+        assert (years_valid, years_invalid) == (False, True)
+
+    def test_mc_budget_boundary_is_valid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import check_validity_monte_carlo
+
+        number_valid, number_invalid, years_valid, years_invalid = check_validity_monte_carlo(500, 30)
+        assert (number_valid, number_invalid) == (True, False)
+        assert (years_valid, years_invalid) == (True, False)
+
+    def test_mc_budget_not_applied_when_mc_off(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import check_validity_monte_carlo
+
+        number_valid, number_invalid, years_valid, years_invalid = check_validity_monte_carlo(0, 50)
+        assert (number_valid, number_invalid) == (True, False)
+        assert (years_valid, years_invalid) == (True, False)
+
+    def test_mc_none_values_show_no_marks(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import check_validity_monte_carlo
+
+        assert check_validity_monte_carlo(None, None) == (False, False, False, False)
+
+    def test_submit_disabled_when_mc_years_invalid(self):
+        from pages.portfolio.cards_portfolio.portfolio_controls import disable_submit_add_link_buttons
+
+        submit_disabled, _, _, _ = disable_submit_add_link_buttons(["AAPL.US", "MSFT.US"], [60, 40], 2, True, False)
+        assert submit_disabled is True
 
 
 def _find_by_id(component, target_id):
