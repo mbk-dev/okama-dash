@@ -834,13 +834,18 @@ def _update_graf_portfolio_inner(
     # Monte Carlo statistics
     if n_monte_carlo != 0 and plot_type == "wealth":
         compact_tables = is_small_screen(screen)
-        forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
+        forecast_survival_statistics_datatable = get_forecast_survival_statistics_section(
             df_forecast,
             df_backtest,
             pf_object,
             compact=compact_tables,
+            screen=screen,
         )
-        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(pf_object, compact=compact_tables)
+        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_section(
+            pf_object,
+            compact=compact_tables,
+            screen=screen,
+        )
     else:
         forecast_survival_statistics_datatable = dag.AgGrid()
         forecast_wealth_statistics_datatable = dag.AgGrid()
@@ -1120,7 +1125,72 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
     return statistics_html
 
 
-def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio, compact: bool = False):
+def _mc_histogram_bins(series_list: list[pd.Series]) -> go.histogram.XBins | None:
+    """Shared adaptive bins for (overlaid) MC histograms.
+
+    Same rule as the rate-of-return distribution figure: 50 bins for >=120
+    samples, else 10. A constant series (all paths identical) returns None
+    so plotly picks its own bin instead of a zero width."""
+    combined_min = min(s.min() for s in series_list)
+    combined_max = max(s.max() for s in series_list)
+    if combined_max == combined_min:
+        return None
+    samples = max(s.shape[0] for s in series_list)
+    bins_number = 50 if samples >= 120 else 10
+    return go.histogram.XBins(size=(combined_max - combined_min) / bins_number)
+
+
+def _get_survival_distribution_figure(fsp: pd.Series) -> go.Figure:
+    """Histogram of MC survival periods (backtest offset already applied)."""
+    fig = go.Figure(
+        go.Histogram(
+            x=fsp,
+            histnorm="probability",
+            xbins=_mc_histogram_bins([fsp]),
+            marker=go.histogram.Marker(color="lightgreen"),
+            name="Survival period",
+            showlegend=False,
+        )
+    )
+    fig.update_layout(title={"text": "Survival period distribution", "x": 0.5, "xanchor": "center"})
+    fig.update_xaxes(title_text="Years")
+    fig.update_yaxes(title_text="Probability")
+    return fig
+
+
+def _get_wealth_distribution_figure(wealth_fv: pd.Series, wealth_pv: pd.Series) -> go.Figure:
+    """Overlaid FV/PV histograms of MC terminal wealth (shared bins)."""
+    bins = _mc_histogram_bins([wealth_fv, wealth_pv])
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(x=wealth_fv, histnorm="probability", xbins=bins, name="FV", opacity=0.6))
+    fig.add_trace(go.Histogram(x=wealth_pv, histnorm="probability", xbins=bins, name="PV", opacity=0.6))
+    fig.update_layout(
+        barmode="overlay",
+        title={"text": "Terminal wealth distribution", "x": 0.5, "xanchor": "center"},
+        legend_title="Legend",
+    )
+    fig.update_yaxes(title_text="Probability")
+    return fig
+
+
+def _mc_section_tabs(grid: dag.AgGrid, graph: dcc.Graph) -> dbc.Tabs:
+    """Table/Distribution tabs of an MC statistics section (issue #18)."""
+    return dbc.Tabs(
+        [
+            dbc.Tab(grid, label="Table", tab_id="table", class_name="pt-2"),
+            dbc.Tab(graph, label="Distribution", tab_id="distribution", class_name="pt-2"),
+        ],
+        active_tab="table",
+    )
+
+
+def get_forecast_survival_statistics_section(
+    df_forecast,
+    df_backtsest,
+    pf_object: ok.Portfolio,
+    compact: bool = False,
+    screen: dict | None = None,
+):
     if not df_forecast.empty:
         backtest_survival_period = 0 if df_backtsest.empty else pf_object.dcf.survival_period_hist()
         fsp = pf_object.dcf.monte_carlo_survival_period(threshold=0)
@@ -1156,13 +1226,18 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
 
         from common.html_elements.grid_export import create_grid_header_with_export
 
+        # The chart shows the same offset series the table is computed from.
+        fig = _get_survival_distribution_figure(fsp)
+        fig, config = adopt_small_screens(fig, screen)
+        graph = dcc.Graph(figure=fig, config=config, id="pf-survival-distribution-graph")
+
         # The matching dcc.Download lives statically in pf_statistics_table.py.
         # The section title lives here (not in portfolio_info.py) so the compact
         # export button can share the header row, top-right (issue #16).
         return html.Div(
             [
                 create_grid_header_with_export("Survival period statistics", "pf-survival-statistics-export-btn"),
-                grid,
+                _mc_section_tabs(grid, graph),
             ],
             className="vstack gap-2",
         )
@@ -1188,11 +1263,13 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
     )
 
 
-def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
-    wealth_fv = pf_object.dcf.monte_carlo_wealth(discounting="fv")
+def get_forecast_wealth_statistics_section(pf_object, compact: bool = False, screen: dict | None = None):
+    # A depleted portfolio balance is 0, never negative: okama replaces
+    # negatives with 0 (same flag the main MC chart uses).
+    wealth_fv = pf_object.dcf.monte_carlo_wealth(discounting="fv", include_negative_values=False)
     if not wealth_fv.empty:
         wealth = wealth_fv.iloc[-1, :]
-        wealth_pv = pf_object.dcf.monte_carlo_wealth(discounting="pv").iloc[-1, :]
+        wealth_pv = pf_object.dcf.monte_carlo_wealth(discounting="pv", include_negative_values=False).iloc[-1, :]
 
         rate = f"{pf_object.dcf.discount_rate * 100:.2f}%"
         percentiles = [
@@ -1249,13 +1326,18 @@ def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
 
         from common.html_elements.grid_export import create_grid_header_with_export
 
+        # The chart shows the same terminal-wealth series the table is computed from.
+        fig = _get_wealth_distribution_figure(wealth, wealth_pv)
+        fig, config = adopt_small_screens(fig, screen)
+        graph = dcc.Graph(figure=fig, config=config, id="pf-wealth-distribution-graph")
+
         # The matching dcc.Download lives statically in pf_statistics_table.py.
         # The section title lives here (not in portfolio_info.py) so the compact
         # export button can share the header row, top-right (issue #16).
         return html.Div(
             [
                 create_grid_header_with_export("Wealth statistics", "pf-wealth-statistics-export-btn"),
-                grid,
+                _mc_section_tabs(grid, graph),
             ],
             className="vstack gap-2",
         )

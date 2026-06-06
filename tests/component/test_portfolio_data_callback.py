@@ -171,6 +171,34 @@ class TestUpdateGrafPortfolioInner:
         assert patched_pf_inner.dcf.discount_rate is None
 
 
+def _pf_with_mc_stats():
+    pf = make_mock_portfolio()
+    pf.dcf.monte_carlo_survival_period.return_value = pd.Series([20.0, 25.0, 30.0])
+    wealth_fv = pd.DataFrame({0: [100.0, 200.0], 1: [150.0, 250.0]})
+    wealth_pv = wealth_fv / 2
+    pf.dcf.monte_carlo_wealth = MagicMock(
+        side_effect=lambda discounting="fv", include_negative_values=True: (
+            wealth_fv if discounting == "fv" else wealth_pv
+        )
+    )
+    return pf
+
+
+def _section_tabs(section):
+    """dbc.Tabs of a tabbed MC statistics section (children: header row, tabs)."""
+    return section.children[1]
+
+
+def _section_grid(section):
+    """Grid from the Table tab of a tabbed MC statistics section."""
+    return _section_tabs(section).children[0].children
+
+
+def _section_graph(section):
+    """dcc.Graph from the Distribution tab of a tabbed MC statistics section."""
+    return _section_tabs(section).children[1].children
+
+
 class TestForecastStatisticsTablesCompact:
     # On small screens (in_width < 800) the two-pane Survival/Wealth statistics
     # tables reflow into a single column of pairs so every cell stays readable.
@@ -184,43 +212,32 @@ class TestForecastStatisticsTablesCompact:
         "99th percentile",
     ]
 
-    @staticmethod
-    def _pf_with_mc_stats():
-        pf = make_mock_portfolio()
-        pf.dcf.monte_carlo_survival_period.return_value = pd.Series([20.0, 25.0, 30.0])
-        wealth_fv = pd.DataFrame({0: [100.0, 200.0], 1: [150.0, 250.0]})
-        wealth_pv = wealth_fv / 2
-        pf.dcf.monte_carlo_wealth = MagicMock(
-            side_effect=lambda discounting="fv": wealth_fv if discounting == "fv" else wealth_pv
-        )
-        return pf
-
     def test_survival_compact_stacks_pairs_in_single_column(self):
-        from pages.portfolio.portfolio import get_forecast_survival_statistics_table
+        from pages.portfolio.portfolio import get_forecast_survival_statistics_section
 
-        pf = self._pf_with_mc_stats()
-        result = get_forecast_survival_statistics_table(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True)
-        grid = result.children[1]
+        pf = _pf_with_mc_stats()
+        result = get_forecast_survival_statistics_section(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True)
+        grid = _section_grid(result)
         assert [row["1"] for row in grid.rowData] == self.PERCENTILE_LABELS + ["Min", "Max", "Mean", "Std"]
         assert all(set(row) == {"1", "2"} for row in grid.rowData)
         assert len(grid.columnDefs) == 2
 
     def test_survival_desktop_keeps_two_pane_layout(self):
-        from pages.portfolio.portfolio import get_forecast_survival_statistics_table
+        from pages.portfolio.portfolio import get_forecast_survival_statistics_section
 
-        pf = self._pf_with_mc_stats()
-        result = get_forecast_survival_statistics_table(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf)
-        grid = result.children[1]
+        pf = _pf_with_mc_stats()
+        result = get_forecast_survival_statistics_section(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf)
+        grid = _section_grid(result)
         assert len(grid.rowData) == 7
         assert all(set(row) == {"1", "2", "3", "4"} for row in grid.rowData)
         assert len(grid.columnDefs) == 4
 
     def test_wealth_compact_stacks_pairs_with_fv_pv_columns(self):
-        from pages.portfolio.portfolio import get_forecast_wealth_statistics_table
+        from pages.portfolio.portfolio import get_forecast_wealth_statistics_section
 
-        pf = self._pf_with_mc_stats()
-        result = get_forecast_wealth_statistics_table(pf, compact=True)
-        grid = result.children[1]
+        pf = _pf_with_mc_stats()
+        result = get_forecast_wealth_statistics_section(pf, compact=True)
+        grid = _section_grid(result)
         labels = [row["1"] for row in grid.rowData]
         assert labels == self.PERCENTILE_LABELS + ["Min", "Max", "Mean", "Std", "Discount rate"]
         assert all(set(row) == {"1", "2", "3"} for row in grid.rowData)
@@ -230,14 +247,129 @@ class TestForecastStatisticsTablesCompact:
         assert discount_row["3"] == "5.00%"
 
     def test_wealth_desktop_keeps_two_pane_layout(self):
-        from pages.portfolio.portfolio import get_forecast_wealth_statistics_table
+        from pages.portfolio.portfolio import get_forecast_wealth_statistics_section
 
-        pf = self._pf_with_mc_stats()
-        result = get_forecast_wealth_statistics_table(pf)
-        grid = result.children[1]
+        pf = _pf_with_mc_stats()
+        result = get_forecast_wealth_statistics_section(pf)
+        grid = _section_grid(result)
         assert len(grid.rowData) == 7
         assert all(set(row) == {"1", "2", "3", "4", "5", "6"} for row in grid.rowData)
         assert len(grid.columnDefs) == 6
+
+
+class TestMcStatisticsTabs:
+    """Issue #18: Survival/Wealth MC sections are tabbed — Table + Distribution."""
+
+    def test_survival_section_has_table_and_distribution_tabs(self):
+        from pages.portfolio.portfolio import get_forecast_survival_statistics_section
+
+        result = get_forecast_survival_statistics_section(pd.DataFrame({"x": [1]}), pd.DataFrame(), _pf_with_mc_stats())
+
+        tabs = _section_tabs(result)
+        assert type(tabs).__name__ == "Tabs"
+        assert [tab.label for tab in tabs.children] == ["Table", "Distribution"]
+        assert tabs.active_tab == "table"
+
+    def test_wealth_section_has_table_and_distribution_tabs(self):
+        from pages.portfolio.portfolio import get_forecast_wealth_statistics_section
+
+        result = get_forecast_wealth_statistics_section(_pf_with_mc_stats())
+
+        tabs = _section_tabs(result)
+        assert type(tabs).__name__ == "Tabs"
+        assert [tab.label for tab in tabs.children] == ["Table", "Distribution"]
+
+    def test_table_tabs_keep_the_export_grid_ids(self):
+        from pages.portfolio.portfolio import (
+            get_forecast_survival_statistics_section,
+            get_forecast_wealth_statistics_section,
+        )
+
+        pf = _pf_with_mc_stats()
+        survival = get_forecast_survival_statistics_section(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf)
+        wealth = get_forecast_wealth_statistics_section(pf)
+
+        assert isinstance(_section_grid(survival), dag.AgGrid)
+        assert _section_grid(survival).id == "pf-survival-statistics-grid"
+        assert _section_grid(wealth).id == "pf-wealth-statistics-grid"
+
+    def test_survival_histogram_plots_the_offset_series(self):
+        # The chart must show the same series the table is computed from:
+        # MC survival periods shifted by the backtest survival period.
+        from pages.portfolio.portfolio import get_forecast_survival_statistics_section
+
+        pf = _pf_with_mc_stats()
+        pf.dcf.survival_period_hist.return_value = 25.0
+        result = get_forecast_survival_statistics_section(
+            pd.DataFrame({"x": [1]}), pd.DataFrame({"y": [1]}), pf
+        )
+
+        figure = _section_graph(result).figure
+        assert len(figure.data) == 1
+        trace = figure.data[0]
+        assert trace.type == "histogram"
+        assert trace.histnorm == "probability"
+        assert list(trace.x) == [45.0, 50.0, 55.0]
+
+    def test_wealth_histogram_overlays_fv_and_pv(self):
+        from pages.portfolio.portfolio import get_forecast_wealth_statistics_section
+
+        result = get_forecast_wealth_statistics_section(_pf_with_mc_stats())
+
+        figure = _section_graph(result).figure
+        assert figure.layout.barmode == "overlay"
+        assert [trace.name for trace in figure.data] == ["FV", "PV"]
+        assert list(figure.data[0].x) == [200.0, 250.0]
+        assert list(figure.data[1].x) == [100.0, 125.0]
+
+    def test_wealth_series_exclude_negative_balances(self):
+        # A depleted portfolio balance is 0, never negative: both FV and PV
+        # series must be fetched with include_negative_values=False (okama
+        # replaces negatives with 0) — same flag the main MC chart uses.
+        from pages.portfolio.portfolio import get_forecast_wealth_statistics_section
+
+        pf = _pf_with_mc_stats()
+        get_forecast_wealth_statistics_section(pf)
+
+        calls = pf.dcf.monte_carlo_wealth.call_args_list
+        assert calls, "monte_carlo_wealth was never called"
+        assert all(call.kwargs.get("include_negative_values") is False for call in calls)
+
+    def test_constant_survival_series_still_builds_a_figure(self):
+        # All paths surviving the same period: bin width must not divide by zero.
+        from pages.portfolio.portfolio import get_forecast_survival_statistics_section
+
+        pf = _pf_with_mc_stats()
+        pf.dcf.monte_carlo_survival_period.return_value = pd.Series([25.0, 25.0, 25.0])
+        result = get_forecast_survival_statistics_section(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf)
+
+        figure = _section_graph(result).figure
+        assert list(figure.data[0].x) == [25.0, 25.0, 25.0]
+
+    def test_empty_forecast_renders_table_only(self):
+        # Backtest-only branch has no MC series — nothing to plot, no tabs.
+        from pages.portfolio.portfolio import get_forecast_survival_statistics_section
+
+        pf = _pf_with_mc_stats()
+        result = get_forecast_survival_statistics_section(pd.DataFrame(), pd.DataFrame({"y": [1]}), pf)
+
+        assert isinstance(result.children[1], dag.AgGrid)
+
+    def test_small_screen_routes_charts_through_mobile_config(self):
+        from pages.portfolio.portfolio import (
+            get_forecast_survival_statistics_section,
+            get_forecast_wealth_statistics_section,
+        )
+
+        pf = _pf_with_mc_stats()
+        screen = {"in_width": 375}
+        survival = get_forecast_survival_statistics_section(
+            pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True, screen=screen
+        )
+        wealth = get_forecast_wealth_statistics_section(pf, compact=True, screen=screen)
+
+        assert _section_graph(survival).config["displayModeBar"] is False
+        assert _section_graph(wealth).config["displayModeBar"] is False
 
     def test_inner_builds_compact_tables_on_small_screen(self, patched_pf_inner):
         from pages.portfolio.portfolio import _update_graf_portfolio_inner
@@ -245,7 +377,9 @@ class TestForecastStatisticsTablesCompact:
         patched_pf_inner.dcf.monte_carlo_survival_period.return_value = pd.Series([20.0, 25.0, 30.0])
         wealth_fv = pd.DataFrame({0: [100.0, 200.0], 1: [150.0, 250.0]})
         patched_pf_inner.dcf.monte_carlo_wealth = MagicMock(
-            side_effect=lambda discounting="fv": wealth_fv if discounting == "fv" else wealth_fv / 2
+            side_effect=lambda discounting="fv", include_negative_values=True: (
+                wealth_fv if discounting == "fv" else wealth_fv / 2
+            )
         )
         args = _default_args()
         args["screen"] = {"in_width": 375}
@@ -256,8 +390,8 @@ class TestForecastStatisticsTablesCompact:
             return_value=(go.Figure(), pd.DataFrame(), non_empty_forecast, pd.DataFrame()),
         ):
             result = _update_graf_portfolio_inner(**args)
-        survival_grid = result[3].children[1]
-        wealth_grid = result[4].children[1]
+        survival_grid = _section_grid(result[3])
+        wealth_grid = _section_grid(result[4])
         assert len(survival_grid.rowData) == 11  # 7 percentiles + Min/Max/Mean/Std
         assert len(wealth_grid.rowData) == 12  # + Discount rate
 

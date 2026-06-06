@@ -40,8 +40,8 @@ import okama as ok
 from common import settings
 from common.ef_grid import predicted_grid_points, resolve_grid_step
 from pages.portfolio.portfolio import (
-    get_forecast_survival_statistics_table,
-    get_forecast_wealth_statistics_table,
+    get_forecast_survival_statistics_section,
+    get_forecast_wealth_statistics_section,
     get_pf_figure,
 )
 
@@ -151,10 +151,10 @@ def bench_pf_combo(pf: ok.Portfolio, n: int, years: int, dist: str, label: str) 
 
     # Phase 3+4: MC statistics tables (reuse the cached MC frame, as in prod)
     t0 = now()
-    get_forecast_survival_statistics_table(df_forecast, df_backtest, pf, compact=False)
+    get_forecast_survival_statistics_section(df_forecast, df_backtest, pf, compact=False)
     t_surv = now() - t0
     t0 = now()
-    get_forecast_wealth_statistics_table(pf, compact=False)
+    get_forecast_wealth_statistics_section(pf, compact=False)
     t_wtbl = now() - t0
 
     # Phase 5: figure JSON serialization (proxy for Dash response encoding)
