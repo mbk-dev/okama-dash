@@ -302,8 +302,7 @@ class TestGetPfFigureAnnualReturn:
             cf_strategy="indexation",
         )
         pf.annual_return_ts.assert_called_once_with(return_type="cagr")
-        annotation_texts = [a.text for a in fig.layout.annotations]
-        assert any("CAGR" in t for t in annotation_texts)
+        assert "CAGR" in fig.layout.title.subtitle.text
 
 
 class TestGetPfFigureWealthAnnotations:

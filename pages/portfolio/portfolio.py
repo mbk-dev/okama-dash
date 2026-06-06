@@ -28,7 +28,7 @@ from common.chart_helpers import (
     add_crisis_rectangles,
     add_last_value_annotations,
     add_sharpe_ratio_row,
-    add_return_type_annotation,
+    add_return_type_subtitle,
     format_points,
 )
 from common.html_elements.submit_spinner import submit_spinner_running
@@ -1454,7 +1454,7 @@ def get_pf_figure(
         fig = px.bar(df, x=ind, y=df.columns, barmode="group", title="Portfolio Annual Return", height=800)
         fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
         fig.update_layout(xaxis_title=None, legend_title="Portfolio")
-        add_return_type_annotation(fig)
+        add_return_type_subtitle(fig)
         return fig, pd.DataFrame(), pd.DataFrame(), df
 
     titles = {
