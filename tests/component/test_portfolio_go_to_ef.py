@@ -9,7 +9,13 @@ class TestGoToEfLink:
         from pages.portfolio.cards_portfolio.portfolio_controls import update_go_to_ef_link
 
         link = update_go_to_ef_link(
-            ["AAPL.US", "MSFT.US"], [60, 40], "EUR", "2015-01", "2020-12", "year", "MyPF",
+            ["AAPL.US", "MSFT.US"],
+            [60, 40],
+            "EUR",
+            "2015-01",
+            "2020-12",
+            "year",
+            "MyPF",
         )
 
         assert link.startswith("/?tickers=AAPL.US,MSFT.US")
@@ -25,7 +31,13 @@ class TestGoToEfLink:
 
         today_str = pd.Timestamp.today().strftime("%Y-%m")
         link = update_go_to_ef_link(
-            ["AAPL.US", "MSFT.US"], [50, 50], "USD", "2000-01", today_str, "month", "PORTFOLIO",
+            ["AAPL.US", "MSFT.US"],
+            [50, 50],
+            "USD",
+            "2000-01",
+            today_str,
+            "month",
+            "PORTFOLIO",
         )
 
         assert "ccy=" not in link
@@ -39,7 +51,13 @@ class TestGoToEfLink:
         from pages.portfolio.cards_portfolio.portfolio_controls import update_go_to_ef_link
 
         link = update_go_to_ef_link(
-            ["AAPL.US", "MSFT.US", None], [60, 40, None], "EUR", "2015-01", "2020-12", "year", None,
+            ["AAPL.US", "MSFT.US", None],
+            [60, 40, None],
+            "EUR",
+            "2015-01",
+            "2020-12",
+            "year",
+            None,
         )
 
         assert "tickers=AAPL.US,MSFT.US" in link
@@ -53,7 +71,10 @@ class TestGoToEfGating:
         )
 
         *_, go_disabled = disable_submit_add_link_buttons(
-            ["AAPL.US", "MSFT.US"], [60, 40], 12, True,
+            ["AAPL.US", "MSFT.US"],
+            [60, 40],
+            12,
+            True,
         )
         assert go_disabled is False
 
@@ -71,6 +92,9 @@ class TestGoToEfGating:
         )
 
         *_, go_disabled = disable_submit_add_link_buttons(
-            ["AAPL.US", "MSFT.US"], [60, 60], 12, True,
+            ["AAPL.US", "MSFT.US"],
+            [60, 60],
+            12,
+            True,
         )
         assert go_disabled is True

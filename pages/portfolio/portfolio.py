@@ -85,9 +85,13 @@ def _portfolio_is_complete(assets, weights) -> bool:
 
 def build_distribution_parameters(
     distribution: str,
-    mu, sigma,
-    shape, scale_ln,
-    df, loc_t, scale_t,
+    mu,
+    sigma,
+    shape,
+    scale_ln,
+    df,
+    loc_t,
+    scale_t,
 ) -> tuple | None:
     """Build okama Monte Carlo ``distribution_parameters`` from raw form values.
 
@@ -96,6 +100,7 @@ def build_distribution_parameters(
     here regardless of the form. Returns ``None`` when the user supplied no value
     (let okama estimate everything).
     """
+
     def _f(x):
         return float(x) if x not in (None, "") else None
 
@@ -127,17 +132,26 @@ def _build_ror_portfolio(assets, weights, ccy, first_date, last_date, rebal_peri
     def _construct():
         rebal_strategy = ok.Rebalance(period=rebal_period, abs_deviation=abs_dev_val, rel_deviation=rel_dev_val)
         return ok.Portfolio(
-            assets=assets, weights=weights, first_date=first_date, last_date=last_date,
-            ccy=ccy, rebalancing_strategy=rebal_strategy,
+            assets=assets,
+            weights=weights,
+            first_date=first_date,
+            last_date=last_date,
+            ccy=ccy,
+            rebalancing_strategy=rebal_strategy,
         )
 
     pf_object, _ = get_or_create(
         obj_type="portfolio",
         constructor_fn=_construct,
         cache_key_params={
-            "symbols": assets, "weights": weights, "ccy": ccy,
-            "first_date": first_date, "last_date": last_date,
-            "rebal": rebal_period, "abs_dev": abs_dev, "rel_dev": rel_dev,
+            "symbols": assets,
+            "weights": weights,
+            "ccy": ccy,
+            "first_date": first_date,
+            "last_date": last_date,
+            "rebal": rebal_period,
+            "abs_dev": abs_dev,
+            "rel_dev": rel_dev,
             "purpose": "mc_params",
         },
         ttl_seconds=TTL_PORTFOLIO,
@@ -397,29 +411,67 @@ def update_graf_portfolio(
         patched_fig["layout"]["yaxis"]["type"] = "log" if log_on else "linear"
         return (
             patched_fig,
-            dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update,
-            dash.no_update, dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
         )
 
     distribution_parameters_monte_carlo = build_distribution_parameters(
         distribution_monte_carlo,
-        mc_norm_mu, mc_norm_sigma,
-        mc_lognorm_shape, mc_lognorm_scale,
-        mc_t_df, mc_t_loc, mc_t_scale,
+        mc_norm_mu,
+        mc_norm_sigma,
+        mc_lognorm_shape,
+        mc_lognorm_scale,
+        mc_t_df,
+        mc_t_loc,
+        mc_t_scale,
     )
 
     try:
         result = _update_graf_portfolio_inner(
-            screen, log_on, assets, weights, ccy, rebalancing_period,
-            rebal_abs_deviation, rebal_rel_deviation, fd_value, ld_value,
-            initial_amount, discount_rate, symbol, cf_strategy, cf_frequency,
-            cf_amount, cf_indexation, cf_percentage,
-            vds_percentage, vds_min_withdrawal, vds_max_withdrawal, vds_adjust_minmax,
-            vds_floor, vds_ceiling, vds_adjust_fc, vds_indexation,
-            cwd_amount, cwd_indexation, cwd_thresholds, cwd_reductions,
-            ts_dates, ts_amounts,
-            plot_type, inflation_on, rolling_window,
-            n_monte_carlo, years_monte_carlo, distribution_monte_carlo, show_backtest,
+            screen,
+            log_on,
+            assets,
+            weights,
+            ccy,
+            rebalancing_period,
+            rebal_abs_deviation,
+            rebal_rel_deviation,
+            fd_value,
+            ld_value,
+            initial_amount,
+            discount_rate,
+            symbol,
+            cf_strategy,
+            cf_frequency,
+            cf_amount,
+            cf_indexation,
+            cf_percentage,
+            vds_percentage,
+            vds_min_withdrawal,
+            vds_max_withdrawal,
+            vds_adjust_minmax,
+            vds_floor,
+            vds_ceiling,
+            vds_adjust_fc,
+            vds_indexation,
+            cwd_amount,
+            cwd_indexation,
+            cwd_thresholds,
+            cwd_reductions,
+            ts_dates,
+            ts_amounts,
+            plot_type,
+            inflation_on,
+            rolling_window,
+            n_monte_carlo,
+            years_monte_carlo,
+            distribution_monte_carlo,
+            show_backtest,
             distribution_parameters_monte_carlo=distribution_parameters_monte_carlo,
         )
         return (*result, False, "")
@@ -427,8 +479,14 @@ def update_graf_portfolio(
         logging.exception("Callback error")
         empty_fig = go.Figure()
         return (
-            empty_fig, {}, dag.AgGrid(), dag.AgGrid(), dag.AgGrid(), None,
-            True, f"Error: {e}",
+            empty_fig,
+            {},
+            dag.AgGrid(),
+            dag.AgGrid(),
+            dag.AgGrid(),
+            None,
+            True,
+            f"Error: {e}",
         )
 
 
@@ -459,6 +517,7 @@ def show_graf_and_statistics_rows(n_clicks, style):
 def export_pf_statistics_xlsx(n_clicks, row_data):
     """Trigger xlsx export for portfolio statistics grid."""
     from common.html_elements.grid_export import percent_column_formats, rowdata_to_xlsx_download
+
     return rowdata_to_xlsx_download(
         n_clicks, row_data, "portfolio_statistics.xlsx", column_formats=percent_column_formats(row_data)
     )
@@ -473,6 +532,7 @@ def export_pf_statistics_xlsx(n_clicks, row_data):
 def export_pf_survival_statistics_xlsx(n_clicks, row_data):
     """Trigger xlsx export for Monte Carlo survival statistics grid."""
     from common.html_elements.grid_export import rowdata_to_xlsx_download
+
     # Grid fields: 1/3 = labels, 2/4 = survival periods in years (desktop);
     # the compact mobile grid only has 1/2, extra keys are simply unused.
     return rowdata_to_xlsx_download(
@@ -489,6 +549,7 @@ def export_pf_survival_statistics_xlsx(n_clicks, row_data):
 def export_pf_wealth_statistics_xlsx(n_clicks, row_data):
     """Trigger xlsx export for Monte Carlo wealth statistics grid."""
     from common.html_elements.grid_export import rowdata_to_xlsx_download
+
     # Grid fields: 1/4 = labels, 2/3/5/6 = FV/PV wealth amounts (desktop);
     # the compact mobile grid only has 1/2/3, extra keys are simply unused.
     # The "Discount rate" row carries a preformatted string — number formats
@@ -552,7 +613,16 @@ def _format_params_output_by_distribution(distribution, params):
     prevent_initial_call=True,
 )
 def auto_estimate_distribution_parameters(
-    assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, distribution, var_level,
+    assets,
+    weights,
+    ccy,
+    fd,
+    ld,
+    rebal,
+    abs_dev,
+    rel_dev,
+    distribution,
+    var_level,
 ):
     """Recompute Monte Carlo distribution parameters in the background.
 
@@ -575,9 +645,7 @@ def auto_estimate_distribution_parameters(
         if distribution != "t":
             return no_op
         try:
-            df = _recompute_df_for_var_level(
-                assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, var_level
-            )
+            df = _recompute_df_for_var_level(assets, weights, ccy, fd, ld, rebal, abs_dev, rel_dev, var_level)
         except Exception as e:
             logging.exception("df recompute failed")
             return nu, nu, nu, nu, nu, nu, nu, f"Could not recompute df: {e}"
@@ -593,16 +661,45 @@ def auto_estimate_distribution_parameters(
 
 
 def _update_graf_portfolio_inner(
-    screen, log_on, assets, weights, ccy, rebalancing_period,
-    rebal_abs_deviation, rebal_rel_deviation, fd_value, ld_value,
-    initial_amount, discount_rate, symbol, cf_strategy, cf_frequency,
-    cf_amount, cf_indexation, cf_percentage,
-    vds_percentage, vds_min_withdrawal, vds_max_withdrawal, vds_adjust_minmax,
-    vds_floor, vds_ceiling, vds_adjust_fc, vds_indexation,
-    cwd_amount, cwd_indexation, cwd_thresholds, cwd_reductions,
-    ts_dates, ts_amounts,
-    plot_type, inflation_on, rolling_window,
-    n_monte_carlo, years_monte_carlo, distribution_monte_carlo, show_backtest,
+    screen,
+    log_on,
+    assets,
+    weights,
+    ccy,
+    rebalancing_period,
+    rebal_abs_deviation,
+    rebal_rel_deviation,
+    fd_value,
+    ld_value,
+    initial_amount,
+    discount_rate,
+    symbol,
+    cf_strategy,
+    cf_frequency,
+    cf_amount,
+    cf_indexation,
+    cf_percentage,
+    vds_percentage,
+    vds_min_withdrawal,
+    vds_max_withdrawal,
+    vds_adjust_minmax,
+    vds_floor,
+    vds_ceiling,
+    vds_adjust_fc,
+    vds_indexation,
+    cwd_amount,
+    cwd_indexation,
+    cwd_thresholds,
+    cwd_reductions,
+    ts_dates,
+    ts_amounts,
+    plot_type,
+    inflation_on,
+    rolling_window,
+    n_monte_carlo,
+    years_monte_carlo,
+    distribution_monte_carlo,
+    show_backtest,
     distribution_parameters_monte_carlo=None,
 ):
     assets = [i for i in assets if i is not None]
@@ -634,6 +731,7 @@ def _update_graf_portfolio_inner(
         ts_dates=tuple(ts_dates) if ts_dates else None,
         ts_amounts=tuple(ts_amounts) if ts_amounts else None,
     )
+
     def _construct_portfolio():
         rebal_strategy = ok.Rebalance(
             period=rebalancing_period,
@@ -742,9 +840,7 @@ def _update_graf_portfolio_inner(
             pf_object,
             compact=compact_tables,
         )
-        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(
-            pf_object, compact=compact_tables
-        )
+        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(pf_object, compact=compact_tables)
     else:
         forecast_survival_statistics_datatable = dag.AgGrid()
         forecast_wealth_statistics_datatable = dag.AgGrid()
@@ -838,8 +934,17 @@ def _build_time_series_strategy(pf_object, initial_amount):
 
 
 def _build_vds_strategy(
-    pf_object, initial_amount, vds_percentage, vds_min_withdrawal, vds_max_withdrawal,
-    vds_adjust_minmax, vds_floor, vds_ceiling, vds_adjust_fc, vds_indexation, has_inflation
+    pf_object,
+    initial_amount,
+    vds_percentage,
+    vds_min_withdrawal,
+    vds_max_withdrawal,
+    vds_adjust_minmax,
+    vds_floor,
+    vds_ceiling,
+    vds_adjust_fc,
+    vds_indexation,
+    has_inflation,
 ):
     indexation = _resolve_indexation(vds_indexation, has_inflation)
     min_max = None
@@ -861,8 +966,7 @@ def _build_vds_strategy(
 
 
 def _build_cwd_strategy(
-    pf_object, initial_amount, frequency, cwd_amount, cwd_indexation,
-    cwd_thresholds, cwd_reductions, has_inflation
+    pf_object, initial_amount, frequency, cwd_amount, cwd_indexation, cwd_thresholds, cwd_reductions, has_inflation
 ):
     error = validate_cwd_thresholds(cwd_thresholds, cwd_reductions)
     if error:
@@ -923,13 +1027,28 @@ def _build_cashflow_strategy(
         strategy = _build_time_series_strategy(pf_object, initial_amount)
     elif strategy_type == "vds":
         strategy = _build_vds_strategy(
-            pf_object, initial_amount, vds_percentage, vds_min_withdrawal, vds_max_withdrawal,
-            vds_adjust_minmax, vds_floor, vds_ceiling, vds_adjust_fc, vds_indexation, has_inflation
+            pf_object,
+            initial_amount,
+            vds_percentage,
+            vds_min_withdrawal,
+            vds_max_withdrawal,
+            vds_adjust_minmax,
+            vds_floor,
+            vds_ceiling,
+            vds_adjust_fc,
+            vds_indexation,
+            has_inflation,
         )
     elif strategy_type == "cwd":
         strategy = _build_cwd_strategy(
-            pf_object, initial_amount, frequency, cwd_amount, cwd_indexation,
-            cwd_thresholds, cwd_reductions, has_inflation
+            pf_object,
+            initial_amount,
+            frequency,
+            cwd_amount,
+            cwd_indexation,
+            cwd_thresholds,
+            cwd_reductions,
+            has_inflation,
         )
     else:
         strategy = _build_indexation_strategy(
@@ -1036,11 +1155,15 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
         )
 
         from common.html_elements.grid_export import create_xlsx_export_button
+
         # The matching dcc.Download lives statically in pf_statistics_table.py
-        return html.Div([
-            create_xlsx_export_button("pf-survival-statistics-export-btn"),
-            grid,
-        ], className="vstack gap-2")
+        return html.Div(
+            [
+                create_xlsx_export_button("pf-survival-statistics-export-btn"),
+                grid,
+            ],
+            className="vstack gap-2",
+        )
     # Empty forecast branch (backtest-only): no export button (old table had none)
     backtest_survival_period = pf_object.dcf.survival_period_hist()
     table_list = [{"1": "Backtest survival period", "2": backtest_survival_period}]
@@ -1099,9 +1222,7 @@ def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
             ]
         else:
             rows = zip_longest(percentiles, moments, fillvalue=("-", None, None))
-            table_list = [
-                {"1": p[0], "2": p[1], "3": p[2], "4": m[0], "5": m[1], "6": m[2]} for p, m in rows
-            ]
+            table_list = [{"1": p[0], "2": p[1], "3": p[2], "4": m[0], "5": m[1], "6": m[2]} for p, m in rows]
             column_defs = [
                 {"field": "1", "headerName": ""},
                 {"field": "2", **fv_column},
@@ -1121,11 +1242,15 @@ def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
         )
 
         from common.html_elements.grid_export import create_xlsx_export_button
+
         # The matching dcc.Download lives statically in pf_statistics_table.py
-        return html.Div([
-            create_xlsx_export_button("pf-wealth-statistics-export-btn"),
-            grid,
-        ], className="vstack gap-2")
+        return html.Div(
+            [
+                create_xlsx_export_button("pf-wealth-statistics-export-btn"),
+                grid,
+            ],
+            className="vstack gap-2",
+        )
     # Empty wealth branch: no export button (old table had none)
     table_list = [{"1": "Wealth", "2": 0}]
     guarded_decimal_formatter = {"function": "formatDecimalGuarded(params.value)"}
@@ -1155,8 +1280,7 @@ def get_pf_statistics_table(al_object):
     # page convention.
     guarded_percent_formatter = {"function": "formatPercentGuarded(params.value)"}
     column_defs = [
-        {"field": col, "headerName": col, "valueFormatter": guarded_percent_formatter}
-        for col in statistics_df.columns
+        {"field": col, "headerName": col, "valueFormatter": guarded_percent_formatter} for col in statistics_df.columns
     ]
 
     return dag.AgGrid(
@@ -1170,7 +1294,6 @@ def get_pf_statistics_table(al_object):
         dashGridOptions={"domLayout": "autoHeight", "suppressFieldDotNotation": True},
         style={"height": None},
     )
-
 
 
 def _nullify_after_first_zero(df: pd.DataFrame, column: str) -> None:
@@ -1354,7 +1477,12 @@ def get_pf_figure(
     return_series = None
     if plot_type == "wealth":
         df, df_backtest, df_forecast, return_series = _get_wealth_data(
-            pf_object, has_cashflow, n_monte_carlo, show_backtest_bool, distribution_monte_carlo, years_monte_carlo,
+            pf_object,
+            has_cashflow,
+            n_monte_carlo,
+            show_backtest_bool,
+            distribution_monte_carlo,
+            years_monte_carlo,
             distribution_parameters_monte_carlo,
         )
     elif plot_type == "cumulative_return":
@@ -1368,8 +1496,14 @@ def get_pf_figure(
         return_series = df.iloc[-1, :]
 
     fig = _build_timeseries_figure(
-        pf_object, df, plot_type, titles, inflation_on, log_scale, condition_monte_carlo, has_cashflow, return_series,
+        pf_object,
+        df,
+        plot_type,
+        titles,
+        inflation_on,
+        log_scale,
+        condition_monte_carlo,
+        has_cashflow,
+        return_series,
     )
     return fig, df_backtest, df_forecast, df
-
-

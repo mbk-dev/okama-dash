@@ -3,11 +3,8 @@ from dash import html, dcc
 
 
 def create_copy_link_div(
-        location_id: str,
-        hidden_div_with_url_id: str,
-        button_id: str,
-        card_name: str,
-        style: dict | None = None):
+    location_id: str, hidden_div_with_url_id: str, button_id: str, card_name: str, style: dict | None = None
+):
     if style is None:
         style = {"textAlign": "center"}
     div = html.Div(

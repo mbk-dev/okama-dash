@@ -68,13 +68,9 @@ class TestCurrencyListCaching:
         common.cache.init_app(app, config={"CACHE_TYPE": "SimpleCache"})
         with app.app_context():
             monkeypatch.setenv("TESTING", "1")
-            monkeypatch.setattr(
-                "okama.symbols_in_namespace", lambda ns, *a, **k: _infl_frame(["USD"])
-            )
+            monkeypatch.setattr("okama.symbols_in_namespace", lambda ns, *a, **k: _infl_frame(["USD"]))
             assert inflation_mod.get_currency_list() == ["USD"]
 
             monkeypatch.delenv("TESTING", raising=False)
-            monkeypatch.setattr(
-                "okama.symbols_in_namespace", lambda ns, *a, **k: _infl_frame(["USD", "RUB"])
-            )
+            monkeypatch.setattr("okama.symbols_in_namespace", lambda ns, *a, **k: _infl_frame(["USD", "RUB"]))
             assert inflation_mod.get_currency_list() == ["USD", "RUB"]

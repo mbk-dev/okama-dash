@@ -29,8 +29,7 @@ dash.register_page(
     title="Compare with benchmark : okama",
     name="Compare with benchmark",
     description=(
-        "Okama.io widget to compare assets with benchmark: tracking difference, "
-        "tracking error, correlation, beta"
+        "Okama.io widget to compare assets with benchmark: tracking difference, tracking error, correlation, beta"
     ),
 )
 
@@ -127,10 +126,7 @@ def update_graf_benchmark(
 
 
 def get_benchmark_figure(
-        al_object: ok.AssetList,
-        plot_type: str,
-        expanding_rolling: str,
-        rolling_window: int
+    al_object: ok.AssetList, plot_type: str, expanding_rolling: str, rolling_window: int
 ) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame]:
     rolling_window = rolling_window * settings.MONTHS_PER_YEAR if expanding_rolling == "rolling" else None
     titles = {

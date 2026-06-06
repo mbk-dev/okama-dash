@@ -193,9 +193,14 @@ def card_controls(
                                         ),
                                     ],
                                     active_item=_accordion_active_items(
-                                        abs_dev=abs_dev, rel_dev=rel_dev,
-                                        cf_strategy=cf_strategy, cf_amount=cf_amount, cf_pct=cf_pct,
-                                        vds_pct=vds_pct, cwd_amount=cwd_amount, cf_ts=cf_ts,
+                                        abs_dev=abs_dev,
+                                        rel_dev=rel_dev,
+                                        cf_strategy=cf_strategy,
+                                        cf_amount=cf_amount,
+                                        cf_pct=cf_pct,
+                                        vds_pct=vds_pct,
+                                        cwd_amount=cwd_amount,
+                                        cf_ts=cf_ts,
                                     ),
                                     flush=True,
                                     class_name="p-0",
@@ -348,9 +353,7 @@ def card_controls(
                             ]
                         ),
                         dbc.Row(
-                            html.H6(children="Monte Carlo simulation"),
-                            className="p-1",
-                            id="pf-monte-carlo-header-row"
+                            html.H6(children="Monte Carlo simulation"), className="p-1", id="pf-monte-carlo-header-row"
                         ),
                         dbc.Row(
                             [
@@ -385,7 +388,7 @@ def card_controls(
                                 ),
                             ],
                             class_name="pt-2",
-                            id="pf-monte-carlo-number-row"
+                            id="pf-monte-carlo-number-row",
                         ),
                         dbc.Row(
                             [
@@ -421,7 +424,7 @@ def card_controls(
                                 ),
                             ],
                             class_name="pt-2",
-                            id="pf-monte-carlo-period-row"
+                            id="pf-monte-carlo-period-row",
                         ),
                         dbc.Row(
                             [
@@ -458,7 +461,7 @@ def card_controls(
                                 ),
                             ],
                             class_name="pt-2",
-                            id="pf-monte-carlo-distribution-row"
+                            id="pf-monte-carlo-distribution-row",
                         ),
                         dbc.Row(
                             [
@@ -485,9 +488,7 @@ def card_controls(
                                         [
                                             html.Div(
                                                 [
-                                                    _mc_param_row(
-                                                        "Mean (μ)", "pf-mc-norm-mu", value=None
-                                                    ),
+                                                    _mc_param_row("Mean (μ)", "pf-mc-norm-mu", value=None),
                                                     _mc_param_row(
                                                         "Std deviation (σ)",
                                                         "pf-mc-norm-sigma",
@@ -501,8 +502,11 @@ def card_controls(
                                                 [
                                                     _mc_param_row("Shape", "pf-mc-lognorm-shape", value=None),
                                                     _mc_param_row(
-                                                        "Location (loc)", "pf-mc-lognorm-loc",
-                                                        value=-1, disabled=True, help_text="fixed at -1 by okama",
+                                                        "Location (loc)",
+                                                        "pf-mc-lognorm-loc",
+                                                        value=-1,
+                                                        disabled=True,
+                                                        help_text="fixed at -1 by okama",
                                                     ),
                                                     _mc_param_row("Scale", "pf-mc-lognorm-scale", value=None),
                                                 ],
@@ -522,9 +526,7 @@ def card_controls(
                                                                         value=None,
                                                                         id="pf-mc-t-df",
                                                                     ),
-                                                                    dbc.FormFeedback(
-                                                                        "df must be > 2", type="invalid"
-                                                                    ),
+                                                                    dbc.FormFeedback("df must be > 2", type="invalid"),
                                                                 ],
                                                                 width=6,
                                                             ),
@@ -550,7 +552,9 @@ def card_controls(
                                                             ),
                                                             dbc.Col(
                                                                 dbc.Input(
-                                                                    type="number", min=1, max=99,
+                                                                    type="number",
+                                                                    min=1,
+                                                                    max=99,
                                                                     value=None,
                                                                     placeholder="e.g. 5",
                                                                     id="pf-mc-t-var-level",
@@ -608,7 +612,7 @@ def card_controls(
                                 ),
                             ],
                             class_name="pt-2",
-                            id="pf-monte-carlo-backtest-row"
+                            id="pf-monte-carlo-backtest-row",
                         ),
                     ]
                 ),
@@ -636,7 +640,7 @@ def card_controls(
                 ),
                 dcc.Store(id="pf_tickers_url", data=tickers_list),
                 dcc.Store(id="pf_weights_url", data=weights_list),
-                dcc.Store(id="pf_saved_portfolios_file_names", storage_type='session'),
+                dcc.Store(id="pf_saved_portfolios_file_names", storage_type="session"),
             ]
         ),
         class_name="mb-3",
@@ -821,9 +825,7 @@ def update_link_pf(
     cwd_tr = None
     if cwd_thresholds and cwd_reductions:
         pairs = [
-            f"{t}:{r}"
-            for t, r in zip(cwd_thresholds, cwd_reductions, strict=True)
-            if t is not None and r is not None
+            f"{t}:{r}" for t, r in zip(cwd_thresholds, cwd_reductions, strict=True) if t is not None and r is not None
         ]
         if pairs:
             cwd_tr = ",".join(pairs)
@@ -948,10 +950,7 @@ def update_rows_in_constructor(
             next_index = max((row["index"] for row in rows), default=-1) + 1
             rows.append({"index": next_index, "symbol": None, "weight": None})
         elif isinstance(trigger, dict) and trigger.get("type") == "pf-dynamic-remove":
-            rows = [
-                row for row in rows
-                if row["index"] != trigger["index"]
-            ]
+            rows = [row for row in rows if row["index"] != trigger["index"]]
             if not rows:
                 next_index = max((row_id["index"] for row_id in dropdown_ids), default=-1) + 1
                 rows = [{"index": next_index, "symbol": None, "weight": None}]

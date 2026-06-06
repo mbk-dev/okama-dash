@@ -16,11 +16,7 @@ def _walk(component):
 
 
 def _by_class(component, css_class):
-    return [
-        node
-        for node in _walk(component)
-        if css_class in (getattr(node, "className", "") or "").split()
-    ]
+    return [node for node in _walk(component) if css_class in (getattr(node, "className", "") or "").split()]
 
 
 def _texts(component):

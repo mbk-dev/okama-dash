@@ -61,9 +61,7 @@ def test_assets_names_and_info_grids_sorting_disabled():
     from common.html_elements.info_ag_grid import get_assets_names, get_info
 
     al_object = PicklableAssetList(["AAPL.US", "MSFT.US"])
-    _assert_sorting_disabled(
-        [get_assets_names(al_object), get_info(al_object)], expected_count=2
-    )
+    _assert_sorting_disabled([get_assets_names(al_object), get_info(al_object)], expected_count=2)
 
 
 def test_compare_statistics_grid_sorting_disabled():
@@ -106,9 +104,7 @@ def test_survival_statistics_grids_sorting_disabled():
 
     pf = _pf_with_mc_stats()
     desktop = get_forecast_survival_statistics_table(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf)
-    compact = get_forecast_survival_statistics_table(
-        pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True
-    )
+    compact = get_forecast_survival_statistics_table(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True)
     _assert_sorting_disabled(_find_grids(desktop) + _find_grids(compact), expected_count=2)
 
 

@@ -14,22 +14,45 @@ PF_MODULE = "pages.portfolio.portfolio"
 
 def _default_args():
     return {
-        "screen": None, "log_on": False,
-        "assets": ["AAPL.US", "MSFT.US"], "weights": [50, 50],
-        "ccy": "USD", "rebalancing_period": "month",
-        "rebal_abs_deviation": None, "rebal_rel_deviation": None,
-        "fd_value": "2020-01", "ld_value": "2024-12",
-        "initial_amount": 1000, "discount_rate": 0, "symbol": "TestPF",
-        "cf_strategy": "indexation", "cf_frequency": "month",
-        "cf_amount": 0, "cf_indexation": 0, "cf_percentage": 0,
-        "vds_percentage": 0, "vds_min_withdrawal": 0, "vds_max_withdrawal": 0,
-        "vds_adjust_minmax": True, "vds_floor": 0, "vds_ceiling": 0,
-        "vds_adjust_fc": False, "vds_indexation": 0,
-        "cwd_amount": 0, "cwd_indexation": 0, "cwd_thresholds": [], "cwd_reductions": [],
-        "ts_dates": [], "ts_amounts": [],
-        "plot_type": "wealth", "inflation_on": False, "rolling_window": 2,
-        "n_monte_carlo": 0, "years_monte_carlo": 0,
-        "distribution_monte_carlo": "norm", "show_backtest": "On",
+        "screen": None,
+        "log_on": False,
+        "assets": ["AAPL.US", "MSFT.US"],
+        "weights": [50, 50],
+        "ccy": "USD",
+        "rebalancing_period": "month",
+        "rebal_abs_deviation": None,
+        "rebal_rel_deviation": None,
+        "fd_value": "2020-01",
+        "ld_value": "2024-12",
+        "initial_amount": 1000,
+        "discount_rate": 0,
+        "symbol": "TestPF",
+        "cf_strategy": "indexation",
+        "cf_frequency": "month",
+        "cf_amount": 0,
+        "cf_indexation": 0,
+        "cf_percentage": 0,
+        "vds_percentage": 0,
+        "vds_min_withdrawal": 0,
+        "vds_max_withdrawal": 0,
+        "vds_adjust_minmax": True,
+        "vds_floor": 0,
+        "vds_ceiling": 0,
+        "vds_adjust_fc": False,
+        "vds_indexation": 0,
+        "cwd_amount": 0,
+        "cwd_indexation": 0,
+        "cwd_thresholds": [],
+        "cwd_reductions": [],
+        "ts_dates": [],
+        "ts_amounts": [],
+        "plot_type": "wealth",
+        "inflation_on": False,
+        "rolling_window": 2,
+        "n_monte_carlo": 0,
+        "years_monte_carlo": 0,
+        "distribution_monte_carlo": "norm",
+        "show_backtest": "On",
     }
 
 
@@ -152,8 +175,13 @@ class TestForecastStatisticsTablesCompact:
     # On small screens (in_width < 800) the two-pane Survival/Wealth statistics
     # tables reflow into a single column of pairs so every cell stays readable.
     PERCENTILE_LABELS = [
-        "1st percentile", "5th percentile", "25th percentile", "50th percentile",
-        "75th percentile", "95th percentile", "99th percentile",
+        "1st percentile",
+        "5th percentile",
+        "25th percentile",
+        "50th percentile",
+        "75th percentile",
+        "95th percentile",
+        "99th percentile",
     ]
 
     @staticmethod
@@ -171,9 +199,7 @@ class TestForecastStatisticsTablesCompact:
         from pages.portfolio.portfolio import get_forecast_survival_statistics_table
 
         pf = self._pf_with_mc_stats()
-        result = get_forecast_survival_statistics_table(
-            pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True
-        )
+        result = get_forecast_survival_statistics_table(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True)
         grid = result.children[1]
         assert [row["1"] for row in grid.rowData] == self.PERCENTILE_LABELS + ["Min", "Max", "Mean", "Std"]
         assert all(set(row) == {"1", "2"} for row in grid.rowData)
@@ -242,9 +268,16 @@ class TestGetPfFigureAnnualReturn:
 
         pf = make_mock_portfolio()
         fig, df_backtest, df_forecast, df_data = get_pf_figure(
-            pf, plot_type="annual_return", inflation_on=False, rolling_window=2,
-            n_monte_carlo=0, years_monte_carlo=0, distribution_monte_carlo="norm",
-            show_backtest="no", log_scale=False, cf_strategy="indexation",
+            pf,
+            plot_type="annual_return",
+            inflation_on=False,
+            rolling_window=2,
+            n_monte_carlo=0,
+            years_monte_carlo=0,
+            distribution_monte_carlo="norm",
+            show_backtest="no",
+            log_scale=False,
+            cf_strategy="indexation",
         )
         assert isinstance(fig, go.Figure)
         assert len(fig.data) > 0
@@ -257,9 +290,16 @@ class TestGetPfFigureAnnualReturn:
 
         pf = make_mock_portfolio()
         fig, *_ = get_pf_figure(
-            pf, plot_type="annual_return", inflation_on=False, rolling_window=2,
-            n_monte_carlo=0, years_monte_carlo=0, distribution_monte_carlo="norm",
-            show_backtest="no", log_scale=False, cf_strategy="indexation",
+            pf,
+            plot_type="annual_return",
+            inflation_on=False,
+            rolling_window=2,
+            n_monte_carlo=0,
+            years_monte_carlo=0,
+            distribution_monte_carlo="norm",
+            show_backtest="no",
+            log_scale=False,
+            cf_strategy="indexation",
         )
         pf.annual_return_ts.assert_called_once_with(return_type="cagr")
         annotation_texts = [a.text for a in fig.layout.annotations]
@@ -273,9 +313,16 @@ class TestGetPfFigureWealthAnnotations:
 
         pf = make_mock_portfolio()
         fig, *_ = get_pf_figure(
-            pf, plot_type="wealth", inflation_on=False, rolling_window=2,
-            n_monte_carlo=0, years_monte_carlo=0, distribution_monte_carlo="norm",
-            show_backtest="no", log_scale=False, cf_strategy="indexation",
+            pf,
+            plot_type="wealth",
+            inflation_on=False,
+            rolling_window=2,
+            n_monte_carlo=0,
+            years_monte_carlo=0,
+            distribution_monte_carlo="norm",
+            show_backtest="no",
+            log_scale=False,
+            cf_strategy="indexation",
         )
         wealth = pf.wealth_index_with_assets
         texts = [a.text for a in fig.layout.annotations if a.text]
@@ -290,9 +337,16 @@ class TestGetPfFigureCumulativeReturn:
 
         pf = make_mock_portfolio()
         fig, df_backtest, df_forecast, df_data = get_pf_figure(
-            pf, plot_type="cumulative_return", inflation_on=False, rolling_window=2,
-            n_monte_carlo=0, years_monte_carlo=0, distribution_monte_carlo="norm",
-            show_backtest="no", log_scale=False, cf_strategy="indexation",
+            pf,
+            plot_type="cumulative_return",
+            inflation_on=False,
+            rolling_window=2,
+            n_monte_carlo=0,
+            years_monte_carlo=0,
+            distribution_monte_carlo="norm",
+            show_backtest="no",
+            log_scale=False,
+            cf_strategy="indexation",
         )
         assert fig.layout.title.text == "Portfolio Cumulative Return"
         cum = pf.get_cumulative_return(real=False)
@@ -319,10 +373,7 @@ class TestStatisticsGridDotNotation:
         from pages.portfolio.portfolio import get_pf_statistics_table
 
         grid = get_pf_statistics_table(make_mock_portfolio())
-        assert all(
-            d["valueFormatter"]["function"] == "formatPercentGuarded(params.value)"
-            for d in grid.columnDefs
-        )
+        assert all(d["valueFormatter"]["function"] == "formatPercentGuarded(params.value)" for d in grid.columnDefs)
 
 
 class TestUpdateGrafPortfolioOuter:
@@ -331,12 +382,12 @@ class TestUpdateGrafPortfolioOuter:
 
         with (
             patch(f"{PF_MODULE}.dash.ctx") as mock_ctx,
-
             patch(f"{PF_MODULE}._update_graf_portfolio_inner", side_effect=ValueError("boom")),
         ):
             mock_ctx.triggered_id = "pf-submit-button"
             result = update_graf_portfolio(
-                **_default_args(), n_clicks=1,
+                **_default_args(),
+                n_clicks=1,
             )
 
         toast_is_open = result[6]
@@ -351,12 +402,12 @@ class TestUpdateGrafPortfolioOuter:
 
         with (
             patch(f"{PF_MODULE}.dash.ctx") as mock_ctx,
-
             patch(f"{PF_MODULE}._update_graf_portfolio_inner", side_effect=ValueError("boom")),
         ):
             mock_ctx.triggered_id = "pf-submit-button"
             result = update_graf_portfolio(
-                **_default_args(), n_clicks=1,
+                **_default_args(),
+                n_clicks=1,
             )
 
         assert len(result) == 8
@@ -366,11 +417,11 @@ class TestUpdateGrafPortfolioOuter:
 
         with (
             patch(f"{PF_MODULE}.dash.ctx") as mock_ctx,
-
         ):
             mock_ctx.triggered_id = "pf-submit-button"
             result = update_graf_portfolio(
-                **_default_args(), n_clicks=1,
+                **_default_args(),
+                n_clicks=1,
             )
 
         assert result[6] is False
@@ -385,7 +436,8 @@ class TestUpdateGrafPortfolioOuter:
             args = _default_args()
             args["log_on"] = True
             result = update_graf_portfolio(
-                **args, n_clicks=1,
+                **args,
+                n_clicks=1,
             )
 
         assert result[6] is dash.no_update
@@ -445,21 +497,29 @@ class TestMonteCarloForecastZeroTermination:
 
         pf, dates = self._portfolio_with_mc_forecast()
         _, _, df_forecast, _ = _get_wealth_data(
-            pf, has_cashflow=True, n_monte_carlo=2, show_backtest_bool=False,
-            distribution_mc="norm", years_mc=5,
+            pf,
+            has_cashflow=True,
+            n_monte_carlo=2,
+            show_backtest_bool=False,
+            distribution_mc="norm",
+            years_mc=5,
         )
 
         dead = df_forecast[0]
         assert dead.loc[dates[2]] == 0  # death point kept at exactly zero
-        assert dead.loc[dates[3]:].isna().all()  # line breaks after death
+        assert dead.loc[dates[3] :].isna().all()  # line breaks after death
 
     def test_surviving_scenario_keeps_all_values(self):
         from pages.portfolio.portfolio import _get_wealth_data
 
         pf, _ = self._portfolio_with_mc_forecast()
         _, _, df_forecast, _ = _get_wealth_data(
-            pf, has_cashflow=True, n_monte_carlo=2, show_backtest_bool=False,
-            distribution_mc="norm", years_mc=5,
+            pf,
+            has_cashflow=True,
+            n_monte_carlo=2,
+            show_backtest_bool=False,
+            distribution_mc="norm",
+            years_mc=5,
         )
 
         alive = df_forecast[1]

@@ -119,8 +119,7 @@ def update_graf_compare(
         raise dash.exceptions.PreventUpdate
     try:
         return _update_graf_compare_inner(
-            screen, log_on, selected_symbols, ccy, fd_value, ld_value,
-            plot_type, inflation_on, rolling_window
+            screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window
         )
     except Exception as e:
         alert = make_error_alert(e)
@@ -128,8 +127,7 @@ def update_graf_compare(
 
 
 def _update_graf_compare_inner(
-    screen, log_on, selected_symbols, ccy, fd_value, ld_value,
-    plot_type, inflation_on, rolling_window
+    screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window
 ):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
     al_object, _ = get_or_create(
@@ -219,13 +217,8 @@ def get_al_statistics_table(al_object):
     )
 
 
-
 def get_al_figure(
-        al_object: ok.AssetList,
-        plot_type: str,
-        inflation_on: bool,
-        rolling_window: int,
-        log_scale: bool
+    al_object: ok.AssetList, plot_type: str, inflation_on: bool, rolling_window: int, log_scale: bool
 ) -> typing.Tuple[plotly.graph_objects.Figure, pd.DataFrame]:
     titles = {
         "wealth": "Assets Wealth indexes",
@@ -315,6 +308,7 @@ def show_graf_and_statistics_table_rows(n_clicks, style):
 )
 def export_statistics_xlsx(n_clicks, row_data):
     from common.html_elements.grid_export import percent_column_formats, rowdata_to_xlsx_download
+
     return rowdata_to_xlsx_download(
         n_clicks, row_data, "compare_statistics.xlsx", column_formats=percent_column_formats(row_data)
     )

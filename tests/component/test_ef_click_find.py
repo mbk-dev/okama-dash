@@ -35,11 +35,7 @@ def _walk(component):
 
 
 def _by_class(component, css_class):
-    return [
-        node
-        for node in _walk(component)
-        if css_class in (getattr(node, "className", "") or "").split()
-    ]
+    return [node for node in _walk(component) if css_class in (getattr(node, "className", "") or "").split()]
 
 
 def _texts(component):
@@ -57,9 +53,7 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         click_data = {"points": [{"x": 12.34, "y": 8.56}]}
-        card, link = display_click_data(
-            click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
-        )
+        card, link = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, [])
 
         texts = _texts(card)
         assert "12.34%" in texts
@@ -74,14 +68,10 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object()
-        click_data = {
-            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
-        }
+        click_data = {"points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]}
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            card, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
-            )
+            card, link = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, [])
 
         texts = _texts(card)
         assert "CAGR" in texts
@@ -106,14 +96,10 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object()
-        click_data = {
-            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
-        }
+        click_data = {"points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]}
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            card, _ = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 2.5, []
-            )
+            card, _ = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 2.5, [])
 
         texts = _texts(card)
         assert "Sharpe" in texts
@@ -123,14 +109,10 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object()
-        click_data = {
-            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
-        }
+        click_data = {"points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]}
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            card, _ = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", None, []
-            )
+            card, _ = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", None, [])
 
         assert "0.75" in _texts(card)  # (7.50 - 0) / 10.00
 
@@ -138,14 +120,10 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object()
-        click_data = {
-            "points": [{"x": 0.0, "y": 7.50, "customdata": [60.0, 40.0]}]
-        }
+        click_data = {"points": [{"x": 0.0, "y": 7.50, "customdata": [60.0, 40.0]}]}
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            card, _ = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
-            )
+            card, _ = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, [])
 
         assert "Sharpe" not in _texts(card)
 
@@ -153,17 +131,11 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object()
-        click_data = {
-            "points": [
-                {"x": 10.0, "y": 7.5, "curveNumber": 1, "customdata": [60.0, 40.0]}
-            ]
-        }
+        click_data = {"points": [{"x": 10.0, "y": 7.5, "curveNumber": 1, "customdata": [60.0, 40.0]}]}
         trace_names = ["Efficient Frontier", "Monte-Carlo Simulation"]
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            card, _ = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, trace_names
-            )
+            card, _ = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, trace_names)
 
         badges = _by_class(card, "pf-card-badge")
         assert len(badges) == 1
@@ -173,16 +145,10 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object()
-        click_data = {
-            "points": [
-                {"x": 10.0, "y": 7.5, "curveNumber": 5, "customdata": [60.0, 40.0]}
-            ]
-        }
+        click_data = {"points": [{"x": 10.0, "y": 7.5, "curveNumber": 5, "customdata": [60.0, 40.0]}]}
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            card, _ = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, ["Efficient Frontier"]
-            )
+            card, _ = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, ["Efficient Frontier"])
 
         assert _by_class(card, "pf-card-badge") == []
 
@@ -190,14 +156,10 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object()
-        click_data = {
-            "points": [{"x": 15.0, "y": 9.0, "customdata": [33.333, 66.667]}]
-        }
+        click_data = {"points": [{"x": 15.0, "y": 9.0, "customdata": [33.333, 66.667]}]}
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            _, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
-            )
+            _, link = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, [])
 
         assert "weights=33.33,66.67" in link
 
@@ -205,14 +167,10 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object(rebalancing_period="year")
-        click_data = {
-            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
-        }
+        click_data = {"points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]}
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            _, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
-            )
+            _, link = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, [])
 
         assert "rebal=year" in link
 
@@ -220,14 +178,10 @@ class TestDisplayClickData:
         from pages.efficient_frontier.frontier import display_click_data
 
         mock_ef = _make_mock_ef_object(rebalancing_period="month")
-        click_data = {
-            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
-        }
+        click_data = {"points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]}
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            _, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
-            )
+            _, link = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, [])
 
         assert "rebal=" not in link
 
@@ -238,14 +192,10 @@ class TestDisplayClickData:
 
         mock_ef = _make_mock_ef_object()
         del mock_ef.rebalancing_strategy
-        click_data = {
-            "points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]
-        }
+        click_data = {"points": [{"x": 10.00, "y": 7.50, "customdata": [60.0, 40.0]}]}
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            _, link = display_click_data(
-                click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, []
-            )
+            _, link = display_click_data(click_data, 1, ["SPY.US", "BND.US"], "file.pkl", 0.0, [])
 
         assert link is not None
         assert "rebal=" not in link
@@ -255,15 +205,11 @@ class TestDisplayClickData:
 
         mock_ef = _make_mock_ef_object()
         mock_ef.symbols = ["SPY.US", "BND.US", "GLD.US"]
-        click_data = {
-            "points": [{"x": 11.0, "y": 8.0, "customdata": [50.0, 30.0, 20.0]}]
-        }
+        click_data = {"points": [{"x": 11.0, "y": 8.0, "customdata": [50.0, 30.0, 20.0]}]}
         symbols = ["SPY.US", "BND.US", "GLD.US"]
 
         with patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef):
-            card, link = display_click_data(
-                click_data, 1, symbols, "file.pkl", 0.0, []
-            )
+            card, link = display_click_data(click_data, 1, symbols, "file.pkl", 0.0, [])
 
         assert len(_by_class(card, "pf-asset-row")) == 3
         texts = _texts(card)
@@ -281,18 +227,20 @@ class TestDisplayClickData:
 
         from pages.efficient_frontier.frontier import display_click_data
 
-        stale_click_data = {
-            "points": [{"x": 10.0, "y": 7.5, "customdata": [60.0, 40.0, 0.0]}]
-        }
+        stale_click_data = {"points": [{"x": 10.0, "y": 7.5, "customdata": [60.0, 40.0, 0.0]}]}
         # ContextVar token reset (NOT set(None)): setting None would poison the
         # context for every later test in the same process.
-        token = context_value.set(AttributeDict(
-            triggered_inputs=[{"prop_id": "ef-submit-button-state.n_clicks", "value": 2}]
-        ))
+        token = context_value.set(
+            AttributeDict(triggered_inputs=[{"prop_id": "ef-submit-button-state.n_clicks", "value": 2}])
+        )
         try:
             children, link = display_click_data(
-                stale_click_data, 2, ["SPY.US", "BND.US", "GLD.US", "MSFT.US"],
-                "file.pkl", 0.0, [],
+                stale_click_data,
+                2,
+                ["SPY.US", "BND.US", "GLD.US", "MSFT.US"],
+                "file.pkl",
+                0.0,
+                [],
             )
         finally:
             context_value.reset(token)
@@ -306,12 +254,8 @@ class TestDisplayClickData:
         # card instead of letting the builder's strict zip raise.
         from pages.efficient_frontier.frontier import display_click_data
 
-        click_data = {
-            "points": [{"x": 10.0, "y": 7.5, "customdata": [60.0, 40.0]}]
-        }
-        card, link = display_click_data(
-            click_data, 1, ["SPY.US", "BND.US", "GLD.US"], "file.pkl", 0.0, []
-        )
+        click_data = {"points": [{"x": 10.0, "y": 7.5, "customdata": [60.0, 40.0]}]}
+        card, link = display_click_data(click_data, 1, ["SPY.US", "BND.US", "GLD.US"], "file.pkl", 0.0, [])
 
         notes = _by_class(card, "pf-note")
         assert len(notes) == 1

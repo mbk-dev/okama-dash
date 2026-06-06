@@ -91,9 +91,7 @@ def _atomic_write(file_path: Path, obj: Any) -> None:
     file_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = None
     try:
-        fd_int, tmp_path_str = tempfile.mkstemp(
-            dir=str(file_path.parent), suffix=".tmp", prefix=".cache-"
-        )
+        fd_int, tmp_path_str = tempfile.mkstemp(dir=str(file_path.parent), suffix=".tmp", prefix=".cache-")
         tmp_path = Path(tmp_path_str)
         with os.fdopen(fd_int, "wb") as f:
             pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)

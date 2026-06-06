@@ -54,9 +54,7 @@ class TestFormatEntry:
         )
         line = format_entry(entry, root=_ROOT)
         loc = f"{_THIS_FILE}:{_sample_callback.__code__.co_firstlineno}"
-        assert line == (
-            f"{loc} _sample_callback | out: graf.figure | in: submit.n_clicks | state: ccy.value"
-        )
+        assert line == (f"{loc} _sample_callback | out: graf.figure | in: submit.n_clicks | state: ccy.value")
 
     def test_state_section_omitted_when_empty(self):
         entry = _entry(

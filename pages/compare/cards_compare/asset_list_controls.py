@@ -94,7 +94,7 @@ def card_controls(
                                         hidden_div_with_url_id="al-show-url",
                                         button_id="al-copy-link-button",
                                         card_name="asset list",
-                                        style={"textAlign": "right"}
+                                        style={"textAlign": "right"},
                                     )
                                 ),
                                 dbc.Col(
@@ -113,7 +113,7 @@ def card_controls(
                                         ],
                                         style={"textAlign": "left"},
                                     )
-                                )
+                                ),
                             ]
                         ),
                         dbc.Row(html.H5("Options")),

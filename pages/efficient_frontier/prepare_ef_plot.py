@@ -539,8 +539,7 @@ def prepare_transition_map(ef: pd.DataFrame):
         "Risk_monthly",
     }
     y_columns = [
-        column for column in ef.columns
-        if column not in ignored_columns and pd.api.types.is_numeric_dtype(ef[column])
+        column for column in ef.columns if column not in ignored_columns and pd.api.types.is_numeric_dtype(ef[column])
     ]
     fig = px.line(
         ef,

@@ -78,9 +78,7 @@ class TestColumnFormats:
         from common.html_elements.grid_export import rowdata_to_xlsx_download
 
         row_data = [{"property": "CAGR", "PORTFOLIO.PF": 0.206}]
-        result = rowdata_to_xlsx_download(
-            1, row_data, "test.xlsx", column_formats={"PORTFOLIO.PF": "percent"}
-        )
+        result = rowdata_to_xlsx_download(1, row_data, "test.xlsx", column_formats={"PORTFOLIO.PF": "percent"})
 
         sheet = _load_sheet(result)
         cell = sheet["B2"]  # column B = PORTFOLIO.PF, row 2 = first data row
@@ -91,9 +89,7 @@ class TestColumnFormats:
         from common.html_elements.grid_export import rowdata_to_xlsx_download
 
         row_data = [{"1": "Mean", "2": 19.0999, "3": 3568.4}]
-        result = rowdata_to_xlsx_download(
-            1, row_data, "test.xlsx", column_formats={"2": "decimal", "3": "int"}
-        )
+        result = rowdata_to_xlsx_download(1, row_data, "test.xlsx", column_formats={"2": "decimal", "3": "int"})
 
         sheet = _load_sheet(result)
         assert sheet["B2"].number_format == "0.00"
@@ -103,9 +99,7 @@ class TestColumnFormats:
         from common.html_elements.grid_export import rowdata_to_xlsx_download
 
         row_data = [{"property": "CAGR", "PORTFOLIO.PF": 0.206}]
-        result = rowdata_to_xlsx_download(
-            1, row_data, "test.xlsx", column_formats={"PORTFOLIO.PF": "percent"}
-        )
+        result = rowdata_to_xlsx_download(1, row_data, "test.xlsx", column_formats={"PORTFOLIO.PF": "percent"})
 
         sheet = _load_sheet(result)
         assert sheet["A2"].number_format == "General"

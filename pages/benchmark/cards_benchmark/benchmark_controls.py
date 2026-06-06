@@ -25,7 +25,6 @@ from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
 )
 
 
-
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 

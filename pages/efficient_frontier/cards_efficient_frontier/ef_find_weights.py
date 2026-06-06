@@ -55,7 +55,7 @@ card_ef_find_weights = dbc.Card(
                                                             html.P(id="ef-find-portfolio-info-return-range"),
                                                         ],
                                                         id="ef-optimized-find-portfolio-info",
-                                                        style={'display': 'inline-block', 'verticalAlign': 'middle'}
+                                                        style={"display": "inline-block", "verticalAlign": "middle"},
                                                     )
                                                 ],
                                                 lg=8,
@@ -70,12 +70,14 @@ card_ef_find_weights = dbc.Card(
                                 [
                                     dbc.Col(
                                         html.Div(
-                                            [dbc.Button(
-                                                "Find portfolio",
-                                                id="ef-find-portfolio-button",
-                                                n_clicks=0,
-                                                color="primary"
-                                            )],
+                                            [
+                                                dbc.Button(
+                                                    "Find portfolio",
+                                                    id="ef-find-portfolio-button",
+                                                    n_clicks=0,
+                                                    color="primary",
+                                                )
+                                            ],
                                             style={"textAlign": "center"},
                                             className="p-3",
                                         )
@@ -85,10 +87,10 @@ card_ef_find_weights = dbc.Card(
                             dbc.Row(
                                 [
                                     dbc.Col(
-                                                [
-                                                    html.H5("Optimized portfolio data"),
-                                                    html.Div(id="ef-find-portfolio-output"),
-                                                ]
+                                        [
+                                            html.H5("Optimized portfolio data"),
+                                            html.Div(id="ef-find-portfolio-output"),
+                                        ]
                                     )
                                 ],
                                 style={"display": "none"},
@@ -98,13 +100,15 @@ card_ef_find_weights = dbc.Card(
                                 [
                                     dbc.Col(
                                         html.Div(
-                                            [dbc.Button(
-                                                "Backtest portfolio",
-                                                id="ef-backtest-optimized-potfolio-button",
-                                                external_link=True,
-                                                target="_blank",
-                                                color="primary"
-                                            )],
+                                            [
+                                                dbc.Button(
+                                                    "Backtest portfolio",
+                                                    id="ef-backtest-optimized-potfolio-button",
+                                                    external_link=True,
+                                                    target="_blank",
+                                                    color="primary",
+                                                )
+                                            ],
                                             style={"textAlign": "center"},
                                             className="p-3",
                                         )
