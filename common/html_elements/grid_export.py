@@ -7,7 +7,7 @@ Provides a reusable export button and conversion function for server-side xlsx e
 import dash.exceptions
 import dash_bootstrap_components as dbc
 import pandas as pd
-from dash import dcc
+from dash import dcc, html
 
 # Excel number formats mirroring the on-page AG Grid value formatters
 # (assets/dashAgGridFunctions.js). The exported file shows the same
@@ -58,6 +58,30 @@ def create_xlsx_export_button(button_id: str) -> dbc.Button:
         color="secondary",
         outline=True,
         size="sm",
+    )
+
+
+def create_grid_header_with_export(title: str, button_id: str) -> dbc.Row:
+    """
+    Build a table header row: section title on the left, compact export button on the right.
+
+    Mirrors the Statistics-table header pattern (H4/H5 + button, justify="between"),
+    so the button sits in the top-right corner instead of stretching to a full row.
+
+    Args:
+        title: Section heading text.
+        button_id: Unique ID for the export button element.
+
+    Returns:
+        dbc.Row with the title and the export button.
+    """
+    return dbc.Row(
+        [
+            dbc.Col(html.H5(children=title), width="auto"),
+            dbc.Col(create_xlsx_export_button(button_id), width="auto"),
+        ],
+        align="center",
+        justify="between",
     )
 
 

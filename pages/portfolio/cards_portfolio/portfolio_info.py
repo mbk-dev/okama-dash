@@ -40,14 +40,15 @@ card_assets_info = dbc.Card(
             html.Div(id="pf-assets-names", children="Start to select assets to see the information"),
             html.Div(
                 [
-                    html.H5(children="Survival period statistics", className="mt-1 align-top"),
+                    # Section titles render inside the dynamic table builders
+                    # (header row shared with the compact export button, issue #16).
                     html.Div(id="pf-monte-carlo-statistics", className="m-0 p-0"),
                     html.Small("All periods are in years."),
-                    html.H5(children="Wealth statistics", className="mt-1 align-top"),
                     html.Div(id="pf-monte-carlo-wealth-statistics", className="m-0 p-0"),
                 ],
                 id="pf-monte-carlo-statistics-frame",
                 hidden=True,
+                className="vstack gap-2",
             ),
         ]
     ),

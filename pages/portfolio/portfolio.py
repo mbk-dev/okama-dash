@@ -1154,12 +1154,14 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             style={"height": None},
         )
 
-        from common.html_elements.grid_export import create_xlsx_export_button
+        from common.html_elements.grid_export import create_grid_header_with_export
 
-        # The matching dcc.Download lives statically in pf_statistics_table.py
+        # The matching dcc.Download lives statically in pf_statistics_table.py.
+        # The section title lives here (not in portfolio_info.py) so the compact
+        # export button can share the header row, top-right (issue #16).
         return html.Div(
             [
-                create_xlsx_export_button("pf-survival-statistics-export-btn"),
+                create_grid_header_with_export("Survival period statistics", "pf-survival-statistics-export-btn"),
                 grid,
             ],
             className="vstack gap-2",
@@ -1172,13 +1174,17 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
         {"field": "1"},
         {"field": "2", "valueFormatter": guarded_decimal_formatter},
     ]
-    return dag.AgGrid(
+    grid = dag.AgGrid(
         rowData=table_list,
         columnDefs=column_defs,
         defaultColDef={"resizable": False, "sortable": False},
         columnSize="responsiveSizeToFit",
         dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
         style={"height": None},
+    )
+    return html.Div(
+        [html.H5(children="Survival period statistics"), grid],
+        className="vstack gap-2",
     )
 
 
@@ -1241,12 +1247,14 @@ def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
             style={"height": None},
         )
 
-        from common.html_elements.grid_export import create_xlsx_export_button
+        from common.html_elements.grid_export import create_grid_header_with_export
 
-        # The matching dcc.Download lives statically in pf_statistics_table.py
+        # The matching dcc.Download lives statically in pf_statistics_table.py.
+        # The section title lives here (not in portfolio_info.py) so the compact
+        # export button can share the header row, top-right (issue #16).
         return html.Div(
             [
-                create_xlsx_export_button("pf-wealth-statistics-export-btn"),
+                create_grid_header_with_export("Wealth statistics", "pf-wealth-statistics-export-btn"),
                 grid,
             ],
             className="vstack gap-2",
@@ -1258,13 +1266,17 @@ def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
         {"field": "1"},
         {"field": "2", "valueFormatter": guarded_decimal_formatter},
     ]
-    return dag.AgGrid(
+    grid = dag.AgGrid(
         rowData=table_list,
         columnDefs=column_defs,
         defaultColDef={"resizable": False, "sortable": False},
         columnSize="responsiveSizeToFit",
         dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
         style={"height": None},
+    )
+    return html.Div(
+        [html.H5(children="Wealth statistics"), grid],
+        className="vstack gap-2",
     )
 
 
