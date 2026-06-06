@@ -1,66 +1,100 @@
-[![Python](https://img.shields.io/badge/python-v3-brightgreen.svg)](https://www.python.org/)
-[![License](https://img.shields.io/pypi/l/okama.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/python-3.11%2B-brightgreen.svg)](https://www.python.org/)
+[![License](https://img.shields.io/github/license/mbk-dev/okama-dash)](https://github.com/mbk-dev/okama-dash/blob/master/LICENSE.md)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # Okama widgets
-This repository has a set of interactive financial widgets (multi-page web application) build with 
-[okama package](https://github.com/mbk-dev/okama/) and [Dash (plotly)](https://dash.plotly.com/) framework:
 
-- Efficient Frontier builder
-- Compare assets historical performance: wealth indexes, rate of return and risk-metrics
+Interactive financial widgets — a multi-page web application built with the
+[okama](https://github.com/mbk-dev/okama/) package and the [Dash (Plotly)](https://dash.plotly.com/) framework.
 
-_okama package_ is used for quantitative finance and historical data.  
-Running financial widgets example is available on [okama.io](https://okama.io).
+A live instance is running at **[okama.io](https://okama.io)**.
 
-![](../images/images/main_page.jpg?raw=true) 
-## Historical data
-Widgets go with free «end of day» historical stock markets data and macroeconomic indicators through 
-[okama package](https://github.com/mbk-dev/okama/):
+![Okama widgets — Efficient Frontier page](https://raw.githubusercontent.com/mbk-dev/okama-dash/images/images/main_page.jpg)
 
-### End of day historical data
+## Features
 
-- Stocks and ETF for main world markets
-- Mutual funds
-- Commodities
-- Stock indexes
+| Widget | Route | What it does |
+|--------|-------|--------------|
+| **Efficient Frontier** | `/` | Portfolio optimization: efficient frontier chart, assets transition map, simulated portfolios |
+| **Compare assets** | `/compare` | Compare assets' historical performance: wealth indexes, rate of return, risk, CVAR, drawdowns, correlation |
+| **Compare with benchmark** | `/benchmark` | Compare assets with a benchmark: tracking difference, tracking error, correlation, beta |
+| **Investment Portfolio** | `/portfolio` | Portfolio analysis: rebalancing, cash flow strategies, Monte Carlo forecasts |
+| **Database** | `/database` | Search the financial database: stocks, ETF, mutual funds, indexes, currencies, commodities, rates |
 
-### Currencies
+![Wealth indexes chart in the Compare widget](https://raw.githubusercontent.com/mbk-dev/okama-dash/images/images/wealth_indexes.png)
 
-- FX currencies
-- Crypto currencies
-- Central bank exchange rates
+## Getting started
 
-### Macroeconomic indicators
-For many countries (USA, United Kingdom, European Union, Russia, Israel etc.):  
+### Prerequisites
 
-- Inflation
-- Central bank rates
-- CAPE10 (Shiller P/E) Cyclically adjusted price-to-earnings ratios
+- [Python](https://www.python.org/) 3.11+
+- [Poetry](https://python-poetry.org/docs/) for dependency management (recommended)
 
-### Other historical data
+### Installation
 
-- Real estate prices
-- Top bank rates
-
-## Installation
-We recommend using [Poetry](https://python-poetry.org/docs/) for dependency management.  
-After installing Poetry:
-```python
-poetry init
-poetry shell  # activate the environment
+```bash
+git clone https://github.com/mbk-dev/okama-dash.git
+cd okama-dash
+poetry install
 ```
-Alternatively you can do it with pure python:
-```python
+
+Alternatively, with pip:
+
+```bash
 python -m venv venv
-source venv/bin/activate  # Windows: \venv\scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
-To run the project locally:
-```python
-python app.py
-```
-For production, we recommend using [gunicorn](https://gunicorn.org/#docs) WSGI server and run the project with `run_gunicorn.py`.
-![](../images/images/wealth_indexes.png?raw=true) 
-## License
 
-MIT
+### Run locally
+
+```bash
+poetry run python app.py
+```
+
+The development server starts at <http://localhost:8050>.
+
+> [!NOTE]
+> By default the application caches okama data in Redis. To run without Redis, set
+> `OKAMA_CACHE_BACKEND=filesystem` — caching falls back to the local `cache-directory/` folder.
+
+| Environment variable | Default | Description |
+|----------------------|---------|-------------|
+| `OKAMA_CACHE_BACKEND` | `redis` | Cache backend: `redis` or `filesystem` |
+| `OKAMA_REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL (used when the backend is `redis`) |
+
+## Production
+
+For production, serve the application with [Gunicorn](https://gunicorn.org/) (installed by `poetry install`)
+using the `run_gunicorn.py` entry point:
+
+```bash
+poetry run gunicorn run_gunicorn:server
+```
+
+## Historical data
+
+The widgets use free "end of day" historical data and macroeconomic indicators provided by the
+[okama](https://github.com/mbk-dev/okama/) package:
+
+- Stocks, ETF and mutual funds for main world markets
+- Stock indexes and commodities
+- FX and crypto currencies, central bank exchange rates
+- Macroeconomic indicators (inflation, central bank rates, CAPE10) for many countries
+
+See the [okama package](https://github.com/mbk-dev/okama/) for the full data coverage.
+
+## Tests
+
+```bash
+poetry run pytest -m "not e2e"   # fast suite: unit + component tests
+poetry run pytest -q             # everything, including browser (e2e) tests
+```
+
+Unit and component tests mock the okama API — no network access or Redis required.
+The e2e tests run in a real browser; install it once with `poetry run playwright install chromium`.
+
+## Related projects
+
+- [okama](https://github.com/mbk-dev/okama) — Python package for investment portfolio analysis, the engine behind these widgets
+- [okama.io](https://okama.io) — live instance of the widgets
