@@ -119,6 +119,10 @@ Cycle: **RED → verify RED → GREEN → verify GREEN → REFACTOR**.
 
 Rules for this repo:
 - Tests run via: `poetry run pytest -q`.
+- Before writing a new test, look for existing tests, fixtures, and mock factories with an
+  explicit path — `rg <pattern> tests/` — because the default search skips `tests/` (see
+  "Searching the codebase"). An empty default-search result does NOT mean the fixture or
+  test doesn't exist.
 - Before writing code, see the test fail for a real reason (`AssertionError` / missing function),
   not a typo/import error.
 - For bugfix: first a test reproducing the bug, then the fix. Without a reproducing test
