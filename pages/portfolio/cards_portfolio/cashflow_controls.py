@@ -35,8 +35,9 @@ STRATEGY_DESCRIPTIONS = {
 
 MAX_TIMESERIES_ENTRIES = 50
 
-# Example entry shown when the Custom cash flows block opens empty: one
-# past-dated withdrawal the user can edit (mirrors the CWD default thresholds).
+# Example entry shown when the Custom cash flows block opens empty in the
+# time_series strategy (the block IS the strategy): one past-dated withdrawal
+# the user can edit. Other strategies open the block with a blank row.
 TS_DEFAULT_DATE = "2020-01"
 TS_DEFAULT_AMOUNT = -1000
 
@@ -871,8 +872,9 @@ def _ts_row(index, date_val=None, amount_val=None):
     State({"type": "pf-cf-ts-date", "index": ALL}, "id"),
     State({"type": "pf-cf-ts-date", "index": ALL}, "value"),
     State({"type": "pf-cf-ts-amount", "index": ALL}, "value"),
+    State("pf-cf-strategy-type", "value"),
 )
-def manage_ts_rows(add_clicks, remove_clicks, active_item, ids, dates, amounts):
+def manage_ts_rows(add_clicks, remove_clicks, active_item, ids, dates, amounts, strategy):
     trigger = dash.ctx.triggered_id
     rows = []
     if ids:
@@ -885,11 +887,16 @@ def manage_ts_rows(add_clicks, remove_clicks, active_item, ids, dates, amounts):
         next_idx = max((r["index"] for r in rows), default=-1) + 1
         rows.append({"index": next_idx, "date": None, "amount": None})
 
-    # An empty visible block starts with one example withdrawal row; while the
-    # accordion is collapsed the container stays empty, so the example never
-    # leaks into a calculation the user hasn't seen.
+    # An empty visible block starts with one row: the example withdrawal for
+    # the time_series strategy (the block IS the strategy), a blank row for
+    # every other strategy — there the regular flow already exists and a
+    # prefilled example would silently join the calculation. While the
+    # accordion is collapsed the container stays empty.
     if not rows and active_item == "custom-cashflows":
-        rows = [{"index": 0, "date": TS_DEFAULT_DATE, "amount": TS_DEFAULT_AMOUNT}]
+        if strategy == "time_series":
+            rows = [{"index": 0, "date": TS_DEFAULT_DATE, "amount": TS_DEFAULT_AMOUNT}]
+        else:
+            rows = [{"index": 0, "date": None, "amount": None}]
 
     return [_ts_row(r["index"], r["date"], r["amount"]) for r in rows]
 

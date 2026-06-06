@@ -862,9 +862,11 @@ class TestOpenTsAccordionOnStrategyChange:
 
 
 class TestManageTsRows:
-    """Row container behavior: empty while collapsed, one example row on expand."""
+    """Row container behavior: empty while collapsed; on expand one row —
+    the example withdrawal for the time_series strategy (the block IS the
+    strategy), a blank row for every other strategy."""
 
-    def _run(self, trigger, active_item, rows=None):
+    def _run(self, trigger, active_item, rows=None, strategy="indexation"):
         import dash
 
         from pages.portfolio.cards_portfolio.cashflow_controls import manage_ts_rows
@@ -875,7 +877,7 @@ class TestManageTsRows:
         amounts = [r["amount"] for r in rows]
         with patch.object(dash, "ctx") as mock_ctx:
             mock_ctx.triggered_id = trigger
-            return manage_ts_rows(0, [], active_item, ids, dates, amounts)
+            return manage_ts_rows(0, [], active_item, ids, dates, amounts, strategy)
 
     @staticmethod
     def _row_values(row):
@@ -886,14 +888,20 @@ class TestManageTsRows:
     def test_initial_load_collapsed_creates_no_rows(self):
         assert self._run(trigger=None, active_item=None) == []
 
-    def test_expand_with_no_rows_creates_prefilled_withdrawal_row(self):
-        result = self._run(trigger="pf-cf-ts-accordion", active_item="custom-cashflows")
+    def test_expand_in_non_ts_strategy_creates_one_empty_row(self):
+        result = self._run(trigger="pf-cf-ts-accordion", active_item="custom-cashflows", strategy="indexation")
+
+        assert len(result) == 1
+        assert self._row_values(result[0]) == (None, None)
+
+    def test_expand_in_time_series_strategy_creates_example_withdrawal_row(self):
+        result = self._run(trigger="pf-cf-ts-accordion", active_item="custom-cashflows", strategy="time_series")
 
         assert len(result) == 1
         assert self._row_values(result[0]) == ("2020-01", -1000)
 
-    def test_initial_load_open_creates_prefilled_row(self):
-        result = self._run(trigger=None, active_item="custom-cashflows")
+    def test_initial_load_open_creates_example_row_for_time_series(self):
+        result = self._run(trigger=None, active_item="custom-cashflows", strategy="time_series")
 
         assert len(result) == 1
         assert self._row_values(result[0]) == ("2020-01", -1000)
@@ -907,13 +915,27 @@ class TestManageTsRows:
         assert self._row_values(result[0]) == ("2031-05", -500)
         assert self._row_values(result[1]) == (None, None)
 
-    def test_remove_last_row_while_open_recreates_prefilled_row(self):
+    def test_remove_last_row_in_non_ts_strategy_recreates_empty_row(self):
         existing = [{"index": 0, "date": "2031-05", "amount": -500}]
 
         result = self._run(
             trigger={"type": "pf-cf-ts-remove", "index": 0},
             active_item="custom-cashflows",
             rows=existing,
+            strategy="cwd",
+        )
+
+        assert len(result) == 1
+        assert self._row_values(result[0]) == (None, None)
+
+    def test_remove_last_row_in_time_series_strategy_recreates_example_row(self):
+        existing = [{"index": 0, "date": "2031-05", "amount": -500}]
+
+        result = self._run(
+            trigger={"type": "pf-cf-ts-remove", "index": 0},
+            active_item="custom-cashflows",
+            rows=existing,
+            strategy="time_series",
         )
 
         assert len(result) == 1

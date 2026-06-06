@@ -137,7 +137,7 @@ Rules for this repo:
 
 ## Test suite
 
-584 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+586 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -174,13 +174,14 @@ tests/
 │   │                                # _apply_custom_time_series on every strategy, nested accordion
 │   │                                # (collapsed default, closed on switch to non-TS, expanded for TS/URL
 │   │                                # prefill, ts-plain chrome-less mode for the TS strategy; row container
-│   │                                # empty while collapsed, one example withdrawal row on expand),
+│   │                                # empty while collapsed, on expand one example withdrawal row for the
+│   │                                # TS strategy / one blank row for every other strategy),
 │   │                                # MC limits validation: check_validity_monte_carlo (n≤MC_PORTFOLIO_MAX,
 │   │                                # years 1..MC_PORTFOLIO_YEARS_MAX, n×years≤MC_PORTFOLIO_BUDGET, out-of-range
 │   │                                # string flagged not crashed) + submit gated on mc-years validity,
 │   │                                # amount inputs (#17): Initial/Cash flow amount are dmc.NumberInput
 │   │                                # (thousandSeparator=" ", min=1 kept, MantineProvider wrap, URL string
-│   │                                # prefill coerced to number, bad prefill → default) (108 tests)
+│   │                                # prefill coerced to number, bad prefill → default) (110 tests)
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks,
 │   │                                # copy-link carries rebal / omits default month,
@@ -216,10 +217,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 212 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 347 | ~7s |
+| `poetry run pytest -m component` | Dash callbacks | 349 | ~7s |
 | `poetry run pytest -m e2e` | Playwright browser | 25 | ~75s |
-| `poetry run pytest -q` | Everything | 584 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 559 | ~9s |
+| `poetry run pytest -q` | Everything | 586 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 561 | ~9s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
