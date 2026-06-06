@@ -75,6 +75,7 @@ class TestGoToEfGating:
             [60, 40],
             12,
             True,
+            True,
         )
         assert go_disabled is False
 
@@ -83,7 +84,7 @@ class TestGoToEfGating:
             disable_submit_add_link_buttons,
         )
 
-        *_, go_disabled = disable_submit_add_link_buttons(["AAPL.US"], [100], 12, True)
+        *_, go_disabled = disable_submit_add_link_buttons(["AAPL.US"], [100], 12, True, True)
         assert go_disabled is True
 
     def test_disabled_when_weights_do_not_sum_to_100(self):
@@ -95,6 +96,7 @@ class TestGoToEfGating:
             ["AAPL.US", "MSFT.US"],
             [60, 60],
             12,
+            True,
             True,
         )
         assert go_disabled is True

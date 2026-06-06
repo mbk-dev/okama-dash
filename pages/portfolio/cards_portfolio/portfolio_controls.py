@@ -380,7 +380,8 @@ def card_controls(
                                         ),
                                         dbc.FormFeedback("", type="valid"),
                                         dbc.FormFeedback(
-                                            f"it should be an integer number ≤{settings.MC_PORTFOLIO_MAX}",
+                                            f"it should be an integer number ≤{settings.MC_PORTFOLIO_MAX}, "
+                                            f"and number × years ≤ {settings.MC_PORTFOLIO_BUDGET}",
                                             type="invalid",
                                         ),
                                     ],
@@ -411,13 +412,15 @@ def card_controls(
                                         dbc.Input(
                                             type="number",
                                             min=1,
-                                            max=50,
+                                            max=settings.MC_PORTFOLIO_YEARS_MAX,
                                             value=10,
                                             id="pf-monte-carlo-years",
                                         ),
                                         dbc.FormFeedback("", type="valid"),
                                         dbc.FormFeedback(
-                                            f"it should be an integer number ≤{settings.MC_EF_MAX}", type="invalid"
+                                            f"it should be an integer number 1–{settings.MC_PORTFOLIO_YEARS_MAX}, "
+                                            f"and number × years ≤ {settings.MC_PORTFOLIO_BUDGET}",
+                                            type="invalid",
                                         ),
                                     ],
                                     width=6,
@@ -1087,9 +1090,10 @@ def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy, frequ
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
     Input("pf-rolling-window", "value"),
     Input("pf-monte-carlo-number", "valid"),
+    Input("pf-monte-carlo-years", "valid"),
 )
 def disable_submit_add_link_buttons(
-    tickers_list, weights_list, rolling_window_value, mc_number_valid
+    tickers_list, weights_list, rolling_window_value, mc_number_valid, mc_years_valid
 ) -> Tuple[bool, bool, bool, bool]:
     """
     Disable "Add Asset", "Submit" and "Copy Link" buttons.
@@ -1102,7 +1106,7 @@ def disable_submit_add_link_buttons(
     - sum of weights is not 100
     - number of weights is not equal to the number of assets
     - rolling window size is natural number
-    - MC number is valid
+    - MC number and MC forecast years are valid (incl. the number × years budget)
 
     disable "Copy Link" conditions:
     - "Submit"
@@ -1128,6 +1132,7 @@ def disable_submit_add_link_buttons(
     rolling_not_natural = validators.validate_integer_bool(rolling_window_value)
 
     mc_number_is_incorrect = not mc_number_valid
+    mc_years_is_incorrect = not mc_years_valid
 
     submit_result = (
         weights_sum_is_not_100
@@ -1135,6 +1140,7 @@ def disable_submit_add_link_buttons(
         or weights_and_tickers_has_different_length
         or rolling_not_natural
         or mc_number_is_incorrect
+        or mc_years_is_incorrect
     )
 
     link_condition = len(tickers_list) > settings.ALLOWED_NUMBER_OF_TICKERS
@@ -1147,16 +1153,29 @@ def disable_submit_add_link_buttons(
 @callback(
     Output("pf-monte-carlo-number", "valid"),
     Output("pf-monte-carlo-number", "invalid"),
+    Output("pf-monte-carlo-years", "valid"),
+    Output("pf-monte-carlo-years", "invalid"),
     Input("pf-monte-carlo-number", "value"),
+    Input("pf-monte-carlo-years", "value"),
 )
-def check_validity_monte_carlo(number: int):
+def check_validity_monte_carlo(number, years):
     """
-    Check if input is an integer in range for 0 to MC_PORTFOLIO_MAX.
+    Validate the Monte Carlo simulations number, forecast years and their combined budget.
+
+    - number: integer in 0..MC_PORTFOLIO_MAX (0 means Monte Carlo is off)
+    - years: integer in 1..MC_PORTFOLIO_YEARS_MAX
+    - budget: number × years ≤ MC_PORTFOLIO_BUDGET (applied only when number > 0)
+
+    Out-of-range typed values arrive from dcc as strings — they must be flagged
+    invalid here (and gate Submit) instead of crashing the data callback.
     """
-    if number is not None:
-        is_correct_number = number in range(0, settings.MC_PORTFOLIO_MAX + 1) and isinstance(number, int)
-        return is_correct_number, not is_correct_number
-    return False, False
+    number_ok = isinstance(number, int) and number in range(0, settings.MC_PORTFOLIO_MAX + 1)
+    years_ok = isinstance(years, int) and years in range(1, settings.MC_PORTFOLIO_YEARS_MAX + 1)
+    if number_ok and years_ok and number > 0 and number * years > settings.MC_PORTFOLIO_BUDGET:
+        number_ok = years_ok = False
+    number_marks = (number_ok, not number_ok) if number is not None else (False, False)
+    years_marks = (years_ok, not years_ok) if years is not None else (False, False)
+    return *number_marks, *years_marks
 
 
 register_date_validation("pf-first-date")
