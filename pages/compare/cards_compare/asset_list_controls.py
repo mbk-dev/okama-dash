@@ -32,6 +32,7 @@ def card_controls(
     ccy: Optional[str],
 ):
     tickers_list = make_list_from_string(tickers)
+    currency_list = inflation.get_currency_list()
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -59,10 +60,10 @@ def card_controls(
                     [
                         html.Label("Base currency"),
                         dcc.Dropdown(
-                            options=inflation.get_currency_list(),
-                            # URL values are normalized to uppercase: dcc.Dropdown
+                            options=currency_list,
+                            # URL values are normalized and validated: dcc.Dropdown
                             # silently clears a value missing from its options.
-                            value=ccy.upper() if ccy else "USD",
+                            value=inflation.resolve_url_currency(ccy, currency_list),
                             multi=False,
                             clearable=False,
                             placeholder="Select a base currency",

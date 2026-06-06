@@ -1,9 +1,10 @@
-"""Lowercase ccy in a shared URL must prefill the currency dropdown, not clear it.
+"""Ccy from a shared URL must prefill the currency dropdown, never clear it.
 
 dcc.Dropdown silently drops a value missing from its options on the client side,
 so an unnormalized "usd" reached Submit as ccy=None and okama 404-ed on
 "None.FX" (reported live on the EF page, 2026-06-06). Every page that prefills
-the currency dropdown from the URL must normalize the value to uppercase.
+the currency dropdown from the URL must normalize the value to uppercase and
+validate it against the known currency list, falling back to the page default.
 """
 
 import pytest
@@ -76,3 +77,18 @@ class TestUrlCcyNormalization:
         card = benchmark_card_controls(None, None, None, None, "eur")
 
         assert _dropdown_value(card, "benchmark-base-currency") == "EUR"
+
+    def test_ef_unknown_ccy_falls_back_to_default(self, mock_okama_symbols, null_cache):
+        from pages.efficient_frontier.cards_efficient_frontier.ef_controls import card_controls
+
+        card = card_controls(None, None, None, "xyz", None)
+
+        assert _dropdown_value(card, "ef-base-currency") == "USD"
+
+    def test_benchmark_unknown_ccy_falls_back_to_default(self, mock_okama_symbols, null_cache):
+        from common import settings
+        from pages.benchmark.cards_benchmark.benchmark_controls import benchmark_card_controls
+
+        card = benchmark_card_controls(None, None, None, None, "xyz")
+
+        assert _dropdown_value(card, "benchmark-base-currency") == settings.default_currency

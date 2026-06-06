@@ -70,6 +70,7 @@ def card_controls(
     rebal_options = {"year", "half-year", "quarter", "month", "none"}
     rebal_from_url = rebal.lower() if isinstance(rebal, str) else None
     rebal_value = rebal_from_url if rebal_from_url in rebal_options else "month"
+    currency_list = inflation.get_currency_list()
 
     card = dbc.Card(
         dbc.CardBody(
@@ -96,10 +97,10 @@ def card_controls(
                     [
                         html.Label("Base currency"),
                         dcc.Dropdown(
-                            options=inflation.get_currency_list(),
-                            # URL values are normalized to uppercase: dcc.Dropdown
+                            options=currency_list,
+                            # URL values are normalized and validated: dcc.Dropdown
                             # silently clears a value missing from its options.
-                            value=ccy.upper() if ccy else "USD",
+                            value=inflation.resolve_url_currency(ccy, currency_list),
                             multi=False,
                             clearable=False,
                             placeholder="Select a base currency",

@@ -8,6 +8,10 @@
     "INDX": {
       "symbol": ["SP500TR.INDX", "MCFTR.INDX"],
       "name": ["S&P 500 Total Return", "MOEX Total Return"]
+    },
+    "INFL": {
+      "symbol": ["USD.INFL", "EUR.INFL", "RUB.INFL"],
+      "name": ["US Inflation Rate", "EU Inflation Rate", "Russia Inflation Rate"]
     }
   }
 }
