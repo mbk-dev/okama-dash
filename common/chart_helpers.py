@@ -58,22 +58,29 @@ def add_last_value_annotations(fig: go.Figure, annotations_xy, annotations_text)
         )
 
 
-def add_return_type_annotation(fig: go.Figure, return_type: str = "CAGR") -> None:
-    """Add a small note clarifying how the plotted return is calculated.
+def add_return_type_subtitle(fig: go.Figure, return_type: str = "CAGR") -> None:
+    """Add a subtitle clarifying how the plotted return is calculated.
 
     Used by the Annual Return bar charts so it is explicit that each yearly
     value is a compound (CAGR) return rather than an arithmetic mean.
+    The native plotly subtitle renders under the title (both left-aligned),
+    so the two never overlap; ``automargin`` grows the top margin when the
+    mobile layout shrinks it below the two-line title block. With automargin
+    plotly anchors the title flush at the container top (y=1, yanchor=top,
+    pad 0), which clips the text ascenders — ``pad.t`` keeps it inside.
     """
-    fig.add_annotation(
-        text=f"Return type: {return_type}",
-        xref="paper",
-        yref="paper",
-        x=0.0,
-        y=1.06,
-        xanchor="left",
-        yanchor="bottom",
-        showarrow=False,
-        font={"size": 12, "color": "grey"},
+    fig.update_layout(
+        title={
+            "x": 0,
+            "xref": "paper",
+            "xanchor": "left",
+            "y": 1,
+            "yref": "container",
+            "yanchor": "top",
+            "pad": {"t": 10},
+            "automargin": True,
+            "subtitle": {"text": f"Return type: {return_type}", "font": {"size": 12, "color": "grey"}},
+        }
     )
 
 

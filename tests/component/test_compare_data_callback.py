@@ -123,8 +123,7 @@ class TestUpdateGrafCompareInner:
             inflation_on=False,
             rolling_window=2,
         )
-        annotation_texts = [a.text for a in fig.layout.annotations]
-        assert any("CAGR" in t for t in annotation_texts)
+        assert "CAGR" in fig.layout.title.subtitle.text
 
     def test_statistics_table_has_data(self, mock_al):
         from pages.compare.compare import _update_graf_compare_inner

@@ -1,7 +1,7 @@
 import plotly.graph_objects as go
 import pytest
 
-from common.chart_helpers import add_return_type_annotation
+from common.chart_helpers import add_return_type_subtitle
 
 pytestmark = pytest.mark.unit
 
@@ -23,19 +23,19 @@ class TestFormatPoints:
         assert format_points(1234567.89) == "1 234 568"
 
 
-class TestAddReturnTypeAnnotation:
+class TestAddReturnTypeSubtitle:
     def test_adds_cagr_note(self):
         fig = go.Figure()
-        add_return_type_annotation(fig, "CAGR")
-        texts = [a.text for a in fig.layout.annotations]
-        assert any("CAGR" in t for t in texts)
+        add_return_type_subtitle(fig, "CAGR")
+        assert "CAGR" in fig.layout.title.subtitle.text
 
     def test_defaults_to_cagr(self):
         fig = go.Figure()
-        add_return_type_annotation(fig)
-        assert "CAGR" in fig.layout.annotations[0].text
+        add_return_type_subtitle(fig)
+        assert "CAGR" in fig.layout.title.subtitle.text
 
-    def test_annotation_is_a_note_without_arrow(self):
+    def test_title_and_subtitle_are_left_aligned(self):
         fig = go.Figure()
-        add_return_type_annotation(fig)
-        assert fig.layout.annotations[0].showarrow is False
+        add_return_type_subtitle(fig)
+        assert fig.layout.title.x == 0
+        assert fig.layout.title.xanchor == "left"

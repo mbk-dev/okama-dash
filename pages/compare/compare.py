@@ -22,7 +22,7 @@ from common.chart_helpers import (
     add_crisis_rectangles,
     add_last_value_annotations,
     add_sharpe_ratio_row,
-    add_return_type_annotation,
+    add_return_type_subtitle,
     format_points,
     make_error_alert,
 )
@@ -236,7 +236,7 @@ def get_al_figure(
         fig = px.bar(df, x=ind, y=df.columns, barmode="group", title=titles[plot_type], height=800)
         fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
         fig.update_layout(xaxis_title=None, legend_title="Assets")
-        add_return_type_annotation(fig)
+        add_return_type_subtitle(fig)
         return fig, df
     if plot_type == "wealth":
         df = al_object.wealth_indexes
