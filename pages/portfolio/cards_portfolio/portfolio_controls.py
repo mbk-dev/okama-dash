@@ -1056,10 +1056,11 @@ def optimize_search_al(search_value, selected_value) -> list:
     Output("pf-portfolio-weights-sum", "children"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
 )
-def print_weights_sum(values) -> Tuple[str, bool]:
+def print_weights_sum(values) -> str:
+    # Single children Output: returning a (text, flag) tuple would serialize the
+    # whole tuple into children and leak a bare bool — an invalid ReactNode.
     weights_sum = sum(float(x) for x in values if x)
-    weights_sum_is_not_100 = np.around(weights_sum, decimals=3) != 100.0
-    return f"Total: {np.around(weights_sum, decimals=3)}", weights_sum_is_not_100
+    return f"Total: {np.around(weights_sum, decimals=3)}"
 
 
 @callback(

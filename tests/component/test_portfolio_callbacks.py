@@ -642,6 +642,16 @@ class TestCashflowPercentageInFrequencyRow:
         assert "Withdrawal/Contribution percentage" not in _label_texts(col)
 
 
+class TestPrintWeightsSum:
+    def test_returns_plain_string_for_single_children_output(self):
+        """The callback has ONE children Output — a tuple return leaks `True` into
+        children (["Total: 100.0", true]); True is an invalid ReactNode and fires
+        a propTypes warning ("Invalid prop `children` supplied") in the dev console."""
+        from pages.portfolio.cards_portfolio.portfolio_controls import print_weights_sum
+
+        assert print_weights_sum(["60", "40"]) == "Total: 100.0"
+
+
 class TestWeightRangeValidation:
     def test_negative_weight_is_invalid(self):
         from pages.portfolio.cards_portfolio.portfolio_controls import validate_weight_input
