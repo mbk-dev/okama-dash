@@ -38,10 +38,12 @@ okama-dash/
 │   ├── crisis/              # Crisis period data (shaded chart regions)
 │   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export, submit spinner)
 │
+├── tools/                   # Dev-only scripts, not deployed (dump_callbacks.py — greppable callback wiring map)
 ├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards)
 ├── cache-directory/         # Runtime file-system cache (Flask-Caching fallback)
 ├── tmp/                     # Scratch space for temporary files (contents gitignored)
-└── docs/                    # Specs and plans (not deployed)
+├── docs/                    # Specs and plans (not deployed)
+└── .rgignore                # ripgrep: default searches skip tests/ (see "Searching the codebase")
 ```
 
 Each page follows the pattern: `pages/<name>/<name>.py` (layout + callbacks) with a
@@ -49,6 +51,31 @@ Each page follows the pattern: `pages/<name>/<name>.py` (layout + callbacks) wit
 
 **Stack:** Dash + Flask, Plotly charts, Dash AG Grid, okama library (financial data & analytics),
 Flask-Caching + Redis, Dash Bootstrap + Dash Mantine, Gunicorn (production).
+
+## Searching the codebase
+
+Tests are ~40% of the repo's Python and mirror production terms, so untargeted greps
+drown in test hits. Conventions:
+
+- **`.rgignore` excludes `tests/` from default ripgrep traversal** (and from Claude Code's
+  Grep tool, which is ripgrep-based). A repo-wide `rg <pattern>` returns production code only.
+- **Explicit paths bypass the ignore** — `rg <pattern> tests/` or naming a test file works
+  with no extra flags (verified behavior; `--no-ignore` is never needed for explicit paths).
+- **Usage searches before a refactor MUST include tests.** When renaming/moving any function,
+  id, or fixture, search both: `rg <pattern>` *and* `rg <pattern> tests/` — otherwise test
+  usages are silently missed and the suite breaks. This is the deliberate trade-off of the
+  `.rgignore` default.
+- **Callback wiring questions go through the callback map, not grep.** Dash wires callbacks
+  by string component ids, invisible to symbol tools (LSP/code graphs — evaluated and
+  rejected; see project memory). Dash keeps the registry itself, so dump it:
+
+  ```bash
+  poetry run python tools/dump_callbacks.py              # full map: file:line, fn, out/in/state
+  poetry run python tools/dump_callbacks.py | rg pf-graf # full wiring of one component id
+  ```
+
+  One line per callback: `<file>:<line> <function> | out: id.prop | in: id.prop, ... | state: ...`.
+  The script imports the app under `TESTING=1` (mocked okama — no network, no Redis writes).
 
 ## Running locally
 
@@ -106,7 +133,7 @@ Rules for this repo:
 
 ## Test suite
 
-558 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+565 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -119,18 +146,19 @@ tests/
 ├── fixtures/symbols_data.json
 ├── unit/                    # @pytest.mark.unit — pure logic, no Dash
 │   ├── conftest.py                  # session-scoped Dash app (for unit tests importing pages/ modules)
-│   ├── test_validators.py           # validate_integer bounds, types, error messages (8 tests)
-│   ├── test_math.py                 # round_list sum preservation (4 tests)
+│   ├── test_validators.py           # validate_integer bounds, types, error messages; validate_integer_bool (21 tests)
+│   ├── test_math.py                 # round_list rounding & sum preservation (8 tests)
 │   ├── test_create_link.py          # URL builder, filename builder, list size check; MC params in Portfolio link (tickers+weights+MC 11 params); zero-valued MC params (t_loc=0) preserved in URL; cf_ts owned by every strategy + zero-primary-with-cf_ts counts as active (73 tests)
-│   ├── test_symbols.py              # symbol search (prefix, name-token, case-insensitive) (9 tests)
+│   ├── test_symbols.py              # symbol lists, search index, search (prefix, name-token, case-insensitive) (23 tests)
 │   ├── test_symbols_cache_isolation.py  # mocked (TESTING) symbol index must not poison real cache (4 tests)
 │   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup, filename-length guard; TESTING flag isolation (env poisoning guard) (25 tests)
 │   ├── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
 │   ├── test_ef_label_padding.py     # EF x-range label padding: centered labels reserve half width on both sides (2 tests)
 │   ├── test_chart_helpers.py        # add_return_type_annotation: CAGR note, default, no-arrow; format_points (integer points, space thousands separator) (6 tests)
 │   ├── test_inflation.py            # resolve_url_currency (case-insensitive, validated, page-default fallback); currency list memoized 30 days with TESTING-token cache isolation (9 tests)
-│   ├── test_mc_distribution_parameters.py  # build_distribution_parameters: norm/lognorm/t mapping, empty→None, lognorm loc=-1; reactive-estimation gates: _portfolio_is_complete (sum=100, tolerance), _valid_mc_date (17 tests)
-│   └── test_ef_portfolio_card.py    # EF portfolio card builder: stat blocks, title/badge, allocation rows with percent + stacked bar (plotly palette colors, zero-weight segments skipped), None-weights note (9 tests)
+│   ├── test_mc_distribution_parameters.py  # build_distribution_parameters: norm/lognorm/t mapping, empty→None, lognorm loc=-1; reactive-estimation gates: _portfolio_is_complete (sum=100, tolerance), _valid_mc_date (18 tests)
+│   ├── test_ef_portfolio_card.py    # EF portfolio card builder: stat blocks, title/badge, allocation rows with percent + stacked bar (plotly palette colors, zero-weight segments skipped), None-weights note (9 tests)
+│   └── test_dump_callbacks.py       # tools/dump_callbacks formatter: file:line via inspect.unwrap of the dash wrapper, single/multi Output, dict (pattern-matching) ids, clientside entries (no Python "callback" key), state omitted when empty, sorted by location (6 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
 │   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
 │   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
@@ -151,6 +179,7 @@ tests/
 │   ├── test_ef_url_portfolio.py     # URL portfolio handoff: _parse_url_portfolio (weights+symbol → store), get_portfolio_point (cached ok.Portfolio → percent risk/CAGR), prepare_ef star trace (label, JSON-list customdata), update_ef_cards wiring (payload on ticker match, None on mismatch, failure isolation) (17 tests)
 │   ├── test_portfolio_go_to_ef.py   # Go to EF link (create_link params, defaults omitted, empty rows skipped) + gating (Copy-Link conditions OR <2 unique tickers) (6 tests)
 │   ├── test_database_callbacks.py   # db_search: search results, empty, namespace routing; dag.AgGrid assertions (6 tests)
+│   ├── test_dump_callbacks_script.py  # tools/dump_callbacks.py runs by path as a subprocess and dumps the full wiring map (sys.path guard) (1 test)
 │   ├── test_compare_data_callback.py  # update_graf_compare: wealth/cumulative_return/annual_return(bar, CAGR annotation)/cagr/correlation, stats (dag.AgGrid), errors; wealth annotations in points vs cumulative_return percent; stats grid suppressFieldDotNotation + formatPercentGuarded wiring (13 tests)
 │   ├── test_benchmark_data_callback.py  # update_graf_benchmark: 6 plot types, bar chart, errors (10 tests)
 │   ├── test_ef_data_callback.py       # update_ef_cards: figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution, return_type always Geometric (no mean-type State), trace-names store for the click badge; customdata must serialize as JSON lists, not numpy/base64 — plotly>=6 drops numpy customdata from clickData (11 tests)
@@ -176,11 +205,11 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 205 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 328 | ~4s |
+| `poetry run pytest -m unit` | Pure logic | 211 | ~2s |
+| `poetry run pytest -m component` | Dash callbacks | 329 | ~7s |
 | `poetry run pytest -m e2e` | Playwright browser | 25 | ~75s |
-| `poetry run pytest -q` | Everything | 558 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 533 | ~6s |
+| `poetry run pytest -q` | Everything | 565 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 540 | ~9s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -198,7 +227,7 @@ to a file in `tmp/` instead of `PIPE`.
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
-| **common/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_annotation, format_points) | change_style_for_hidden_row, grid_export (xlsx via dcc.Download + rowdata_to_xlsx_download; Excel number formats mirror the on-page grid formatters), grid sorting disabled on every AG Grid (all 6 grid-building files) | — |
+| **common/ & tools/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_annotation, format_points), dump_callbacks (callback wiring map formatter) | change_style_for_hidden_row, grid_export (xlsx via dcc.Download + rowdata_to_xlsx_download; Excel number formats mirror the on-page grid formatters), grid sorting disabled on every AG Grid (all 6 grid-building files) | — |
 
 ### Known gaps
 
