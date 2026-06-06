@@ -1,23 +1,42 @@
+def is_small_screen(screen: dict | None) -> bool:
+    """True when the client viewport is narrower than the mobile breakpoint."""
+    return bool(screen and screen["in_width"] < 800)
+
+
 def adopt_small_screens(fig, screen: dict):
     """
     Change Figure and Graph config for small screens.
     """
-    if screen and screen["in_width"] < 800:
+    if is_small_screen(screen):
         fig.update_layout(
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            margin=dict(l=0, r=0, t=20, b=20, pad=3),
+            # Legend below the chart: "container" ref pins it to the bottom edge
+            # and lets plotly auto-expand the margin so it never overlaps the plot.
+            legend={
+                "orientation": "h",
+                "yanchor": "bottom",
+                "yref": "container",
+                "y": 0,
+                "xanchor": "left",
+                "xref": "container",
+                "x": 0,
+                # Horizontal legends put the title on the left by default,
+                # stealing width from every row; move it to its own row.
+                "title": {"side": "top"},
+            },
+            margin={"l": 0, "r": 0, "t": 40, "b": 24, "pad": 0},
         )
         fig.update_yaxes(
-            # tickangle=90,
             title_text=None,
-            # title_font={"size": 8},
             title_standoff=0,
             visible=True,
+            # Tick labels inside the plot area: frees the left gutter so the
+            # chart can stretch edge to edge while the scale stays readable.
+            ticklabelposition="inside",
         )
         config = {"displayModeBar": False, "displaylogo": False}
     else:
         fig.update_layout(
-            margin=dict(pad=3),
+            margin={"pad": 3},
         )
         config = {"displayModeBar": True, "displaylogo": False}
     return fig, config

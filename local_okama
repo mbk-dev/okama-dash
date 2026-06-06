@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Launch the okama-dash dev server locally (http://localhost:8050, debug=True, hot reload).
+set -euo pipefail
+cd "$(dirname "$0")"
+exec poetry run python app.py

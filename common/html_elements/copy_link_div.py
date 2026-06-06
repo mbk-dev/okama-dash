@@ -7,7 +7,9 @@ def create_copy_link_div(
         hidden_div_with_url_id: str,
         button_id: str,
         card_name: str,
-        style: dict = {"text-align": "center"}):
+        style: dict | None = None):
+    if style is None:
+        style = {"textAlign": "center"}
     div = html.Div(
         [
             # the URL bar, doesn't render anything

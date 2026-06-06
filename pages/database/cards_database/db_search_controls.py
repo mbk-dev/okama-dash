@@ -63,7 +63,7 @@ card_db_search_controls = dbc.Card(
                                     dbc.Col(
                                         html.Div(
                                             [dbc.Button("Search", id="db-search-button", n_clicks=0, color="primary")],
-                                            style={"text-align": "center"},
+                                            style={"textAlign": "center"},
                                             className="p-3",
                                         )
                                     ),

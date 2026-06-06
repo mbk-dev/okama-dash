@@ -43,7 +43,7 @@ card_graf_compare = dbc.Card(
                                                     dcc.Store(id="al-store-chart-data", storage_type='session'),
                                                     dcc.Download(id="al-download-dataframe-xlsx"),
                                                 ],
-                                                style={"text-align": "center"},
+                                                style={"textAlign": "center"},
                                             )],
                                             lg=2, md=2, sm=12,
                                         )
@@ -57,7 +57,7 @@ card_graf_compare = dbc.Card(
             )
         ]
     ),
-    class_name="mb-3",
+    class_name="chart-card mb-3",
 )
 
 

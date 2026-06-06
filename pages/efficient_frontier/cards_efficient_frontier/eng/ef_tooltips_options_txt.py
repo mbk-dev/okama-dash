@@ -2,21 +2,20 @@ from dash import dcc
 
 ef_options_tooltip_ror = dcc.Markdown(
     """
-    **Geometric mean** or Compound annual growth rate (CAGR) is the rate of return 
-    that would be required for an investment to grow from its initial to its
-    final value, assuming all incomes were reinvested.  
-    &NewLine;  
-    **Arithmetic mean** - annualized mean return (arithmetic mean) for
-    the rate of return monthly time series.
+    Select one or both plot types.
+
+    **Efficient frontier** shows portfolios with the minimum risk for each selected level of return.
+
+    **Pairwise efficiency frontiers** show efficient frontiers built separately for every pair of selected assets.
     """
 )
 ef_options_tooltip_cml = dcc.Markdown(
     """
     **Capital Market Line** (CML) is the tangent line drawn from the point of
     the risk-free asset (volatility is zero) to the point of tangency portfolio
-    or Maximum Sharpe Ratio (MSR) point.  
-    &NewLine;  
-    The slope of the CML is the Sharpe ratio of the tangency portfolio."
+    or Maximum Sharpe Ratio (MSR) point.
+
+    The slope of the CML is the Sharpe ratio of the tangency portfolio.
     """
 )
 ef_options_tooltip_rf_rate = dcc.Markdown(
@@ -28,19 +27,31 @@ ef_options_tooltip_rf_rate = dcc.Markdown(
 )
 ef_options_tooltip_mdp = dcc.Markdown(
     """
-    Each point on the **Most diversified portfolios (MDP)** line is a portfolio with optimized "Diversification ratio" 
+    Each point on the **Most diversified portfolios (MDP)** line is a portfolio with optimized "Diversification ratio"
     for a given return.
     """
 )
-ef_options_monte_carlo = dcc.Markdown(
+
+ef_options_simulation_mc = dcc.Markdown(
     """
-    Generate N random portfolios with Monte Carlo simulation. 
-    Risk and Return are calculated for a set of random weights.
+    Fill the interior of the efficient frontier with random portfolios.
+
+    **Monte Carlo** generates N random portfolios.
+    """
+)
+
+ef_options_simulation_grid = dcc.Markdown(
+    """
+    Fill the interior of the efficient frontier with a regular grid of portfolios.
+
+    **Grid** enumerates all portfolios on a fixed weight step (minimum 10 %). The step is
+    chosen automatically so the number of portfolios stays within a safe budget; you can
+    also pick a coarser step manually.
     """
 )
 
 ef_options_transition_map = dcc.Markdown(
     """
-    Transition Map shows the relation between asset weights and optimized portfolios risk (standard deviation).
+    **Transition Map** shows the relation between asset weights and optimized portfolios risk (standard deviation).
     """
 )

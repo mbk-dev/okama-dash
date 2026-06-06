@@ -1,30 +1,33 @@
+import dash_ag_grid as dag
 import okama
 import pandas as pd
-from dash import dash_table
 
 
-def get_assets_names(al_object: okama.AssetList) -> dash_table.DataTable:
+def get_assets_names(al_object: okama.AssetList) -> dag.AgGrid:
     """
-    Render DataTable with assets names.
+    Render AgGrid table with assets names.
     """
     names_df = (
         pd.DataFrame.from_dict(al_object.names, orient="index")
         .reset_index(drop=False)
         .rename(columns={"index": "Ticker", 0: "Name"})[["Ticker", "Name"]]
     )
-    return dash_table.DataTable(
-        data=names_df.to_dict(orient="records"),
-        style_data={
-            "whiteSpace": "normal",
-            "height": "auto",
-        },
-        # page_size=4,
+    return dag.AgGrid(
+        rowData=names_df.to_dict(orient="records"),
+        columnDefs=[
+            {"field": "Ticker", "wrapText": True, "autoHeight": True},
+            {"field": "Name", "wrapText": True, "autoHeight": True},
+        ],
+        defaultColDef={"resizable": False, "sortable": False},
+        columnSize="responsiveSizeToFit",
+        dashGridOptions={"domLayout": "autoHeight"},
+        style={"height": None},
     )
 
 
-def get_info(al_object) -> dash_table.DataTable:
+def get_info(al_object) -> dag.AgGrid:
     """
-    Render DataTable with information about assets available historical period: length, first date, last date etc.
+    Render AgGrid table with information about assets available historical period: length, first date, last date etc.
     """
     newest_asset_date = al_object.assets_first_dates[al_object.newest_asset].strftime("%Y-%m")
     ccy = al_object.currency
@@ -47,8 +50,14 @@ def get_info(al_object) -> dash_table.DataTable:
     if len(al_object.symbols) < 2:
         # no need in "Shortest history" and "Longest history" if only one ticker
         info_list = info_list[:3]
-    info_table = dash_table.DataTable(
-        data=info_list,
-        style_data={"whiteSpace": "normal", "height": "auto"},
+    return dag.AgGrid(
+        rowData=info_list,
+        columnDefs=[
+            {"field": "Property", "wrapText": True, "autoHeight": True},
+            {"field": "Value", "wrapText": True, "autoHeight": True},
+        ],
+        defaultColDef={"resizable": False, "sortable": False},
+        columnSize="responsiveSizeToFit",
+        dashGridOptions={"domLayout": "autoHeight"},
+        style={"height": None},
     )
-    return info_table

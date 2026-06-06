@@ -1,25 +1,63 @@
-import re
 from typing import Optional
 
 import dash
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash import html, dcc, callback
 from dash.dependencies import Input, Output
 
 import pandas as pd
 
 from common import settings as settings, inflation as inflation
+from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
-from common.symbols import get_symbols
-from common import cache
+from common.html_elements.submit_spinner import create_submit_spinner
+from common.symbols import get_selected_symbol_options, search_symbol_options
+from common.ef_grid import grid_step_options, AUTO_STEP
+from common.date_input import date_input, register_date_validation
 import pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt as tl
 
-app = dash.get_app()
-cache.init_app(app.server)
-options = get_symbols()
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
+
+PLOT_OPTIONS = [
+    {
+        "label": "Efficient frontier",
+        "value": "Frontier",
+    },
+    {
+        "label": "Pairwise efficiency frontiers",
+        "value": "Pairwise",
+    },
+]
+
+TOGGLE_OPTIONS = [
+    {"label": "On", "value": "On"},
+    {"label": "Off", "value": "Off"},
+]
+
+
+def _normalize_plot_types(plot_type) -> list[str]:
+    if plot_type is None:
+        return []
+    if isinstance(plot_type, str):
+        return [plot_type]
+    return list(dict.fromkeys(plot_type))
+
+
+def _get_plot_options(pairwise_disabled: bool) -> list[dict]:
+    result = []
+    for option in PLOT_OPTIONS:
+        current_option = option.copy()
+        if current_option["value"] == "Pairwise":
+            current_option["disabled"] = pairwise_disabled
+        result.append(current_option)
+    return result
+
+
+def _get_toggle_options(disabled: bool) -> list[dict]:
+    return [dict(option, disabled=disabled) for option in TOGGLE_OPTIONS]
 
 
 def card_controls(
@@ -27,7 +65,13 @@ def card_controls(
     first_date: Optional[str],
     last_date: Optional[str],
     ccy: Optional[str],
+    rebal: Optional[str],
 ):
+    rebal_options = {"year", "half-year", "quarter", "month", "none"}
+    rebal_from_url = rebal.lower() if isinstance(rebal, str) else None
+    rebal_value = rebal_from_url if rebal_from_url in rebal_options else "month"
+    currency_list = inflation.get_currency_list()
+
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -35,12 +79,17 @@ def card_controls(
                 html.Div(
                     [
                         html.Label("Tickers in the Efficient Frontier"),
-                        dcc.Dropdown(
-                            options=tickers if tickers else [],
-                            value=tickers if tickers else settings.default_symbols,
-                            multi=True,
-                            placeholder="Select assets",
-                            id="ef-symbols-list",
+                        search_provider(
+                            dmc.MultiSelect(
+                                data=get_selected_symbol_options(tickers if tickers else settings.default_symbols),
+                                value=tickers if tickers else settings.default_symbols,
+                                placeholder="Select assets",
+                                id="ef-symbols-list",
+                                searchable=True,
+                                clearable=False,
+                                nothingFoundMessage="No matching tickers",
+                                comboboxProps={"shadow": "md"},
+                            )
                         ),
                     ],
                 ),
@@ -48,12 +97,29 @@ def card_controls(
                     [
                         html.Label("Base currency"),
                         dcc.Dropdown(
-                            options=inflation.get_currency_list(),
-                            value=ccy if ccy else "USD",
+                            options=currency_list,
+                            # URL values are normalized and validated: dcc.Dropdown
+                            # silently clears a value missing from its options.
+                            value=inflation.resolve_url_currency(ccy, currency_list),
                             multi=False,
                             clearable=False,
                             placeholder="Select a base currency",
                             id="ef-base-currency",
+                        ),
+                        html.Label("Rebalancing Frequency"),
+                        dcc.Dropdown(
+                            options=[
+                                {"label": "year", "value": "year"},
+                                {"label": "half-year", "value": "half-year"},
+                                {"label": "quarter", "value": "quarter"},
+                                {"label": "month", "value": "month"},
+                                {"label": "none", "value": "none"},
+                            ],
+                            value=rebal_value,
+                            multi=False,
+                            clearable=False,
+                            placeholder="Select rebalancing frequency",
+                            id="ef-rebalancing-frequency",
                         ),
                     ],
                 ),
@@ -62,26 +128,12 @@ def card_controls(
                         dbc.Row(
                             [
                                 dbc.Col(
-                                    [
-                                        html.Label("First Date"),
-                                        dbc.Input(
-                                            id="ef-first-date",
-                                            value=first_date if first_date else "2000-01",
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ],
+                                    [html.Label("First Date")]
+                                    + date_input("ef-first-date", first_date if first_date else "2000-01"),
                                 ),
                                 dbc.Col(
-                                    [
-                                        html.Label("Last Date"),
-                                        dbc.Input(
-                                            id="ef-last-date",
-                                            value=last_date if last_date else today_str,
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ],
+                                    [html.Label("Last Date")]
+                                    + date_input("ef-last-date", last_date if last_date else today_str),
                                 ),
                             ]
                         ),
@@ -108,18 +160,9 @@ def card_controls(
                                                 ),
                                             ]
                                         ),
-                                        dbc.RadioItems(
-                                            options=[
-                                                {
-                                                    "label": "Geometric mean vs Risk",
-                                                    "value": "Geometric",
-                                                },
-                                                {
-                                                    "label": "Arithmetic mean vs Risk",
-                                                    "value": "Arithmetic",
-                                                },
-                                            ],
-                                            value="Geometric",
+                                        dbc.Checklist(
+                                            options=PLOT_OPTIONS,
+                                            value=["Frontier"],
                                             id="ef-plot-options",
                                         ),
                                         dbc.Tooltip(
@@ -132,6 +175,12 @@ def card_controls(
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
+                                dbc.Col(lg=6, md=6, sm=12),
+                            ],
+                            className="p-1",
+                        ),
+                        dbc.Row(
+                            [
                                 dbc.Col(
                                     [
                                         dbc.Label(
@@ -144,10 +193,7 @@ def card_controls(
                                             ]
                                         ),
                                         dbc.RadioItems(
-                                            options=[
-                                                {"label": "On", "value": "On"},
-                                                {"label": "Off", "value": "Off"},
-                                            ],
+                                            options=TOGGLE_OPTIONS,
                                             value="Off",
                                             id="mdp-line-option",
                                         ),
@@ -161,11 +207,6 @@ def card_controls(
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
-                            ],
-                            className="p-1",
-                        ),
-                        dbc.Row(
-                            [
                                 dbc.Col(
                                     [
                                         dbc.Label(
@@ -178,10 +219,7 @@ def card_controls(
                                             ]
                                         ),
                                         dbc.RadioItems(
-                                            options=[
-                                                {"label": "On", "value": "On"},
-                                                {"label": "Off", "value": "Off"},
-                                            ],
+                                            options=TOGGLE_OPTIONS,
                                             value="Off",
                                             id="cml-option",
                                         ),
@@ -195,6 +233,11 @@ def card_controls(
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
+                            ],
+                            className="p-1",
+                        ),
+                        dbc.Row(
+                            [
                                 dbc.Col(
                                     [
                                         dbc.Label(
@@ -213,7 +256,7 @@ def card_controls(
                                             value=0,
                                             id="risk-free-rate-option",
                                         ),
-                                        dbc.FormText("0 - 100 (Format: XX.XX)"),
+                                        dbc.FormText("0 - 100 % (Format: XX.XX)"),
                                         dbc.Tooltip(
                                             tl.ef_options_tooltip_rf_rate,
                                             target="info-rf-rate",
@@ -224,42 +267,103 @@ def card_controls(
                                     sm=12,
                                     class_name="pt-4 pt-sm-4 pt-md-1",
                                 ),
+                                dbc.Col(lg=6, md=6, sm=12),
                             ],
                             className="p-1",
                         ),
-                        dbc.Row(html.H6(children="Monte Carlo Simulation")),
+                        dbc.Row(html.H6(children="Inside Efficient Frontier")),
                         dbc.Row(
                             [
-                                dbc.Label(
-                                    [
-                                        "Number of points",
-                                        html.I(
-                                            className="bi bi-info-square ms-2",
-                                            id="info-monte-carlo",
-                                        ),
-                                    ],
-                                    width=6,
-                                ),
                                 dbc.Col(
-                                    [
-                                        dbc.Input(
-                                            type="number",
-                                            value=0,
-                                            id="monte-carlo-option",
-                                        ),
-                                        dbc.FormFeedback("", type="valid"),
-                                        dbc.FormFeedback(
-                                            f"it should be an integer number ≤{settings.MC_EF_MAX}", type="invalid"
-                                        ),
-                                    ],
-                                    width=6,
+                                    dbc.RadioItems(
+                                        options=[
+                                            {"label": "Off", "value": "Off"},
+                                            {
+                                                "label": html.Span(
+                                                    [
+                                                        "Monte Carlo",
+                                                        html.I(
+                                                            className="bi bi-info-square ms-2",
+                                                            id="info-sim-mc",
+                                                        ),
+                                                    ]
+                                                ),
+                                                "value": "Monte Carlo",
+                                            },
+                                            {
+                                                "label": html.Span(
+                                                    [
+                                                        "Grid",
+                                                        html.I(
+                                                            className="bi bi-info-square ms-2",
+                                                            id="info-sim-grid",
+                                                        ),
+                                                    ]
+                                                ),
+                                                "value": "Grid",
+                                            },
+                                        ],
+                                        value="Off",
+                                        id="ef-sim-mode",
+                                    ),
+                                    width=12,
                                 ),
                                 dbc.Tooltip(
-                                    tl.ef_options_monte_carlo,
-                                    target="info-monte-carlo",
+                                    tl.ef_options_simulation_mc,
+                                    target="info-sim-mc",
+                                ),
+                                dbc.Tooltip(
+                                    tl.ef_options_simulation_grid,
+                                    target="info-sim-grid",
                                 ),
                             ],
                             className="p-1",
+                        ),
+                        html.Div(
+                            dbc.Row(
+                                [
+                                    dbc.Label("Number of points", width=6),
+                                    dbc.Col(
+                                        [
+                                            dbc.Input(
+                                                type="number",
+                                                value=0,
+                                                id="monte-carlo-option",
+                                            ),
+                                            dbc.FormFeedback("", type="valid"),
+                                            dbc.FormFeedback(
+                                                f"it should be an integer number ≤{settings.MC_EF_MAX}",
+                                                type="invalid",
+                                            ),
+                                        ],
+                                        width=6,
+                                    ),
+                                ],
+                                className="p-1",
+                            ),
+                            id="ef-mc-input-wrapper",
+                            style={"display": "none"},
+                        ),
+                        html.Div(
+                            dbc.Row(
+                                [
+                                    dbc.Label("Weight step", width=6),
+                                    dbc.Col(
+                                        dcc.Dropdown(
+                                            id="ef-grid-step",
+                                            options=grid_step_options(
+                                                len(tickers) if tickers else len(settings.default_symbols)
+                                            ),
+                                            value=AUTO_STEP,
+                                            clearable=False,
+                                        ),
+                                        width=6,
+                                    ),
+                                ],
+                                className="p-1",
+                            ),
+                            id="ef-grid-step-wrapper",
+                            style={"display": "none"},
                         ),
                         dbc.Row(html.H6(children="Transition map")),
                         dbc.Row(
@@ -299,8 +403,9 @@ def card_controls(
                             n_clicks=0,
                             color="primary",
                         ),
+                        create_submit_spinner("ef-submit-spinner"),
                     ],
-                    style={"text-align": "center"},
+                    style={"textAlign": "center"},
                     className="p-3",
                 ),
             ]
@@ -308,6 +413,32 @@ def card_controls(
         class_name="mb-3",
     )
     return card
+
+
+@callback(
+    Output("ef-mc-input-wrapper", "style"),
+    Output("ef-grid-step-wrapper", "style"),
+    Input("ef-sim-mode", "value"),
+)
+def toggle_simulation_inputs(mode: str) -> tuple[dict, dict]:
+    """Show the Monte Carlo input or the grid step dropdown based on the mode."""
+    hidden = {"display": "none"}
+    shown: dict = {}
+    if mode == "Monte Carlo":
+        return shown, hidden
+    if mode == "Grid":
+        return hidden, shown
+    return hidden, hidden
+
+
+@callback(
+    Output("ef-grid-step", "options"),
+    Input("ef-symbols-list", "value"),
+)
+def update_grid_step_options(tickers_list) -> list[dict]:
+    """Rebuild grid step options so steps over the point budget are disabled."""
+    n_assets = len(tickers_list) if tickers_list else 0
+    return grid_step_options(n_assets)
 
 
 @callback(
@@ -319,31 +450,97 @@ def update_risk_free_rate(cml: str):
 
 
 @callback(
+    Output("ef-plot-options", "options"),
+    Output("ef-plot-options", "value"),
+    Output("mdp-line-option", "options"),
+    Output("mdp-line-option", "value"),
+    Output("cml-option", "options"),
+    Output("cml-option", "value"),
+    Output("ef-sim-mode", "value"),
+    Input("ef-plot-options", "value"),
+    Input("mdp-line-option", "value"),
+    Input("cml-option", "value"),
+    Input("ef-sim-mode", "value"),
+)
+def sync_incompatible_options(plot_type, mdp_value, cml_value, sim_mode):
+    plot_types = _normalize_plot_types(plot_type)
+    mdp_value = mdp_value or "Off"
+    cml_value = cml_value or "Off"
+    sim_mode = sim_mode or "Off"
+    triggered_id = dash.ctx.triggered_id
+
+    sim_active = sim_mode in {"Monte Carlo", "Grid"}
+    incompatible_selected = mdp_value == "On" or cml_value == "On" or sim_active
+    pairwise_selected = "Pairwise" in plot_types
+
+    if triggered_id in {"mdp-line-option", "cml-option", "ef-sim-mode"} and incompatible_selected:
+        plot_types = [option for option in plot_types if option != "Pairwise"]
+        pairwise_selected = False
+
+    if triggered_id == "ef-plot-options" and pairwise_selected:
+        mdp_value = "Off"
+        cml_value = "Off"
+        sim_mode = "Off"
+        sim_active = False
+        incompatible_selected = False
+
+    if not plot_types:
+        plot_types = ["Frontier"]
+
+    pairwise_selected = "Pairwise" in plot_types
+    mdp_cml_disabled = pairwise_selected
+
+    if mdp_cml_disabled:
+        mdp_value = "Off"
+        cml_value = "Off"
+
+    if pairwise_selected:
+        sim_mode = "Off"
+        sim_active = False
+
+    pairwise_disabled = mdp_value == "On" or cml_value == "On" or sim_active
+
+    return (
+        _get_plot_options(pairwise_disabled=pairwise_disabled),
+        plot_types,
+        _get_toggle_options(disabled=mdp_cml_disabled),
+        mdp_value,
+        _get_toggle_options(disabled=mdp_cml_disabled),
+        cml_value,
+        sim_mode,
+    )
+
+
+@callback(
     Output("ef-show-url", "children"),
     Input("ef-url", "href"),
     Input("ef-symbols-list", "value"),
     Input("ef-base-currency", "value"),
     Input("ef-first-date", "value"),
     Input("ef-last-date", "value"),
+    Input("ef-rebalancing-frequency", "value"),
 )
-def update_link_ef(href: str, tickers_list: list, ccy: str, first_date: str, last_date: str):
-    return create_link(ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list)
-
-
-@app.callback(
-    Output("ef-symbols-list", "options"),
-    Input("ef-symbols-list", "search_value"),
-    Input("ef-symbols-list", "value"),
-)
-def optimize_search_ef(search_value, selected_values):
-    return (
-        [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])]
-        if search_value
-        else selected_values
+def update_link_ef(href: str, tickers_list: list, ccy: str, first_date: str, last_date: str, rebal: str):
+    return create_link(
+        ccy=ccy,
+        first_date=first_date,
+        href=href,
+        last_date=last_date,
+        tickers_list=tickers_list,
+        rebal=rebal,
     )
 
 
-@app.callback(
+@callback(
+    Output("ef-symbols-list", "data"),
+    Input("ef-symbols-list", "searchValue"),
+    Input("ef-symbols-list", "value"),
+)
+def optimize_search_ef(search_value, selected_values):
+    return search_symbol_options(search_value, selected_values)
+
+
+@callback(
     Output("monte-carlo-option", "valid"),
     Output("monte-carlo-option", "invalid"),
     Input("monte-carlo-option", "value"),
@@ -358,7 +555,7 @@ def check_validity_monte_carlo(number: int):
     return False, False
 
 
-@app.callback(
+@callback(
     Output("ef-symbols-list", "disabled"),
     Input("ef-symbols-list", "value"),
 )
@@ -369,7 +566,7 @@ def disable_search(tickers_list) -> bool:
     return len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
 
 
-@app.callback(
+@callback(
     Output("ef-copy-link-button", "disabled"),
     Input("ef-symbols-list", "value"),
 )
@@ -384,21 +581,24 @@ def disable_link_button(tickers_list) -> bool:
     return check_if_list_empty_or_big(tickers_list) or len(tickers_list) < 2
 
 
-@app.callback(
+@callback(
     Output("ef-submit-button-state", "disabled"),
     Input("ef-symbols-list", "value"),
     Input("monte-carlo-option", "valid"),
+    Input("ef-sim-mode", "value"),
 )
-def disable_submit(tickers_list, mc_number_valid) -> bool:
+def disable_submit(tickers_list, mc_number_valid, sim_mode) -> bool:
     """
     Disable Submit button.
 
-    conditions:
+    Conditions:
     - number of tickers is < 2
-    - MC number is incorrect
+    - Monte Carlo mode is selected and its point count is invalid
     """
     number_of_tickers_is_too_small = len(tickers_list) < 2
-    mc_number_is_incorrect = mc_number_valid == False
+    mc_number_is_incorrect = sim_mode == "Monte Carlo" and mc_number_valid is False
+    return number_of_tickers_is_too_small or mc_number_is_incorrect
 
-    submit_result = number_of_tickers_is_too_small or mc_number_is_incorrect
-    return submit_result
+
+register_date_validation("ef-first-date")
+register_date_validation("ef-last-date")

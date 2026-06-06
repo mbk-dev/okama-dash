@@ -1,11 +1,12 @@
+import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
-from dash import html, callback, dash_table
+from dash import html, callback
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
 import okama as ok
 
-from common.html_elements.info_dash_table import get_assets_names, get_info
+from common.html_elements.info_ag_grid import get_assets_names, get_info
 
 card_assets_info = dbc.Card(
     dbc.CardBody(
@@ -30,7 +31,7 @@ card_assets_info = dbc.Card(
 )
 def pf_update_asset_names_info(
     assets: list, ccy: str, inflation: bool
-) -> tuple[dash_table.DataTable, dash_table.DataTable]:
+) -> tuple[dag.AgGrid, dag.AgGrid]:
     if not assets:
         raise PreventUpdate
     assets = [i for i in assets if i is not None]

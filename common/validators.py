@@ -1,17 +1,16 @@
-import numbers
 import operator
-from typing import Optional, Any
+from typing import Any
 
 
 def validate_integer(
     arg_name: str,
     arg_value: Any,
     *,
-    min_value: Optional[int] = None,
-    max_value: Optional[int] = None,
+    min_value: int | None = None,
+    max_value: int | None = None,
     inclusive: bool = False,
-    custom_min_message: Optional[str] = None,
-    custom_max_message: Optional[str] = None,
+    custom_min_message: str | None = None,
+    custom_max_message: str | None = None,
 ):
     """
     Validate that `arg_value` is an integer, and optionally fall within specific bounds.
@@ -50,24 +49,26 @@ def validate_integer(
     if not isinstance(arg_value, int):
         raise TypeError(f"{arg_name} must be an integer.")
 
-    ops = {"<=": operator.le, ">=": operator.ge, ">": operator.gt, "<": operator.lt}
-
     if inclusive:
-        operator_less = "<"
-        operator_greater = ">"
+        check_min = operator.lt
+        check_max = operator.gt
+        min_op_str = ">="
+        max_op_str = "<="
     else:
-        operator_less = "<="
-        operator_greater = ">="
+        check_min = operator.le
+        check_max = operator.ge
+        min_op_str = ">"
+        max_op_str = "<"
 
-    if min_value is not None and ops[operator_less](arg_value, min_value):
+    if min_value is not None and check_min(arg_value, min_value):
         if custom_min_message is not None:
             raise ValueError(custom_min_message)
-        raise ValueError(f"'{arg_name:s}' must be {operator_greater} {min_value:d}")
+        raise ValueError(f"'{arg_name:s}' must be {min_op_str} {min_value:d}")
 
-    if max_value is not None and ops[operator_greater](arg_value, max_value):
+    if max_value is not None and check_max(arg_value, max_value):
         if custom_max_message is not None:
             raise ValueError(custom_max_message)
-        raise ValueError(f"'{arg_name:s}' must be {operator_less} {max_value:d}")
+        raise ValueError(f"'{arg_name:s}' must be {max_op_str} {max_value:d}")
 
 
 def validate_integer_bool(rolling_window_value) -> bool:

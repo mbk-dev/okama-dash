@@ -7,7 +7,7 @@ from dash.dependencies import Input, Output, State
 import common.update_style
 
 
-find_weights_description = "Find optimized portfolio weights for a given return (annual value, arithmetic mean)."
+find_weights_description = "Find optimized portfolio weights for a given rate of return (CAGR)."
 
 
 card_ef_find_weights = dbc.Card(
@@ -76,7 +76,7 @@ card_ef_find_weights = dbc.Card(
                                                 n_clicks=0,
                                                 color="primary"
                                             )],
-                                            style={"text-align": "center"},
+                                            style={"textAlign": "center"},
                                             className="p-3",
                                         )
                                     ),
@@ -87,14 +87,7 @@ card_ef_find_weights = dbc.Card(
                                     dbc.Col(
                                                 [
                                                     html.H5("Optimized portfolio data"),
-                                                    html.Div(
-                                                        [
-                                                            html.P(id="ef-find-portfolio-mean-return"),
-                                                            html.P(id="ef-find-portfolio-cagr"),
-                                                            html.P(id="ef-find-portfolio-risk"),
-                                                            html.Pre(id="ef-find-portfolio-weights"),
-                                                        ],
-                                                    )
+                                                    html.Div(id="ef-find-portfolio-output"),
                                                 ]
                                     )
                                 ],
@@ -112,7 +105,7 @@ card_ef_find_weights = dbc.Card(
                                                 target="_blank",
                                                 color="primary"
                                             )],
-                                            style={"text-align": "center"},
+                                            style={"textAlign": "center"},
                                             className="p-3",
                                         )
                                     ),

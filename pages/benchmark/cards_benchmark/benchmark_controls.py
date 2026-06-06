@@ -1,30 +1,30 @@
-import re
 from typing import Optional
 
 import dash
 import dash.exceptions
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback
 
 import pandas as pd
 
 from common import settings as settings, inflation as inflation
+from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
+from common.html_elements.submit_spinner import create_submit_spinner
 from common.parse_query import make_list_from_string
-from common.symbols import get_symbols
-from common import cache
+from common.symbols import get_selected_symbol_options, search_symbol_options
 import common.validators as validators
+from common.date_input import date_input, register_date_validation
 from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
     benchmark_options_tooltip_plot,
     benchmark_options_tooltip_window_size,
     benchmark_options_tooltip_type,
 )
 
-app = dash.get_app()
-cache.init_app(app.server)
-options = get_symbols()
+
 
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
@@ -37,6 +37,7 @@ def benchmark_card_controls(
     ccy: Optional[str],
 ):
     tickers_list = make_list_from_string(tickers)
+    currency_list = inflation.get_currency_list()
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -48,12 +49,19 @@ def benchmark_card_controls(
                                 dbc.Col(
                                     [
                                         html.Label("Benchmark"),
-                                        dcc.Dropdown(
-                                            options=[benchmark] if benchmark else [],
-                                            multi=False,
-                                            placeholder="Select a benchmark",
-                                            id="select-benchmark",
-                                            value=benchmark if benchmark else settings.default_benchmark,
+                                        search_provider(
+                                            dmc.Select(
+                                                data=get_selected_symbol_options(
+                                                    [benchmark] if benchmark else [settings.default_benchmark]
+                                                ),
+                                                placeholder="Select a benchmark",
+                                                id="select-benchmark",
+                                                value=benchmark if benchmark else settings.default_benchmark,
+                                                searchable=True,
+                                                clearable=False,
+                                                nothingFoundMessage="No matching tickers",
+                                                comboboxProps={"shadow": "md"},
+                                            )
                                         ),
                                     ],
                                     lg=6,
@@ -67,12 +75,19 @@ def benchmark_card_controls(
                 html.Div(
                     [
                         html.Label("Tickers to compare with benchmark"),
-                        dcc.Dropdown(
-                            # options=options,
-                            value=tickers_list if tickers_list else settings.default_symbols_benchmark,
-                            multi=True,
-                            placeholder="Select tickers",
-                            id="benchmark-assets-list",
+                        search_provider(
+                            dmc.MultiSelect(
+                                data=get_selected_symbol_options(
+                                    tickers_list if tickers_list else settings.default_symbols_benchmark
+                                ),
+                                value=tickers_list if tickers_list else settings.default_symbols_benchmark,
+                                placeholder="Select tickers",
+                                id="benchmark-assets-list",
+                                searchable=True,
+                                clearable=False,
+                                nothingFoundMessage="No matching tickers",
+                                comboboxProps={"shadow": "md"},
+                            )
                         ),
                     ],
                 ),
@@ -80,8 +95,10 @@ def benchmark_card_controls(
                     [
                         html.Label("Base currency"),
                         dcc.Dropdown(
-                            options=inflation.get_currency_list(),
-                            value=ccy if ccy else settings.default_currency,
+                            options=currency_list,
+                            # URL values are normalized and validated: dcc.Dropdown
+                            # silently clears a value missing from its options.
+                            value=inflation.resolve_url_currency(ccy, currency_list, settings.default_currency),
                             multi=False,
                             clearable=False,
                             placeholder="Select a base currency",
@@ -95,26 +112,12 @@ def benchmark_card_controls(
                         dbc.Row(
                             [
                                 dbc.Col(
-                                    [
-                                        html.Label("First Date"),
-                                        dbc.Input(
-                                            id="benchmark-first-date",
-                                            value=first_date if first_date else "2000-01",
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ]
+                                    [html.Label("First Date")]
+                                    + date_input("benchmark-first-date", first_date if first_date else "2000-01")
                                 ),
                                 dbc.Col(
-                                    [
-                                        html.Label("Last Date"),
-                                        dbc.Input(
-                                            id="benchmark-last-date",
-                                            value=last_date if last_date else today_str,
-                                            type="text",
-                                        ),
-                                        dbc.FormText("Format: YYYY-MM"),
-                                    ]
+                                    [html.Label("Last Date")]
+                                    + date_input("benchmark-last-date", last_date if last_date else today_str)
                                 ),
                             ]
                         ),
@@ -227,8 +230,9 @@ def benchmark_card_controls(
                             n_clicks=0,
                             color="primary",
                         ),
+                        create_submit_spinner("benchmark-submit-spinner"),
                     ],
-                    style={"text-align": "center"},
+                    style={"textAlign": "center"},
                     className="p-3",
                 ),
             ]
@@ -283,31 +287,27 @@ def update_link_benchmark(
     )
 
 
-@app.callback(
-    Output("select-benchmark", "options"),
-    Input("select-benchmark", "search_value"),
+@callback(
+    Output("select-benchmark", "data"),
+    Input("select-benchmark", "searchValue"),
     Input("select-benchmark", "value"),
 )
 def optimize_search_benchmark(search_value, selected_value):
     if not search_value:
         raise dash.exceptions.PreventUpdate
-    return [o for o in options if re.match(search_value, o, re.IGNORECASE)] if search_value else selected_value
+    return search_symbol_options(search_value, [selected_value] if selected_value else None)
 
 
-@app.callback(
-    Output("benchmark-assets-list", "options"),
-    Input("benchmark-assets-list", "search_value"),
+@callback(
+    Output("benchmark-assets-list", "data"),
+    Input("benchmark-assets-list", "searchValue"),
     Input("benchmark-assets-list", "value"),
 )
 def optimize_search_assets_benchmark(search_value, selected_values):
-    return (
-        [o for o in options if re.match(search_value, o, re.IGNORECASE) or o in (selected_values or [])]
-        if search_value
-        else selected_values
-    )
+    return search_symbol_options(search_value, selected_values)
 
 
-@app.callback(
+@callback(
     Output("benchmark-assets-list", "disabled"),
     Input("benchmark-assets-list", "value"),
 )
@@ -318,7 +318,7 @@ def disable_search(tickers_list) -> bool:
     return len(tickers_list) >= settings.ALLOWED_NUMBER_OF_TICKERS
 
 
-@app.callback(
+@callback(
     Output("benchmark-copy-link-button", "disabled"),
     Input("benchmark-assets-list", "value"),
 )
@@ -333,7 +333,7 @@ def disable_link_button(tickers_list) -> bool:
     return check_if_list_empty_or_big(tickers_list)
 
 
-@app.callback(
+@callback(
     Output("benchmark-submit-button", "disabled"),
     Input("benchmark-assets-list", "value"),
     Input("benchmark-rolling-window", "value"),
@@ -349,3 +349,7 @@ def disable_submit(tickers_list, rolling_window_value) -> bool:
     condition1 = len(tickers_list) == 0
     condition2 = validators.validate_integer_bool(rolling_window_value)
     return condition1 or condition2
+
+
+register_date_validation("benchmark-first-date")
+register_date_validation("benchmark-last-date")

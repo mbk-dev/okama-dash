@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "okama-dash"
-version = "2.1.0"
+version = "4.0.0"
 description = "Python financial widgets with okama and Dash (plotly)"
 authors = ["Sergey Kikevich <sergey@rostsber.ru>"]
 license = "MIT"
@@ -18,29 +18,38 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 packages = [{include = "okama_dash"}]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.11, <4.0.0"
-okama = "1.4.4"
+okama = "^2.2.0"
 dash = "*"
 dash-daq = "*"
 dash-bootstrap-components = "*"
-plotly = "5.24.1"  # bug with clickData["points"][0]["customdata"]
-#plotly = "*"
+dash-mantine-components = "*"
+# plotly>=6 loses numpy customdata in clickData (plotly/plotly.py#5119);
+# app passes plain lists instead — see prepare_ef_plot.py and
+# test_customdata_serializes_as_json_lists_for_clickdata.
+plotly = "*"
 Flask-Caching = "*"
-pandas = "^2.0.0"
+pandas = "^3.0.0"
 #scipy = "1.12"  # https://github.com/numpy/numpy/issues/27135
 redis = "*"
 xlsxwriter = "*"
+dash-ag-grid = "^35.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
 black = { version = "*", optional = true }
 gunicorn = "*"
+ruff = "^0.15.14"
+pytest-playwright = "^0.8.0"
+openpyxl = "^3.1.5"
 
 [build-system]
 requires = ["poetry-core"]
@@ -48,3 +57,20 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["C", "E", "F", "W", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: pure logic tests, no Dash or browser",
+    "component: Dash callback tests with mocked okama",
+    "e2e: Playwright browser tests",
+]

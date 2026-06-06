@@ -1,6 +1,8 @@
 dash
+dash-ag-grid
+dash-mantine-components
 dash_daq
 dash-bootstrap-components
 plotly
 flask_caching
-okama
+okama>=2.2.0

@@ -1,0 +1,42 @@
+/*
+ * okama-dash — single source of truth for form-control sizing & spacing.
+ *
+ * The widgets mix three control families that ship with different default
+ * heights, which looks sloppy when they share a dbc.Row:
+ *   - dbc.Input / dbc.Select  -> 38px (Bootstrap .form-control)
+ *   - dcc.Dropdown (Dash 3.x) -> 34px (.dash-dropdown-trigger min-height 32px + 2px border)
+ *   - dmc.Select  (Mantine)   -> 36px (.mantine-Select-input min-height 36px)
+ *
+ * Design rule 1 — Equal height in a row: normalize every interactive control to
+ * 38px so dropdowns and selects line up with inputs in the same row.
+ *
+ * Design rule 2 — Vertical rhythm: stacked form rows must never touch. The
+ * CONTAINER of stacked rows owns the gap via Bootstrap `vstack gap-2` (0.5rem),
+ * so every row — including ones added dynamically — keeps a consistent gap and
+ * no row has to remember a bottom-margin utility. See #dynamic-container in
+ * pages/portfolio/cards_portfolio/portfolio_controls.py.
+ */
+
+/* Rule 1: dcc.Dropdown -> 38px (36px trigger + 2px border on the wrapper). */
+.dash-dropdown .dash-dropdown-trigger {
+    min-height: 36px;
+}
+
+/* Rule 1: single dmc.Select -> 38px. min-height (not height) keeps the
+   PillsInput-based dmc.MultiSelect free to grow as tags wrap. */
+.mantine-Select-input {
+    min-height: 38px;
+}
+
+/* Custom cash flows (Portfolio, #pf-cf-ts-accordion): when the time_series
+   strategy is selected the nested accordion header would just repeat the
+   strategy name picked in the dropdown. `ts-plain` (set by the
+   open_ts_accordion_for_time_series callback / at build time) hides the
+   header and styles the body as the former bordered block. */
+#pf-cf-ts-accordion.ts-plain .accordion-header {
+    display: none;
+}
+
+#pf-cf-ts-accordion.ts-plain .accordion-item {
+    background-color: var(--bs-tertiary-bg);
+}

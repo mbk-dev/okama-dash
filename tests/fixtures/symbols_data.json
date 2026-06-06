@@ -1,0 +1,17 @@
+{
+  "namespaces": ["US", "INDX"],
+  "symbols_by_namespace": {
+    "US": {
+      "symbol": ["AAPL.US", "MSFT.US", "GOOG.US", "AMZN.US", "TSLA.US"],
+      "name": ["Apple Inc", "Microsoft Corp", "Alphabet Inc", "Amazon.com Inc", "Tesla Inc"]
+    },
+    "INDX": {
+      "symbol": ["SP500TR.INDX", "MCFTR.INDX"],
+      "name": ["S&P 500 Total Return", "MOEX Total Return"]
+    },
+    "INFL": {
+      "symbol": ["USD.INFL", "EUR.INFL", "RUB.INFL"],
+      "name": ["US Inflation Rate", "EU Inflation Rate", "Russia Inflation Rate"]
+    }
+  }
+}

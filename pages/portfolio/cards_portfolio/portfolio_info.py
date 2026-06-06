@@ -1,13 +1,14 @@
+import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
-from dash import html, dcc, callback, ALL, dash_table
+from dash import html, dcc, callback, ALL
 from dash.dependencies import Input, Output, State
 import plotly.express as px
 from dash.exceptions import PreventUpdate
 import okama as ok
 
-from common.html_elements.info_dash_table import get_assets_names, get_info
+from common.html_elements.info_ag_grid import get_assets_names, get_info
 from common.mobile_screens import adopt_small_screens
 
 card_assets_info = dbc.Card(
@@ -19,15 +20,21 @@ card_assets_info = dbc.Card(
                         [
                             html.H5("Asset Allocation"),
                             dcc.Graph(id="pf-asset-allocation", style={"height": 200, "width": "100%"}),
-                        ]
+                        ],
+                        xs=12,
+                        md=6,
                     ),
                     dbc.Col(
                         [
                             html.H5("Information"),
                             html.Div(id="pf-asset-list-info", children="Start to select assets to see the information"),
-                        ]
+                        ],
+                        xs=12,
+                        md=6,
                     ),
-                ]
+                ],
+                # Single column on mobile (stacked with a vertical gap), two columns from md up.
+                class_name="gy-3",
             ),
             html.H5(children="Assets names"),
             html.Div(id="pf-assets-names", children="Start to select assets to see the information"),
@@ -70,7 +77,7 @@ def generate_pie_chart(tickers, weights, screen):
     # Change layout for screen sizes
     fig, config = adopt_small_screens(fig, screen)
     fig.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0, pad=0),
+        margin={"l": 0, "r": 0, "t": 0, "b": 0, "pad": 0},
     )
     return fig, config
 
@@ -83,7 +90,7 @@ def generate_pie_chart(tickers, weights, screen):
     Input("pf-inflation-switch", "value"),  # inflation
     prevent_initial_call=True,
 )
-def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> dash_table.DataTable:
+def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> tuple[dag.AgGrid, dag.AgGrid]:
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate
@@ -96,13 +103,11 @@ def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> dash_
 @callback(
     Output(component_id="pf-monte-carlo-statistics-frame", component_property="hidden"),
     Input(component_id="pf-submit-button", component_property="n_clicks"),
-    State(component_id="pf-cashflow", component_property="value"),
     State(component_id="pf-plot-option", component_property="value"),
     State(component_id="pf-monte-carlo-number", component_property="value"),
 )
 def show_survival_periods_statistics_table(
     n_clicks,
-    cashflow: float,
     plot_type: str,
     n_monte_carlo: int,
 ):

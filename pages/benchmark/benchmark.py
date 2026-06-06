@@ -1,5 +1,4 @@
 import typing
-import warnings
 
 import dash
 from dash import callback
@@ -12,22 +11,27 @@ import pandas as pd
 import okama as ok
 
 import common.settings as settings
+from common.object_cache import get_or_create, TTL_ASSET_LIST
 import common.update_style
+from common.chart_helpers import add_last_value_annotations
+from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens
+import plotly.graph_objects as go
 from pages.benchmark.cards_benchmark.benchmark_chart import card_graf_benchmark
 from pages.benchmark.cards_benchmark.benchmark_controls import benchmark_card_controls
 
 from pages.benchmark.cards_benchmark.benchmark_description import card_benchmark_description
 from pages.benchmark.cards_benchmark.benchmark_info import card_benchmark_info
 
-warnings.simplefilter(action="ignore", category=FutureWarning)
-
 dash.register_page(
     __name__,
     path="/benchmark",
     title="Compare with benchmark : okama",
     name="Compare with benchmark",
-    description="Okama.io widget to compare assets with benchmark: tracking difference, tracking error, correlation, beta",
+    description=(
+        "Okama.io widget to compare assets with benchmark: tracking difference, "
+        "tracking error, correlation, beta"
+    ),
 )
 
 
@@ -71,6 +75,9 @@ def layout(benchmark=None, tickers=None, first_date=None, last_date=None, ccy=No
     State("benchmark-plot-option", "value"),
     State("benchmark-chart-expanding-rolling", "value"),
     State("benchmark-rolling-window", "value"),
+    # Show the spinner under the Compare button while computing (the chart's
+    # own dcc.Loading spinner is below the fold on mobile).
+    running=submit_spinner_running("benchmark-submit-spinner"),
     prevent_initial_call=True,
 )
 def update_graf_benchmark(
@@ -88,19 +95,35 @@ def update_graf_benchmark(
 ):
     if not selected_symbols or not benchmark:
         raise dash.exceptions.PreventUpdate
-    tickers = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
-    symbols = [benchmark] + tickers
-    al_object = ok.AssetList(
-        symbols,
-        first_date=fd_value,
-        last_date=ld_value,
-        ccy=ccy,
-        inflation=False,
-    )
-    fig, df_data = get_benchmark_figure(al_object, plot_type, expanding_rolling, rolling_window)
-    json_data = df_data.to_json(orient="split", default_handler=str)
-    fig, config = adopt_small_screens(fig, screen)
-    return fig, config, json_data
+    try:
+        tickers = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
+        symbols = [benchmark] + tickers
+        al_object, _ = get_or_create(
+            obj_type="assetlist",
+            constructor_fn=lambda: ok.AssetList(
+                symbols,
+                first_date=fd_value,
+                last_date=ld_value,
+                ccy=ccy,
+                inflation=False,
+            ),
+            cache_key_params={
+                "symbols": symbols,
+                "ccy": ccy,
+                "first_date": fd_value,
+                "last_date": ld_value,
+                "inflation": False,
+            },
+            ttl_seconds=TTL_ASSET_LIST,
+        )
+        fig, df_data = get_benchmark_figure(al_object, plot_type, expanding_rolling, rolling_window)
+        json_data = df_data.to_json(orient="split", default_handler=str)
+        fig, config = adopt_small_screens(fig, screen)
+        return fig, config, json_data
+    except Exception as e:
+        alert_fig = go.Figure()
+        alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
+        return alert_fig, {}, None
 
 
 def get_benchmark_figure(
@@ -146,24 +169,15 @@ def get_benchmark_figure(
 
         return_series = df.iloc[-1, :]
 
-        annotations_xy = [(ind[-1], y) for y in df.iloc[-1].values]
+        annotations_xy = [(ind[-1], y) for y in df.iloc[-1].to_numpy()]
         annotation_series = (
             return_series.map("{:,.2f}%".format)
             if plot_type not in ("correlation", "beta")
             else return_series.map("{:,.2f}".format)
         )
-        annotations_text = [cum_return for cum_return in annotation_series]
+        annotations_text = list(annotation_series)
 
-        # plot annotations
-        for point in zip(annotations_xy, annotations_text):
-            fig.add_annotation(
-                x=point[0][0],
-                y=point[0][1],
-                text=point[1],
-                showarrow=False,
-                xanchor="left",
-                bgcolor="grey",
-            )
+        add_last_value_annotations(fig, annotations_xy, annotations_text)
         fig.update_yaxes(
             # ticks='outside',
             zeroline=True,

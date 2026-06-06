@@ -1,13 +1,12 @@
-from typing import Tuple
-
+import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
-from dash import html, callback, dash_table
+from dash import html, callback
 from dash.dependencies import Input, Output
 from dash.exceptions import PreventUpdate
 
 import okama as ok
 
-from common.html_elements.info_dash_table import get_assets_names, get_info
+from common.html_elements.info_ag_grid import get_assets_names, get_info
 
 card_benchmark_info = dbc.Card(
     dbc.CardBody(
@@ -32,7 +31,7 @@ card_benchmark_info = dbc.Card(
 )
 def pf_update_asset_names_info(
     assets: list, benchmark: str, ccy: str
-) -> Tuple[dash_table.DataTable, dash_table.DataTable]:
+) -> tuple[dag.AgGrid, dag.AgGrid]:
     assets_to_compare = [i for i in assets if i is not None]
     assets = [benchmark] + assets_to_compare if benchmark else assets_to_compare
     if not assets:
