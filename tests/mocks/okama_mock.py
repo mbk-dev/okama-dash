@@ -101,6 +101,12 @@ class _DCF:
     def monte_carlo_survival_period(self, threshold: float = 0) -> pd.Series:
         return pd.Series([25.0, 30.0, 20.0])
 
+    def monte_carlo_irr(self) -> pd.Series:
+        return pd.Series([0.04, 0.05, 0.06])
+
+    def irr(self) -> float:
+        return 0.045
+
 
 class PicklablePortfolio:
     def __init__(self):
@@ -444,6 +450,8 @@ def make_mock_portfolio() -> MagicMock:
     dcf.wealth_index_fv_with_assets = mock.wealth_index_with_assets.copy()
     dcf.monte_carlo_wealth = pd.DataFrame()
     dcf.survival_period_hist.return_value = 25.0
+    dcf.monte_carlo_irr.return_value = pd.Series([0.04, 0.05, 0.06])
+    dcf.irr.return_value = 0.045
     mock.dcf = dcf
 
     return mock

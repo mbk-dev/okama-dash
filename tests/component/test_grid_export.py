@@ -161,8 +161,8 @@ class TestComparePageExportCallback:
 
 class TestPortfolioPageExportCallbacks:
     """
-    Portfolio page has three grids with xlsx export: describe statistics,
-    survival statistics (MC forecast branch), and wealth statistics (MC forecast branch).
+    Portfolio page has four grids with xlsx export: describe statistics plus
+    the MC forecast sections — survival, wealth and cash flow IRR statistics.
     Each has its own export callback wired to the grid_export helper.
     """
 
@@ -245,3 +245,31 @@ class TestPortfolioPageExportCallbacks:
 
         with pytest.raises(dash.exceptions.PreventUpdate):
             export_pf_wealth_statistics_xlsx(None, [{"percentile": 50, "wealth": 100000}])
+
+    def test_cashflow_irr_export_returns_download_object_on_click(self):
+        from pages.portfolio.portfolio import export_pf_cashflow_irr_statistics_xlsx
+
+        row_data = [{"1": "Mean", "2": 0.05}]
+        result = export_pf_cashflow_irr_statistics_xlsx(1, row_data)
+
+        assert isinstance(result, dict)
+        assert result["filename"] == "cashflow_irr_statistics.xlsx"
+
+    def test_cashflow_irr_export_formats_value_columns_as_percent(self):
+        from pages.portfolio.portfolio import export_pf_cashflow_irr_statistics_xlsx
+
+        # Desktop layout: 1/3 = labels, 2/4 = IRR fractions
+        row_data = [{"1": "1st percentile", "2": 0.0412, "3": "Min", "4": 0.0399}]
+        result = export_pf_cashflow_irr_statistics_xlsx(1, row_data)
+
+        sheet = _load_sheet(result)
+        assert sheet["B2"].value == 0.0412
+        assert sheet["B2"].number_format == "0.00%"
+        assert sheet["D2"].number_format == "0.00%"
+        assert sheet["A2"].number_format == "General"
+
+    def test_cashflow_irr_export_prevents_update_without_click(self):
+        from pages.portfolio.portfolio import export_pf_cashflow_irr_statistics_xlsx
+
+        with pytest.raises(dash.exceptions.PreventUpdate):
+            export_pf_cashflow_irr_statistics_xlsx(None, [{"1": "Mean", "2": 0.05}])

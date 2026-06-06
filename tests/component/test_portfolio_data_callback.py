@@ -83,7 +83,7 @@ class TestUpdateGrafPortfolioInner:
         from pages.portfolio.portfolio import _update_graf_portfolio_inner
 
         result = _update_graf_portfolio_inner(**_default_args())
-        fig, config, stats, forecast_surv, forecast_wealth, json_data = result
+        fig, config, stats, forecast_surv, forecast_wealth, forecast_irr, json_data = result
 
         assert isinstance(fig, go.Figure)
         assert isinstance(config, dict)
@@ -300,9 +300,7 @@ class TestMcStatisticsTabs:
 
         pf = _pf_with_mc_stats()
         pf.dcf.survival_period_hist.return_value = 25.0
-        result = get_forecast_survival_statistics_section(
-            pd.DataFrame({"x": [1]}), pd.DataFrame({"y": [1]}), pf
-        )
+        result = get_forecast_survival_statistics_section(pd.DataFrame({"x": [1]}), pd.DataFrame({"y": [1]}), pf)
 
         figure = _section_graph(result).figure
         assert len(figure.data) == 1
@@ -509,7 +507,124 @@ class TestStatisticsGridDotNotation:
         assert all(d["valueFormatter"]["function"] == "formatPercentGuarded(params.value)" for d in grid.columnDefs)
 
 
+def _irr_pf(series, hist=0.045):
+    pf = _pf_with_mc_stats()
+    pf.dcf.monte_carlo_irr.return_value = pd.Series(series, dtype="float64")
+    pf.dcf.irr.return_value = hist
+    return pf
+
+
+class TestCashflowIrrSection:
+    """Issue #19: third MC section — CashFlow IRR (percentile table + histogram)."""
+
+    @staticmethod
+    def _build(pf, **kwargs):
+        from pages.portfolio.portfolio import get_forecast_cashflow_irr_statistics_section
+
+        return get_forecast_cashflow_irr_statistics_section(pf, **kwargs)
+
+    # The Table tab wraps grid + effective-sample note in one Div.
+    @staticmethod
+    def _grid(section):
+        return _section_tabs(section).children[0].children.children[0]
+
+    @staticmethod
+    def _note(section):
+        return _section_tabs(section).children[0].children.children[1]
+
+    def test_section_has_table_and_distribution_tabs(self):
+        section = self._build(_irr_pf([0.04, 0.05, 0.06]))
+
+        tabs = _section_tabs(section)
+        assert type(tabs).__name__ == "Tabs"
+        assert [tab.label for tab in tabs.children] == ["Table", "Distribution"]
+
+    def test_table_grid_id_matches_the_export_wiring(self):
+        section = self._build(_irr_pf([0.04, 0.05, 0.06]))
+
+        assert self._grid(section).id == "pf-cashflow-irr-statistics-grid"
+
+    def test_statistics_computed_on_non_nan_subset(self):
+        section = self._build(_irr_pf([0.04, float("nan"), 0.06]))
+
+        right_pane = {row["3"]: row["4"] for row in self._grid(section).rowData}
+        assert right_pane["Min"] == pytest.approx(0.04)
+        assert right_pane["Max"] == pytest.approx(0.06)
+        assert right_pane["Mean"] == pytest.approx(0.05)
+
+    def test_effective_sample_note_shows_n_of_total(self):
+        section = self._build(_irr_pf([0.04, float("nan"), 0.06]))
+
+        assert "2 of 3" in self._note(section).children
+
+    def test_historical_irr_row_present(self):
+        section = self._build(_irr_pf([0.04, 0.05, 0.06], hist=0.045))
+
+        right_pane = {row["3"]: row["4"] for row in self._grid(section).rowData}
+        assert right_pane["Historical IRR"] == pytest.approx(0.045)
+
+    def test_nan_historical_irr_rendered_as_none(self):
+        # NaN is not valid JSON; the guarded formatter renders None as a dash.
+        section = self._build(_irr_pf([0.04, 0.06], hist=float("nan")))
+
+        right_pane = {row["3"]: row["4"] for row in self._grid(section).rowData}
+        assert right_pane["Historical IRR"] is None
+
+    def test_all_nan_renders_graceful_note(self):
+        section = self._build(_irr_pf([float("nan")] * 3))
+
+        assert "undefined" in str(section.children[1].children)
+        assert "Tabs" not in [type(c).__name__ for c in section.children]
+
+    def test_values_use_guarded_percent_formatter(self):
+        section = self._build(_irr_pf([0.04, 0.05, 0.06]))
+
+        value_defs = [d for d in self._grid(section).columnDefs if "valueFormatter" in d]
+        assert value_defs, "no value columns found"
+        assert all(d["valueFormatter"]["function"] == "formatPercentGuarded(params.value)" for d in value_defs)
+
+    def test_histogram_plots_non_nan_values_with_percent_ticks(self):
+        section = self._build(_irr_pf([0.04, float("nan"), 0.06]))
+
+        figure = _section_graph(section).figure
+        assert figure.data[0].histnorm == "probability"
+        assert list(figure.data[0].x) == [0.04, 0.06]
+        assert figure.layout.xaxis.tickformat == ".1%"
+
+    def test_compact_stacks_pairs_in_single_column(self):
+        section = self._build(_irr_pf([0.04, 0.05, 0.06]), compact=True)
+
+        grid = self._grid(section)
+        assert len(grid.rowData) == 12  # 7 percentiles + Min/Max/Mean/Std + Historical IRR
+        assert all(set(row) == {"1", "2"} for row in grid.rowData)
+
+    def test_inner_returns_irr_section_before_chart_data(self, patched_pf_inner):
+        from pages.portfolio.portfolio import _update_graf_portfolio_inner
+
+        patched_pf_inner.dcf.monte_carlo_survival_period.return_value = pd.Series([20.0, 25.0, 30.0])
+        wealth_fv = pd.DataFrame({0: [100.0, 200.0], 1: [150.0, 250.0]})
+        patched_pf_inner.dcf.monte_carlo_wealth = MagicMock(
+            side_effect=lambda discounting="fv", include_negative_values=True: (
+                wealth_fv if discounting == "fv" else wealth_fv / 2
+            )
+        )
+        patched_pf_inner.dcf.monte_carlo_irr.return_value = pd.Series([0.04, 0.05, 0.06])
+        patched_pf_inner.dcf.irr.return_value = 0.045
+        args = _default_args()
+        args["n_monte_carlo"] = 2
+        with patch(
+            f"{PF_MODULE}.get_pf_figure",
+            return_value=(go.Figure(), pd.DataFrame(), pd.DataFrame({0: [1.0]}), pd.DataFrame()),
+        ):
+            result = _update_graf_portfolio_inner(**args)
+
+        assert len(result) == 7
+        assert self._grid(result[5]).id == "pf-cashflow-irr-statistics-grid"
+
+
 class TestUpdateGrafPortfolioOuter:
+    # Outputs: fig, config, stats, survival, wealth, cashflow IRR, chart data,
+    # toast is_open, toast children — toast sits at positions 7/8.
     def test_exception_opens_toast_with_message(self):
         from pages.portfolio.portfolio import update_graf_portfolio
 
@@ -523,8 +638,8 @@ class TestUpdateGrafPortfolioOuter:
                 n_clicks=1,
             )
 
-        toast_is_open = result[6]
-        toast_children = result[7]
+        toast_is_open = result[7]
+        toast_children = result[8]
         assert toast_is_open is True
         assert "boom" in str(toast_children)
 
@@ -543,7 +658,7 @@ class TestUpdateGrafPortfolioOuter:
                 n_clicks=1,
             )
 
-        assert len(result) == 8
+        assert len(result) == 9
 
     def test_success_closes_toast(self, patched_pf_inner):
         from pages.portfolio.portfolio import update_graf_portfolio
@@ -557,8 +672,8 @@ class TestUpdateGrafPortfolioOuter:
                 n_clicks=1,
             )
 
-        assert result[6] is False
-        assert len(result) == 8
+        assert result[7] is False
+        assert len(result) == 9
 
     def test_log_scale_toggle_no_update_toast(self):
         import dash
@@ -573,8 +688,8 @@ class TestUpdateGrafPortfolioOuter:
                 n_clicks=1,
             )
 
-        assert result[6] is dash.no_update
         assert result[7] is dash.no_update
+        assert result[8] is dash.no_update
 
 
 class TestShowGrafAndStatisticsRows:

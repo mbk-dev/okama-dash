@@ -24,6 +24,7 @@ card_table = dbc.Card(
                 # statically, so their export callbacks always have a valid Output target.
                 dcc.Download(id="pf-survival-statistics-download"),
                 dcc.Download(id="pf-wealth-statistics-download"),
+                dcc.Download(id="pf-cashflow-irr-statistics-download"),
                 html.P("Portfolio statistics without cash flows:"),
                 html.Div(id="pf-describe-table"),
             ]

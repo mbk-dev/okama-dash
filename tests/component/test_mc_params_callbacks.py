@@ -96,7 +96,7 @@ class TestSubmitBuildsParameters:
 
         with (
             patch(f"{PF_MODULE}.dash.ctx") as mock_ctx,
-            patch(f"{PF_MODULE}._update_graf_portfolio_inner", return_value=(None,) * 6) as mock_inner,
+            patch(f"{PF_MODULE}._update_graf_portfolio_inner", return_value=(None,) * 7) as mock_inner,
         ):
             mock_ctx.triggered_id = "pf-submit-button"
             update_graf_portfolio(

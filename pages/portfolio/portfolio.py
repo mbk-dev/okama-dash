@@ -285,6 +285,7 @@ def layout(
     Output(component_id="pf-describe-table", component_property="children"),
     Output(component_id="pf-monte-carlo-statistics", component_property="children"),
     Output(component_id="pf-monte-carlo-wealth-statistics", component_property="children"),
+    Output(component_id="pf-monte-carlo-cashflow-irr-statistics", component_property="children"),
     Output(component_id="pf-store-chart-data", component_property="data"),
     Output(component_id="pf-error-toast", component_property="is_open"),
     Output(component_id="pf-error-toast", component_property="children"),
@@ -409,16 +410,7 @@ def update_graf_portfolio(
     if trigger == "pf-logarithmic-scale-switch":
         patched_fig = dash.Patch()
         patched_fig["layout"]["yaxis"]["type"] = "log" if log_on else "linear"
-        return (
-            patched_fig,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-        )
+        return (patched_fig,) + (dash.no_update,) * 8
 
     distribution_parameters_monte_carlo = build_distribution_parameters(
         distribution_monte_carlo,
@@ -481,6 +473,7 @@ def update_graf_portfolio(
         return (
             empty_fig,
             {},
+            dag.AgGrid(),
             dag.AgGrid(),
             dag.AgGrid(),
             dag.AgGrid(),
@@ -559,6 +552,26 @@ def export_pf_wealth_statistics_xlsx(n_clicks, row_data):
         row_data,
         "wealth_statistics.xlsx",
         column_formats={"2": "int", "3": "int", "5": "int", "6": "int"},
+    )
+
+
+@callback(
+    Output("pf-cashflow-irr-statistics-download", "data"),
+    Input("pf-cashflow-irr-statistics-export-btn", "n_clicks"),
+    State("pf-cashflow-irr-statistics-grid", "rowData"),
+    prevent_initial_call=True,
+)
+def export_pf_cashflow_irr_statistics_xlsx(n_clicks, row_data):
+    """Trigger xlsx export for Monte Carlo cash flow IRR statistics grid."""
+    from common.html_elements.grid_export import rowdata_to_xlsx_download
+
+    # Grid fields: 1/3 = labels, 2/4 = IRR fractions (desktop); the compact
+    # mobile grid only has 1/2, extra keys are simply unused.
+    return rowdata_to_xlsx_download(
+        n_clicks,
+        row_data,
+        "cashflow_irr_statistics.xlsx",
+        column_formats={"2": "percent", "4": "percent"},
     )
 
 
@@ -846,15 +859,22 @@ def _update_graf_portfolio_inner(
             compact=compact_tables,
             screen=screen,
         )
+        forecast_cashflow_irr_datatable = get_forecast_cashflow_irr_statistics_section(
+            pf_object,
+            compact=compact_tables,
+            screen=screen,
+        )
     else:
         forecast_survival_statistics_datatable = dag.AgGrid()
         forecast_wealth_statistics_datatable = dag.AgGrid()
+        forecast_cashflow_irr_datatable = dag.AgGrid()
     return (
         fig,
         config,
         statistics_ag_grid,
         forecast_survival_statistics_datatable,
         forecast_wealth_statistics_datatable,
+        forecast_cashflow_irr_datatable,
         json_data,
     )
 
@@ -1173,11 +1193,14 @@ def _get_wealth_distribution_figure(wealth_fv: pd.Series, wealth_pv: pd.Series) 
     return fig
 
 
-def _mc_section_tabs(grid: dag.AgGrid, graph: dcc.Graph) -> dbc.Tabs:
-    """Table/Distribution tabs of an MC statistics section (issue #18)."""
+def _mc_section_tabs(table_content, graph: dcc.Graph) -> dbc.Tabs:
+    """Table/Distribution tabs of an MC statistics section (issue #18).
+
+    table_content is the grid itself or a wrapper around it (e.g. the
+    CashFlow IRR grid with its effective-sample note)."""
     return dbc.Tabs(
         [
-            dbc.Tab(grid, label="Table", tab_id="table", class_name="pt-2"),
+            dbc.Tab(table_content, label="Table", tab_id="table", class_name="pt-2"),
             dbc.Tab(graph, label="Distribution", tab_id="distribution", class_name="pt-2"),
         ],
         active_tab="table",
@@ -1358,6 +1381,102 @@ def get_forecast_wealth_statistics_section(pf_object, compact: bool = False, scr
     )
     return html.Div(
         [html.H5(children="Wealth statistics"), grid],
+        className="vstack gap-2",
+    )
+
+
+def _get_cashflow_irr_distribution_figure(irr_series: pd.Series) -> go.Figure:
+    """Histogram of per-path money-weighted IRRs (NaN paths already dropped)."""
+    fig = go.Figure(
+        go.Histogram(
+            x=irr_series,
+            histnorm="probability",
+            xbins=_mc_histogram_bins([irr_series]),
+            marker=go.histogram.Marker(color="lightgreen"),
+            name="CashFlow IRR",
+            showlegend=False,
+        )
+    )
+    fig.update_layout(title={"text": "CashFlow IRR distribution", "x": 0.5, "xanchor": "center"})
+    fig.update_xaxes(tickformat=".1%")
+    fig.update_yaxes(title_text="Probability")
+    return fig
+
+
+def get_forecast_cashflow_irr_statistics_section(pf_object, compact: bool = False, screen: dict | None = None):
+    """CashFlow IRR MC section (issue #19): percentile table + distribution.
+
+    monte_carlo_irr() returns NaN for paths whose cash flow has no sign change
+    (e.g. contributions only); statistics use the non-NaN subset and the table
+    surfaces the effective sample size instead of silently shrinking.
+    """
+    irr_series = pf_object.dcf.monte_carlo_irr()
+    valid = irr_series.dropna()
+    if valid.empty:
+        return html.Div(
+            [
+                html.H5(children="CashFlow IRR"),
+                html.Small("IRR is undefined for every simulated path (cash flow has no sign change)."),
+            ],
+            className="vstack gap-2",
+        )
+
+    historical_irr = pf_object.dcf.irr()
+    percentiles = [(f"{q}{suffix} percentile", valid.quantile(q / 100)) for q, suffix in PERCENTILES]
+    moments = [
+        ("Min", valid.min()),
+        ("Max", valid.max()),
+        ("Mean", valid.mean()),
+        ("Std", valid.std()),
+        # NaN is not valid JSON; the guarded formatter renders None as a dash.
+        ("Historical IRR", None if pd.isna(historical_irr) else historical_irr),
+    ]
+    guarded_percent_formatter = {"function": "formatPercentGuarded(params.value)"}
+    if compact:
+        # Mobile: one pair per row — the two-pane layout doesn't fit narrow screens.
+        table_list = [{"1": label, "2": value} for label, value in percentiles + moments]
+        column_defs = [
+            {"field": "1", "minWidth": 130},
+            {"field": "2", "valueFormatter": guarded_percent_formatter},
+        ]
+    else:
+        rows = zip_longest(percentiles, moments, fillvalue=("-", None))
+        table_list = [{"1": p[0], "2": p[1], "3": m[0], "4": m[1]} for p, m in rows]
+        column_defs = [
+            {"field": "1"},
+            {"field": "2", "valueFormatter": guarded_percent_formatter},
+            {"field": "3"},
+            {"field": "4", "valueFormatter": guarded_percent_formatter},
+        ]
+    grid = dag.AgGrid(
+        id="pf-cashflow-irr-statistics-grid",
+        rowData=table_list,
+        columnDefs=column_defs,
+        defaultColDef={"resizable": False, "sortable": False},
+        columnSize="responsiveSizeToFit",
+        dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
+        style={"height": None},
+    )
+    table_content = html.Div(
+        [
+            grid,
+            html.Small(f"IRR is defined for {len(valid)} of {len(irr_series)} simulated paths."),
+        ],
+        className="vstack gap-1",
+    )
+
+    fig = _get_cashflow_irr_distribution_figure(valid)
+    fig, config = adopt_small_screens(fig, screen)
+    graph = dcc.Graph(figure=fig, config=config, id="pf-cashflow-irr-distribution-graph")
+
+    from common.html_elements.grid_export import create_grid_header_with_export
+
+    # The matching dcc.Download lives statically in pf_statistics_table.py.
+    return html.Div(
+        [
+            create_grid_header_with_export("CashFlow IRR", "pf-cashflow-irr-statistics-export-btn"),
+            _mc_section_tabs(table_content, graph),
+        ],
         className="vstack gap-2",
     )
 

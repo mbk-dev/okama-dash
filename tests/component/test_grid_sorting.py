@@ -117,3 +117,14 @@ def test_wealth_statistics_grids_sorting_disabled():
     desktop = get_forecast_wealth_statistics_section(pf)
     compact = get_forecast_wealth_statistics_section(pf, compact=True)
     _assert_sorting_disabled(_find_grids(desktop) + _find_grids(compact), expected_count=2)
+
+
+def test_cashflow_irr_statistics_grids_sorting_disabled():
+    from pages.portfolio.portfolio import get_forecast_cashflow_irr_statistics_section
+
+    pf = _pf_with_mc_stats()
+    pf.dcf.monte_carlo_irr.return_value = pd.Series([0.04, 0.05, 0.06])
+    pf.dcf.irr.return_value = 0.045
+    desktop = get_forecast_cashflow_irr_statistics_section(pf)
+    compact = get_forecast_cashflow_irr_statistics_section(pf, compact=True)
+    _assert_sorting_disabled(_find_grids(desktop) + _find_grids(compact), expected_count=2)
