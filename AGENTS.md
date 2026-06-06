@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-556 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+558 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -128,7 +128,7 @@ tests/
 │   ├── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
 │   ├── test_ef_label_padding.py     # EF x-range label padding: centered labels reserve half width on both sides (2 tests)
 │   ├── test_chart_helpers.py        # add_return_type_annotation: CAGR note, default, no-arrow; format_points (integer points, space thousands separator) (6 tests)
-│   ├── test_inflation.py            # resolve_url_currency: case-insensitive, validated against the currency list, falls back to the page default (7 tests)
+│   ├── test_inflation.py            # resolve_url_currency (case-insensitive, validated, page-default fallback); currency list memoized 30 days with TESTING-token cache isolation (9 tests)
 │   ├── test_mc_distribution_parameters.py  # build_distribution_parameters: norm/lognorm/t mapping, empty→None, lognorm loc=-1; reactive-estimation gates: _portfolio_is_complete (sum=100, tolerance), _valid_mc_date (17 tests)
 │   └── test_ef_portfolio_card.py    # EF portfolio card builder: stat blocks, title/badge, allocation rows with percent + stacked bar (plotly palette colors, zero-weight segments skipped), None-weights note (9 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
@@ -176,11 +176,11 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 203 | ~2s |
+| `poetry run pytest -m unit` | Pure logic | 205 | ~2s |
 | `poetry run pytest -m component` | Dash callbacks | 328 | ~4s |
-| `poetry run pytest -m e2e` | Playwright browser | 25 | ~63s |
-| `poetry run pytest -q` | Everything | 556 | ~66s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 531 | ~4s |
+| `poetry run pytest -m e2e` | Playwright browser | 25 | ~75s |
+| `poetry run pytest -q` | Everything | 558 | ~80s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 533 | ~6s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
