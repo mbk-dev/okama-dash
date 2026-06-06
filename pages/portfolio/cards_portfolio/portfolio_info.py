@@ -48,7 +48,9 @@ card_assets_info = dbc.Card(
                 ],
                 id="pf-monte-carlo-statistics-frame",
                 hidden=True,
-                className="vstack gap-2",
+                # mt-3 owns the gap to the Assets names grid above (#20): the
+                # builder-rendered header rows carry no margins of their own.
+                className="vstack gap-2 mt-3",
             ),
         ]
     ),
