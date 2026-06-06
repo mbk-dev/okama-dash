@@ -97,7 +97,9 @@ def card_controls(
                         html.Label("Base currency"),
                         dcc.Dropdown(
                             options=inflation.get_currency_list(),
-                            value=ccy if ccy else "USD",
+                            # URL values are normalized to uppercase: dcc.Dropdown
+                            # silently clears a value missing from its options.
+                            value=ccy.upper() if ccy else "USD",
                             multi=False,
                             clearable=False,
                             placeholder="Select a base currency",

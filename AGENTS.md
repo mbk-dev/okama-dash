@@ -106,7 +106,7 @@ Rules for this repo:
 
 ## Test suite
 
-542 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+547 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -158,6 +158,7 @@ tests/
 │   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows, incl. cumulative_return), reactive auto_estimate_distribution_parameters (gates, norm/lognorm/t fit, VaR-level df optimize + reset-on-clear, errors), df>2 validation; URL params prefill and survive reactive auto-estimate, dcc.Store round-trip (25 tests)
 │   ├── test_grid_export.py           # xlsx export: button, rowdata_to_xlsx_download (PreventUpdate on empty rows AND on n_clicks=None — dynamically rendered export buttons fire their callback on first mount, must not auto-download), page callbacks return dcc.send_bytes dict; Excel number formats mirror grid formatters (column_formats percent/decimal/int, percent_column_formats helper, all 4 export callbacks wired — read back via openpyxl) (21 tests)
 │   ├── test_grid_sorting.py          # column sorting disabled in every AG Grid: defaultColDef wiring asserted on all 11 grids across 6 files (database ×2, assets names/info, compare stats, pf stats, K-S distribution, MC survival/wealth desktop+compact) (8 tests)
+│   ├── test_url_ccy_normalization.py # lowercase ccy in shared URLs prefills the currency dropdown uppercase on all 4 page forms (dcc.Dropdown silently clears values missing from options → ccy=None → okama "None.FX" 404) (5 tests)
 │   ├── test_submit_spinner.py        # all 4 main data callbacks toggle the submit-button spinner via the `running` spec (chart's dcc.Loading is below the fold on mobile) (4 tests)
 │   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │                                            # get_y_title (6 plot types), rolling-window disabled for annual_return + cumulative_return (compare + portfolio) (21 tests)
@@ -175,10 +176,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 196 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 321 | ~4s |
+| `poetry run pytest -m component` | Dash callbacks | 326 | ~4s |
 | `poetry run pytest -m e2e` | Playwright browser | 25 | ~63s |
-| `poetry run pytest -q` | Everything | 542 | ~66s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 517 | ~4s |
+| `poetry run pytest -q` | Everything | 547 | ~66s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 522 | ~4s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
