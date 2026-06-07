@@ -14,17 +14,22 @@ class TestMacroAutoRender:
         bars.first.wait_for(state="attached", timeout=15_000)
         assert bars.count() == 3
 
+    # Line charts on macro pages enable the x-axis rangeslider, which renders
+    # a duplicate copy of every trace inside .rangeslider-container (verified
+    # in an isolated plotly DOM probe). Scope the locator to .cartesianlayer
+    # so the count equals the number of plotted series.
+
     def test_rates_autorenders_step_lines(self, page, dash_server_url):
         page.goto(f"{dash_server_url}/macro/rates", wait_until="domcontentloaded")
-        traces = page.locator("#rates-chart .scatterlayer .js-line")
+        traces = page.locator("#rates-chart .cartesianlayer .scatterlayer .js-line")
         traces.first.wait_for(state="attached", timeout=15_000)
-        assert traces.count() == 6  # 3 series × 2 (line + marker)
+        assert traces.count() == 3
 
     def test_cape10_autorenders_history_lines(self, page, dash_server_url):
         page.goto(f"{dash_server_url}/macro/cape10", wait_until="domcontentloaded")
-        traces = page.locator("#cape-chart .scatterlayer .js-line")
+        traces = page.locator("#cape-chart .cartesianlayer .scatterlayer .js-line")
         traces.first.wait_for(state="attached", timeout=15_000)
-        assert traces.count() == 8  # 4 series × 2 (line + marker)
+        assert traces.count() == 4
 
     def test_inflation_stats_grid_renders_percent(self, page, dash_server_url):
         page.goto(f"{dash_server_url}/macro/inflation", wait_until="domcontentloaded")
@@ -48,9 +53,11 @@ class TestMacroNavigationAndPrefill:
             f"{dash_server_url}/macro/inflation?tickers=RUB.INFL&plot=monthly",
             wait_until="domcontentloaded",
         )
-        traces = page.locator("#infl-chart .scatterlayer .js-line")
+        # Monthly plot is a line chart with a rangeslider — scope to the main
+        # cartesian layer (see the rangeslider note above).
+        traces = page.locator("#infl-chart .cartesianlayer .scatterlayer .js-line")
         traces.first.wait_for(state="attached", timeout=15_000)
-        assert traces.count() == 2  # one country from the URL (line + marker)
+        assert traces.count() == 1  # one country from the URL
 
     def test_inflation_mobile_viewport(self, dash_server_url, browser):
         context = browser.new_context(viewport={"width": 375, "height": 812})
