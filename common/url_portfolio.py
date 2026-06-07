@@ -6,10 +6,16 @@ parsed once at layout time into a dcc.Store; the portfolio then shows up as
 a synthetic chip (its symbol) inside the page's tickers MultiSelect.
 """
 
+import re
+
 from common.parse_query import make_list_from_string
 
 PF_REBAL_DEFAULT = "month"
 PF_SYMBOL_DEFAULT = "PORTFOLIO"
+
+# Anything outside this set is replaced in cache tokens: the token lands in a
+# pickle FILENAME via object_cache._build_cache_key's f-string interpolation.
+_CACHE_KEY_UNSAFE = re.compile(r"[^A-Za-z0-9_.,:;-]")
 
 
 def normalize_portfolio_symbol(symbol: str) -> str:
@@ -18,7 +24,9 @@ def normalize_portfolio_symbol(symbol: str) -> str:
     return symbol + ".PF" if not symbol.lower().endswith(".pf") else symbol
 
 
-def parse_url_portfolio_group(pf_tickers, pf_weights, pf_rebal=None, pf_symbol=None) -> dict | None:
+def parse_url_portfolio_group(
+    pf_tickers: str | None, pf_weights: str | None, pf_rebal: str | None = None, pf_symbol: str | None = None
+) -> dict | None:
     """Parse the pf_* URL param group into store data.
 
     Returns None when the group is absent or invalid (unparseable weights,
@@ -45,7 +53,7 @@ def parse_url_portfolio_group(pf_tickers, pf_weights, pf_rebal=None, pf_symbol=N
     }
 
 
-def split_portfolio_from_selection(values, pf_def) -> tuple[list, bool]:
+def split_portfolio_from_selection(values: list | None, pf_def: dict | None) -> tuple[list, bool]:
     """Split MultiSelect values into (real tickers, portfolio-chip present).
 
     The chip is recognized by exact match against the store's symbol — the
@@ -88,4 +96,4 @@ def pf_cache_token(pf_def: dict | None) -> str | None:
     if not pf_def:
         return None
     pairs = ",".join(f"{t}:{w:g}" for t, w in zip(pf_def["tickers"], pf_def["weights"], strict=True))
-    return f"{pairs};{pf_def['rebal']};{pf_def['symbol']}"
+    return _CACHE_KEY_UNSAFE.sub("_", f"{pairs};{pf_def['rebal']};{pf_def['symbol']}")

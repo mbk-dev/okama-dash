@@ -109,3 +109,11 @@ class TestPfCacheToken:
 
     def test_none_for_absent_def(self):
         assert pf_cache_token(None) is None
+
+    def test_token_is_path_safe(self):
+        # A crafted pf_symbol must not smuggle path separators into the
+        # cache filename (object_cache interpolates the token verbatim).
+        pf_def = dict(PF_DEF, symbol="a/b.PF", tickers=["AA/PL.US", "MSFT.US"])
+        token = pf_cache_token(pf_def)
+        assert "/" not in token
+        assert token == "AA_PL.US:60,MSFT.US:40;year;a_b.PF"
