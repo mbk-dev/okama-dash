@@ -841,19 +841,19 @@ class TestToggleStrategyPanels:
         from pages.portfolio.cards_portfolio.cashflow_controls import toggle_strategy_panels
 
         result = toggle_strategy_panels("indexation")
-        assert len(result) == 5  # description + 4 panel styles (TS panel is gone)
+        assert len(result) == 6  # description + 4 panel styles + find block
 
     def test_time_series_hides_all_strategy_panels(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import toggle_strategy_panels
 
-        _description, indexation, percentage, vds, cwd = toggle_strategy_panels("time_series")
+        _description, indexation, percentage, vds, cwd, _find = toggle_strategy_panels("time_series")
         hide = {"display": "none"}
         assert (indexation, percentage, vds, cwd) == (hide, hide, hide, hide)
 
     def test_indexation_shows_only_indexation_panel(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import toggle_strategy_panels
 
-        _description, indexation, percentage, vds, cwd = toggle_strategy_panels("indexation")
+        _description, indexation, percentage, vds, cwd, _find = toggle_strategy_panels("indexation")
         hide = {"display": "none"}
         assert indexation is None
         assert (percentage, vds, cwd) == (hide, hide, hide)

@@ -911,17 +911,20 @@ def cashflow_accordion_item(
     Output("pf-cf-percentage-col", "style"),
     Output("pf-cf-vds-panel", "style"),
     Output("pf-cf-cwd-panel", "style"),
+    Output("pf-cf-find-block", "style"),
     Input("pf-cf-strategy-type", "value"),
 )
 def toggle_strategy_panels(strategy):
     show = None
     hide = {"display": "none"}
+    # (indexation, percentage, vds, cwd, find_block) — the Find block is hidden
+    # only for time_series (the okama solver doesn't accept TimeSeriesStrategy).
     panels = {
-        "indexation": (show, hide, hide, hide),
-        "percentage": (hide, show, hide, hide),
-        "time_series": (hide, hide, hide, hide),
-        "vds": (hide, hide, show, hide),
-        "cwd": (hide, hide, hide, show),
+        "indexation": (show, hide, hide, hide, show),
+        "percentage": (hide, show, hide, hide, show),
+        "time_series": (hide, hide, hide, hide, hide),
+        "vds": (hide, hide, show, hide, show),
+        "cwd": (hide, hide, hide, show, show),
     }
     styles = panels.get(strategy, panels["indexation"])
     description = STRATEGY_DESCRIPTIONS.get(strategy, "")
