@@ -673,6 +673,215 @@ def auto_estimate_distribution_parameters(
     return _format_params_output_by_distribution(distribution, params)
 
 
+@callback(
+    Output("pf-cf-find-result", "children"),
+    Output("pf-cf-find-result", "className"),
+    Output("pf-cf-amount", "value"),
+    Output("pf-cf-percentage", "value"),
+    Output("pf-cf-vds-percentage", "value"),
+    Output("pf-cf-cwd-amount", "value"),
+    Input("pf-cf-find-button", "n_clicks"),
+    State("pf-cf-find-goal", "value"),
+    State("pf-cf-find-percentile", "value"),
+    State("pf-cf-find-target-sp", "value"),
+    State({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
+    State({"type": "pf-dynamic-input", "index": ALL}, "value"),
+    State(component_id="pf-base-currency", component_property="value"),
+    State(component_id="pf-rebalancing-period", component_property="value"),
+    State(component_id="pf-rebal-abs-deviation", component_property="value"),
+    State(component_id="pf-rebal-rel-deviation", component_property="value"),
+    State(component_id="pf-first-date", component_property="value"),
+    State(component_id="pf-last-date", component_property="value"),
+    State(component_id="pf-initial-amount", component_property="value"),
+    State(component_id="pf-discount-rate", component_property="value"),
+    State(component_id="pf-ticker", component_property="value"),
+    State(component_id="pf-cf-strategy-type", component_property="value"),
+    State(component_id="pf-cf-frequency", component_property="value"),
+    State(component_id="pf-cf-amount", component_property="value"),
+    State(component_id="pf-cf-indexation", component_property="value"),
+    State(component_id="pf-cf-percentage", component_property="value"),
+    State(component_id="pf-cf-vds-percentage", component_property="value"),
+    State(component_id="pf-cf-vds-min-withdrawal", component_property="value"),
+    State(component_id="pf-cf-vds-max-withdrawal", component_property="value"),
+    State(component_id="pf-cf-vds-adjust-minmax", component_property="value"),
+    State(component_id="pf-cf-vds-floor", component_property="value"),
+    State(component_id="pf-cf-vds-ceiling", component_property="value"),
+    State(component_id="pf-cf-vds-adjust-fc", component_property="value"),
+    State(component_id="pf-cf-vds-indexation", component_property="value"),
+    State(component_id="pf-cf-cwd-amount", component_property="value"),
+    State(component_id="pf-cf-cwd-indexation", component_property="value"),
+    State({"type": "pf-cf-cwd-threshold", "index": ALL}, "value"),
+    State({"type": "pf-cf-cwd-reduction", "index": ALL}, "value"),
+    State({"type": "pf-cf-ts-date", "index": ALL}, "value"),
+    State({"type": "pf-cf-ts-amount", "index": ALL}, "value"),
+    State(component_id="pf-inflation-switch", component_property="value"),
+    State(component_id="pf-monte-carlo-number", component_property="value"),
+    State(component_id="pf-monte-carlo-years", component_property="value"),
+    State(component_id="pf-monte-carlo-distribution", component_property="value"),
+    State(component_id="pf-monte-carlo-backtest", component_property="value"),
+    State(component_id="pf-mc-norm-mu", component_property="value"),
+    State(component_id="pf-mc-norm-sigma", component_property="value"),
+    State(component_id="pf-mc-lognorm-shape", component_property="value"),
+    State(component_id="pf-mc-lognorm-scale", component_property="value"),
+    State(component_id="pf-mc-t-df", component_property="value"),
+    State(component_id="pf-mc-t-loc", component_property="value"),
+    State(component_id="pf-mc-t-scale", component_property="value"),
+    running=submit_spinner_running("pf-cf-find-spinner"),
+    prevent_initial_call=True,
+)
+def find_max_withdrawal(
+    n_clicks,
+    goal,
+    percentile,
+    target_sp,
+    assets,
+    weights,
+    ccy,
+    rebalancing_period,
+    rebal_abs_deviation,
+    rebal_rel_deviation,
+    fd_value,
+    ld_value,
+    initial_amount,
+    discount_rate,
+    symbol,
+    cf_strategy,
+    cf_frequency,
+    cf_amount,
+    cf_indexation,
+    cf_percentage,
+    vds_percentage,
+    vds_min_withdrawal,
+    vds_max_withdrawal,
+    vds_adjust_minmax,
+    vds_floor,
+    vds_ceiling,
+    vds_adjust_fc,
+    vds_indexation,
+    cwd_amount,
+    cwd_indexation,
+    cwd_thresholds,
+    cwd_reductions,
+    ts_dates,
+    ts_amounts,
+    inflation_on,
+    n_monte_carlo,
+    years_monte_carlo,
+    distribution_monte_carlo,
+    show_backtest,
+    mc_norm_mu=None,
+    mc_norm_sigma=None,
+    mc_lognorm_shape=None,
+    mc_lognorm_scale=None,
+    mc_t_df=None,
+    mc_t_loc=None,
+    mc_t_scale=None,
+):
+    """Search for the largest sustainable withdrawal (issue #22).
+
+    Separate from Submit: each solver evaluation runs a full MC simulation
+    (up to iter_max=20 + 2 boundary evaluations), so the search takes seconds
+    of server compute. Builds the same pf.dcf state the Submit forecast path
+    builds, so Find results match the forecast the user then runs.
+    """
+    no_fill = (dash.no_update,) * 4
+    if cf_strategy == "time_series":
+        # The block is hidden for time_series; defensive guard for stale clicks.
+        return "Not supported for the Custom Time Series strategy.", "ms-2 text-warning", *no_fill
+    distribution_parameters_monte_carlo = build_distribution_parameters(
+        distribution_monte_carlo,
+        mc_norm_mu,
+        mc_norm_sigma,
+        mc_lognorm_shape,
+        mc_lognorm_scale,
+        mc_t_df,
+        mc_t_loc,
+        mc_t_scale,
+    )
+    try:
+        pf_object = _build_cached_portfolio(
+            assets=assets,
+            weights=weights,
+            ccy=ccy,
+            rebalancing_period=rebalancing_period,
+            rebal_abs_deviation=rebal_abs_deviation,
+            rebal_rel_deviation=rebal_rel_deviation,
+            fd_value=fd_value,
+            ld_value=ld_value,
+            initial_amount=initial_amount,
+            discount_rate=discount_rate,
+            symbol=symbol,
+            cf_strategy=cf_strategy,
+            cf_frequency=cf_frequency,
+            cf_amount=cf_amount,
+            cf_indexation=cf_indexation,
+            cf_percentage=cf_percentage,
+            vds_percentage=vds_percentage,
+            vds_min_withdrawal=vds_min_withdrawal,
+            vds_max_withdrawal=vds_max_withdrawal,
+            vds_adjust_minmax=vds_adjust_minmax,
+            vds_floor=vds_floor,
+            vds_ceiling=vds_ceiling,
+            vds_adjust_fc=vds_adjust_fc,
+            vds_indexation=vds_indexation,
+            cwd_amount=cwd_amount,
+            cwd_indexation=cwd_indexation,
+            cwd_thresholds=cwd_thresholds,
+            cwd_reductions=cwd_reductions,
+            ts_dates=ts_dates,
+            ts_amounts=ts_amounts,
+            inflation_on=inflation_on,
+        )
+        initial_investment = pf_object.dcf.cashflow_parameters.initial_investment
+        if show_backtest == "yes":
+            df_backtest = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)[
+                [pf_object.symbol]
+            ]
+            _nullify_after_first_zero(df_backtest, pf_object.symbol)
+            last_backtest_value = df_backtest.iat[-1, -1]
+        else:
+            last_backtest_value = initial_investment
+        if not _prepare_dcf_forecast_state(
+            pf_object,
+            last_backtest_value,
+            distribution_monte_carlo,
+            years_monte_carlo,
+            n_monte_carlo,
+            distribution_parameters_monte_carlo,
+        ):
+            return (
+                "Backtest ends with a depleted balance — nothing to withdraw.",
+                "ms-2 text-warning",
+                *no_fill,
+            )
+        solver_kwargs = {"goal": goal, "percentile": int(percentile)}
+        if goal == "survival_period":
+            solver_kwargs["target_survival_period"] = int(target_sp)
+        result = pf_object.dcf.find_the_largest_withdrawals_size(**solver_kwargs)
+    except ValueError as e:
+        return f"Error: {e}", "ms-2 text-danger", *no_fill
+    except Exception:
+        logging.exception("Find max withdrawal failed")
+        return (
+            "Search failed — check the portfolio and Monte Carlo inputs.",
+            "ms-2 text-danger",
+            *no_fill,
+        )
+    if not result.success:
+        return "No solution found in range (0-100% of initial investment).", "ms-2 text-warning", *no_fill
+    value = _map_find_result(cf_strategy, result)
+    fills = dict.fromkeys(("indexation", "percentage", "vds", "cwd"), dash.no_update)
+    fills[cf_strategy] = value
+    return (
+        _format_find_result(cf_strategy, result),
+        "ms-2",
+        fills["indexation"],
+        fills["percentage"],
+        fills["vds"],
+        fills["cwd"],
+    )
+
+
 def _build_cached_portfolio(
     assets,
     weights,
