@@ -600,6 +600,11 @@ def _walk_components(node):
 
 
 def _find_by_id(node, target_id):
+    """Depth-first search of a Dash component tree by id (string or dict).
+
+    Walks the ``children`` prop only — ids embedded in other props
+    (e.g. an icon inside an AccordionItem ``title``) are not searched.
+    """
     for n in _walk_components(node):
         if getattr(n, "id", None) == target_id:
             return n
@@ -759,26 +764,6 @@ class TestMonteCarloLimitsValidation:
 
         submit_disabled, _, _, _ = disable_submit_add_link_buttons(["AAPL.US", "MSFT.US"], [60, 40], 2, True, False)
         assert submit_disabled is True
-
-
-def _find_by_id(component, target_id):
-    """Depth-first search of a Dash component tree for an exact string id.
-
-    Walks the ``children`` prop only — ids embedded in other props
-    (e.g. an icon inside an AccordionItem ``title``) are not searched.
-    """
-    if getattr(component, "id", None) == target_id:
-        return component
-    children = getattr(component, "children", None)
-    if children is None:
-        return None
-    if not isinstance(children, (list, tuple)):
-        children = [children]
-    for child in children:
-        found = _find_by_id(child, target_id)
-        if found is not None:
-            return found
-    return None
 
 
 class TestTsAccordionActiveItem:
