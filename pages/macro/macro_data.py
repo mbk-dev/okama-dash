@@ -7,6 +7,9 @@ defaults. Every symbol below was verified against the live okama database
 Stage 2 extends this file with deposit-rate and money-market groups.
 """
 
+# NOTE: e2e tests (tests/e2e/test_macro_pages.py) assert exact trace counts on
+# auto-render; update them when changing the length of any *_DEFAULTS list.
+
 # /macro/inflation — INFL namespace, handled by ok.Inflation
 INFLATION_SERIES = {
     "RUB.INFL": "Russia",

@@ -18,7 +18,8 @@ okama-dash/
 │   ├── compare/             # "/compare" — historical asset performance comparison
 │   ├── benchmark/           # "/benchmark" — performance vs benchmark index
 │   ├── portfolio/           # "/portfolio" — portfolio analysis, rebalancing, cashflows
-│   └── database/            # "/database" — search financial DB (stocks, ETFs, currencies)
+│   ├── database/            # "/database" — search financial DB (stocks, ETFs, currencies)
+│   └── macro/               # "/macro/*" — macro indicators: inflation, key rates, CAPE10 (stage 1)
 │
 ├── common/                  # Shared modules used across pages
 │   ├── settings.py          # App-wide constants (max tickers, MC limits, defaults)
@@ -137,7 +138,7 @@ Rules for this repo:
 
 ## Test suite
 
-611 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+700 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -162,7 +163,12 @@ tests/
 │   ├── test_inflation.py            # resolve_url_currency (case-insensitive, validated, page-default fallback); currency list memoized 30 days with TESTING-token cache isolation (9 tests)
 │   ├── test_mc_distribution_parameters.py  # build_distribution_parameters: norm/lognorm/t mapping, empty→None, lognorm loc=-1; reactive-estimation gates: _portfolio_is_complete (sum=100, tolerance), _valid_mc_date (18 tests)
 │   ├── test_ef_portfolio_card.py    # EF portfolio card builder: stat blocks, title/badge, allocation rows with percent + stacked bar (plotly palette colors, zero-weight segments skipped), None-weights note (9 tests)
-│   └── test_dump_callbacks.py       # tools/dump_callbacks formatter: file:line via inspect.unwrap of the dash wrapper, single/multi Output, dict (pattern-matching) ids, clientside entries (no Python "callback" key), state omitted when empty, sorted by location (6 tests)
+│   ├── test_dump_callbacks.py       # tools/dump_callbacks formatter: file:line via inspect.unwrap of the dash wrapper, single/multi Output, dict (pattern-matching) ids, clientside entries (no Python "callback" key), state omitted when empty, sorted by location (6 tests)
+│   ├── test_macro_data.py           # curated macro catalog integrity: namespaces, 26 CAPE countries, overlay mapping covers all 6 INFL currencies (ECB=MRO), defaults ⊆ catalogs, filter_known URL guard (9 tests)
+│   ├── test_macro_mocks.py          # PicklableInflation/Rate/Indicator API surface (all data members are attributes, only describe() a method), rolling_inflation starts at the 12th month (window alignment regression), pickle round-trips (6 tests)
+│   ├── test_macro_objects.py        # cached accessors wire get_or_create: obj_type per class, date bounds into ctor, TTL_ASSET_LIST (3 tests)
+│   ├── test_macro_stats.py          # describe-table outer merge on (property, period) incl. mismatched full-period rows; stats grid percent/decimal formatter wiring, sortable=False, suppressFieldDotNotation (6 tests)
+│   └── test_macro_link.py           # macro shareable links: defaults omitted, (value, default) extra params, rates flag (4 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
 │   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
 │   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
@@ -203,26 +209,32 @@ tests/
 │   ├── test_grid_sorting.py          # column sorting disabled in every AG Grid: defaultColDef wiring asserted on all 13 grids across 6 files (database ×2, assets names/info, compare stats, pf stats, K-S distribution, MC survival/wealth/cash-flow-IRR desktop+compact) (9 tests)
 │   ├── test_url_ccy_normalization.py # ccy in shared URLs prefills the currency dropdown on all 4 page forms: lowercase → uppercase, unknown → page default via resolve_url_currency (dcc.Dropdown silently clears values missing from options → ccy=None → okama "None.FX" 404) (7 tests)
 │   ├── test_submit_spinner.py        # all 4 main data callbacks toggle the submit-button spinner via the `running` spec (chart's dcc.Loading is below the fold on mobile) (4 tests)
-│   └── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
-│                                            # get_y_title (6 plot types), rolling-window disabled for annual_return + cumulative_return (compare + portfolio) (21 tests)
+│   ├── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
+│   │                                        # get_y_title (6 plot types), rolling-window disabled for annual_return + cumulative_return (compare + portfolio) (21 tests)
+│   ├── test_macro_cards.py          # shared card factories: page-prefixed ids, multiselect defaults, submit guard, chart-card class (5 tests)
+│   ├── test_macro_inflation_figures.py  # inflation figure builders: annual grouped bars / rolling / cumulative / monthly ×100, key-rate overlay (step-dot traces via catalog mapping), purchasing-power cards (7 tests)
+│   ├── test_macro_inflation_page.py  # /macro/inflation page: main callback (figure+PP cards+grid, PP rows dropped), overlay gating by plot type, AUTO-RENDER registration (no prevent_initial_call), URL prefill, link/export/disable-actions callbacks (13 tests)
+│   ├── test_macro_rates_page.py     # /macro/rates: step-lines (hv) with catalog labels, ×100, auto-render, prefill, link, export guard, disable actions (10 tests)
+│   └── test_macro_cape10_page.py    # /macro/cape10: history lines (raw decimals), 26-country snapshot (sorted, cached per month, highlight colors, x-range headroom for outside labels, mobile keeps country ticks outside), decimal formatter, auto-render, PreventUpdate guard (14 tests)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
     ├── conftest.py                  # Gunicorn server (TESTING=1, 2 workers) + Playwright
     ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
     │                                # mobile viewport 375px (Portfolio + EF),
     │                                # EF info panel renders assets names + info for URL tickers (#13 guard) (9 tests)
     ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages; Portfolio fresh link (no MC URL params) → reactive estimation auto-fills the MC distribution fields (dead-callback regression guard); Portfolio Go to EF link → EF prefill (6 tests)
-    └── test_submit_interaction.py   # Submit → chart with real traces for all 4 pages; Portfolio stats grid: dotted column renders values, percent-formatted (6 tests)
+    ├── test_submit_interaction.py   # Submit → chart with real traces for all 4 pages; Portfolio stats grid: dotted column renders values, percent-formatted (6 tests)
+    └── test_macro_pages.py          # macro pages AUTO-RENDER chart without Submit (bars/step-lines/history counts scoped to .cartesianlayer — rangeslider duplicates traces), stats grid percent via real DOM (formatPercentGuarded blind-spot coverage), navbar dropdown navigation, URL prefill, mobile viewport (7 tests)
 ```
 
 ### Run commands
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 212 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 374 | ~7s |
-| `poetry run pytest -m e2e` | Playwright browser | 25 | ~75s |
-| `poetry run pytest -q` | Everything | 611 | ~80s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 586 | ~9s |
+| `poetry run pytest -m unit` | Pure logic | 240 | ~2s |
+| `poetry run pytest -m component` | Dash callbacks | 428 | ~7s |
+| `poetry run pytest -m e2e` | Playwright browser | 32 | ~82s |
+| `poetry run pytest -q` | Everything | 700 | ~92s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 668 | ~9s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -240,6 +252,7 @@ to a file in `tmp/` instead of `PIPE`.
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
+| **Macro (Inflation / Rates / CAPE10)** | catalog integrity + overlay mapping (ECB=MRO), cached accessors wiring, describe-merge + grid formatters, link builder, mocks API surface | per-page main callbacks with auto-render (no prevent_initial_call) + error annotation, overlay gating, snapshot (26 countries, monthly cache, highlight + mobile outside ticks), URL prefill via filter_known, combined Submit/Copy-link guard, xlsx export n_clicks guard | auto-render w/o Submit (3 pages), stats grid percent via DOM, navbar dropdown, prefill, mobile |
 | **common/ & tools/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_subtitle, format_points), dump_callbacks (callback wiring map formatter) | change_style_for_hidden_row, grid_export (xlsx via dcc.Download + rowdata_to_xlsx_download; Excel number formats mirror the on-page grid formatters), grid sorting disabled on every AG Grid (all 6 grid-building files) | — |
 
 ### Known gaps
@@ -450,6 +463,7 @@ so prefer fixing the shared stylesheet/convention over per-component patches.
   `defaultColDef={"resizable": False, "sortable": False}` (AG Grid columns are sortable
   by default). New grids must follow suit; `tests/component/test_grid_sorting.py` asserts
   the wiring on all existing grid builders.
+- **Macro pages are chart-first and auto-render.** `/macro/*` pages use a one-row control bar above the chart (no controls/info card pair) and render the chart immediately on page load: the main data callback deliberately omits `prevent_initial_call` (deviation approved in the macro spec). Submit applies changes; an empty series selection disables both Submit and Copy link.
 - These are visual/markup changes — verify by eye on the live local site (see below), no
   unit test per the TDD-skip rule for non-logic changes.
 
