@@ -79,6 +79,8 @@ RATES_GROUPS = {
 }
 
 # Union catalog for figure legend labels regardless of the active group.
+# Safe regardless of union order: the three groups share no symbols
+# (guarded by test_groups_do_not_overlap).
 ALL_RATES_SERIES = {**KEY_RATES_SERIES, **DEPOSIT_RATES_SERIES, **MONEY_MARKET_SERIES}
 
 
