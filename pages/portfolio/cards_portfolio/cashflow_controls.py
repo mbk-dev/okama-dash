@@ -7,6 +7,7 @@ from dash.dependencies import Input, Output, State
 from common import settings as settings
 from common.date_input import register_date_validation
 from common.mantine import search_provider
+from common.html_elements.submit_spinner import create_submit_spinner
 import pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt as tl
 
 STRATEGY_OPTIONS = [
@@ -15,6 +16,12 @@ STRATEGY_OPTIONS = [
     {"label": "Custom Time Series", "value": "time_series"},
     {"label": "Vanguard Dynamic Spending (VDS)", "value": "vds"},
     {"label": "Cut Withdrawals if Drawdown (CWD)", "value": "cwd"},
+]
+
+FIND_GOAL_OPTIONS = [
+    {"label": "Keep purchasing power (PV)", "value": "maintain_balance_pv"},
+    {"label": "Keep nominal balance (FV)", "value": "maintain_balance_fv"},
+    {"label": "Survive N years", "value": "survival_period"},
 ]
 
 FREQUENCY_OPTIONS = [
@@ -703,6 +710,146 @@ def cashflow_accordion_item(
                 id="pf-cf-cwd-panel",
                 style={"display": "none"},
             ),
+            # ---- Find max withdrawal (issue #22) ----
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.I(className="bi bi-chevron-right me-2", id="pf-cf-find-chevron"),
+                            "Find max withdrawal",
+                            html.I(className="bi bi-info-square ms-2", id="pf-cf-find-info-label"),
+                            dbc.Tooltip(tl.pf_cf_find_block, target="pf-cf-find-info-label"),
+                        ],
+                        id="pf-cf-find-toggle",
+                        n_clicks=0,
+                        className="fw-bold",
+                        style={"cursor": "pointer", "userSelect": "none"},
+                    ),
+                    dbc.Collapse(
+                        html.Div(
+                            [
+                                dbc.Row(
+                                    dbc.Col(
+                                        [
+                                            html.Label(
+                                                [
+                                                    "Goal",
+                                                    html.I(
+                                                        className="bi bi-info-square ms-2",
+                                                        id="pf-info-find-goal",
+                                                    ),
+                                                ]
+                                            ),
+                                            dbc.Tooltip(tl.pf_cf_find_goal, target="pf-info-find-goal"),
+                                            dcc.Dropdown(
+                                                options=FIND_GOAL_OPTIONS,
+                                                value="maintain_balance_pv",
+                                                multi=False,
+                                                clearable=False,
+                                                searchable=False,
+                                                id="pf-cf-find-goal",
+                                            ),
+                                        ],
+                                        lg=12,
+                                        sm=12,
+                                    ),
+                                ),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [
+                                                html.Label(
+                                                    [
+                                                        "Percentile",
+                                                        html.I(
+                                                            className="bi bi-info-square ms-2",
+                                                            id="pf-info-find-percentile",
+                                                        ),
+                                                    ],
+                                                    className="text-nowrap",
+                                                ),
+                                                dbc.Tooltip(
+                                                    tl.pf_cf_find_percentile,
+                                                    target="pf-info-find-percentile",
+                                                ),
+                                                dbc.Input(
+                                                    id="pf-cf-find-percentile",
+                                                    type="number",
+                                                    min=0,
+                                                    max=100,
+                                                    step=1,
+                                                    value=20,
+                                                ),
+                                                dbc.FormText("0 - 100"),
+                                            ],
+                                            lg=6,
+                                            md=6,
+                                            sm=6,
+                                        ),
+                                        dbc.Col(
+                                            [
+                                                html.Label(
+                                                    [
+                                                        "Target survival period",
+                                                        html.I(
+                                                            className="bi bi-info-square ms-2",
+                                                            id="pf-info-find-target-sp",
+                                                        ),
+                                                    ],
+                                                    className="text-nowrap",
+                                                ),
+                                                dbc.Tooltip(
+                                                    tl.pf_cf_find_target_sp,
+                                                    target="pf-info-find-target-sp",
+                                                ),
+                                                dbc.Input(
+                                                    id="pf-cf-find-target-sp",
+                                                    type="number",
+                                                    min=1,
+                                                    step=1,
+                                                    value=25,
+                                                ),
+                                                dbc.FormText("Years, below the forecast period"),
+                                            ],
+                                            lg=6,
+                                            md=6,
+                                            sm=6,
+                                            id="pf-cf-find-target-sp-col",
+                                            style={"display": "none"},
+                                        ),
+                                    ],
+                                ),
+                                dbc.Row(
+                                    dbc.Col(
+                                        [
+                                            html.Div(
+                                                [
+                                                    dbc.Button(
+                                                        "Find",
+                                                        id="pf-cf-find-button",
+                                                        n_clicks=0,
+                                                        size="sm",
+                                                        color="secondary",
+                                                    ),
+                                                    html.Small(id="pf-cf-find-result", className="ms-2"),
+                                                ],
+                                                className="d-flex align-items-center",
+                                            ),
+                                            create_submit_spinner("pf-cf-find-spinner"),
+                                            dbc.FormText(id="pf-cf-find-hint"),
+                                        ],
+                                    ),
+                                ),
+                            ],
+                            className="vstack gap-2 p-2",
+                        ),
+                        id="pf-cf-find-collapse",
+                        is_open=False,
+                    ),
+                ],
+                id="pf-cf-find-block",
+                className="mt-3",
+            ),
             # ---- Custom cash flows (shared across all strategies) ----
             # okama's base CashFlow accepts time_series_dic for every strategy,
             # so one-off user entries combine with the regular flow. Initially
@@ -1019,3 +1166,26 @@ def should_disable_cwd_add(thresholds: list, reductions: list) -> bool:
 )
 def disable_cwd_add_button(thresholds, reductions):
     return should_disable_cwd_add(thresholds, reductions)
+
+
+@callback(
+    Output("pf-cf-find-collapse", "is_open"),
+    Output("pf-cf-find-chevron", "className"),
+    Input("pf-cf-find-toggle", "n_clicks"),
+    State("pf-cf-find-collapse", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_find_collapse(n_clicks, is_open):
+    """Flip the Find-max-withdrawal collapse and its chevron icon."""
+    new_open = not is_open
+    chevron = "bi bi-chevron-down me-2" if new_open else "bi bi-chevron-right me-2"
+    return new_open, chevron
+
+
+@callback(
+    Output("pf-cf-find-target-sp-col", "style"),
+    Input("pf-cf-find-goal", "value"),
+)
+def toggle_find_target_sp(goal):
+    """Target survival period applies to the survival_period goal only."""
+    return None if goal == "survival_period" else {"display": "none"}
