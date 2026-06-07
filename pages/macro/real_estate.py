@@ -217,6 +217,9 @@ def update_re_page(screen, symbols, plot_type, ccy, fd_value, ld_value):
             fig = get_re_wealth_figure(al_object)
         else:
             fig = get_re_price_figure(_price_series(symbols, ccy, fd_value, ld_value), ccy)
+        # Stats always come from the inflation=True AssetList: describe() then
+        # reports CAGR next to the inflation column — the core question of the
+        # page ("does real estate beat inflation") in both plot modes.
         stats_al = macro_objects.get_asset_list_object(
             symbols, ccy=ccy, first_date=fd_value, last_date=ld_value, inflation=True
         )
