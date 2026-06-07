@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+import dash
 import pandas as pd
 import pytest
 
@@ -84,6 +85,12 @@ class TestMainCallback:
         with patch.object(cape_page.macro_objects, "get_indicator_object", side_effect=ValueError("nope")):
             fig, config, grid = cape_page.update_cape_page(None, 0, ["USA_CAPE10.RATIO"], "history", None, None)
         assert fig.layout.annotations[0].text == "nope"
+
+    def test_empty_selection_prevents_update(self, cape_page):
+        # Symmetry with the inflation/rates pages: the callback itself guards
+        # against an empty selection, not only the disabled buttons.
+        with pytest.raises(dash.exceptions.PreventUpdate):
+            cape_page.update_cape_page(None, 0, [], "history", None, None)
 
 
 class TestLayoutAndLink:
