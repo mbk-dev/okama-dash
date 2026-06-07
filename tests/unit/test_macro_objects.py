@@ -88,6 +88,8 @@ def test_asset_list_accessor_wires_cache_and_constructor():
 
 
 def test_private_price_converter_still_exists_in_okama():
+    # Upgrade guard clustered here while it is the only one; move guards to a
+    # dedicated test_okama_api_guards.py if they proliferate.
     # The RE page calls AssetList._adjust_price_to_currency_monthly (okama has
     # no public converted-price API — verified 2026-06-07). This guard fails on
     # an okama upgrade that removes/renames it, pointing straight at the spot.
