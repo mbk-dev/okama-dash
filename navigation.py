@@ -12,6 +12,7 @@ navbar = dbc.NavbarSimple(
                 dbc.DropdownMenuItem("Inflation", href="/macro/inflation"),
                 dbc.DropdownMenuItem("Rates", href="/macro/rates"),
                 dbc.DropdownMenuItem("CAPE10", href="/macro/cape10"),
+                dbc.DropdownMenuItem("Real Estate", href="/macro/real-estate"),
             ],
             nav=True,
             in_navbar=True,

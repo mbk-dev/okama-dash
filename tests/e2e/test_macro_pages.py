@@ -70,3 +70,41 @@ class TestMacroNavigationAndPrefill:
 
         mobile_page.close()
         context.close()
+
+
+class TestStage2:
+    def test_real_estate_autorenders_price_lines(self, page, dash_server_url):
+        page.goto(f"{dash_server_url}/macro/real-estate", wait_until="domcontentloaded")
+        traces = page.locator("#re-chart .cartesianlayer .scatterlayer .js-line")
+        traces.first.wait_for(state="attached", timeout=15_000)
+        assert traces.count() == 2  # Moscow primary + secondary defaults
+
+    def test_real_estate_wealth_prefill_adds_inflation_line(self, page, dash_server_url):
+        page.goto(
+            f"{dash_server_url}/macro/real-estate?tickers=MOW_PR.RE&plot=wealth",
+            wait_until="domcontentloaded",
+        )
+        traces = page.locator("#re-chart .cartesianlayer .scatterlayer .js-line")
+        traces.first.wait_for(state="attached", timeout=15_000)
+        assert traces.count() == 2  # asset + inflation reference
+
+    def test_rates_group_switch_recalculates_reactively(self, page, dash_server_url):
+        page.goto(f"{dash_server_url}/macro/rates", wait_until="domcontentloaded")
+        traces = page.locator("#rates-chart .cartesianlayer .scatterlayer .js-line")
+        traces.first.wait_for(state="attached", timeout=15_000)
+        assert traces.count() == 3  # key-rates defaults
+        # Switch the group; the chart re-renders to the single deposit default
+        # without any Submit click (fully reactive chain: group -> series -> chart).
+        page.locator("#rates-group").click()
+        page.get_by_text("Deposit rates RU", exact=True).click()
+        page.wait_for_function(
+            "() => document.querySelectorAll('#rates-chart .cartesianlayer .scatterlayer .js-line').length === 1",
+            timeout=15_000,
+        )
+
+    def test_navbar_macro_dropdown_lists_real_estate(self, page, dash_server_url):
+        page.goto(dash_server_url, wait_until="domcontentloaded")
+        navbar = page.locator(".navbar")
+        navbar.get_by_text("Macro", exact=True).click()
+        navbar.get_by_text("Real Estate", exact=True).click()
+        page.wait_for_url("**/macro/real-estate", timeout=10_000)
