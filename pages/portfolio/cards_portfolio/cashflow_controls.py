@@ -1192,3 +1192,22 @@ def toggle_find_collapse(n_clicks, is_open):
 def toggle_find_target_sp(goal):
     """Target survival period applies to the survival_period goal only."""
     return None if goal == "survival_period" else {"display": "none"}
+
+
+@callback(
+    Output("pf-cf-find-percentile", "invalid"),
+    Output("pf-cf-find-target-sp", "invalid"),
+    Input("pf-cf-find-percentile", "value"),
+    Input("pf-cf-find-target-sp", "value"),
+    Input("pf-monte-carlo-years", "value"),
+)
+def validate_find_inputs(percentile, target_sp, mc_years):
+    """Validate the Find solver inputs.
+
+    Out-of-range typed values arrive from dcc as strings (same behavior as the
+    MC number/years inputs) — flag them invalid instead of crashing the solver
+    callback.
+    """
+    percentile_ok = isinstance(percentile, int) and 0 <= percentile <= 100
+    target_ok = isinstance(target_sp, int) and target_sp >= 1 and isinstance(mc_years, int) and target_sp < mc_years
+    return not percentile_ok, not target_ok
