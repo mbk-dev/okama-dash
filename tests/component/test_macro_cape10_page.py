@@ -53,6 +53,13 @@ class TestSnapshot:
         other_positions = [i for i in range(len(snapshot)) if i != usa_pos]
         assert all(colors[usa_pos] != colors[i] for i in other_positions)
 
+    def test_snapshot_figure_pads_x_range_for_outside_labels(self, cape_page):
+        # textposition="outside" value labels need headroom past the longest
+        # bar, otherwise the label of the max country clips at the plot edge.
+        snapshot = pd.Series({"USA": 40.0, "Russia": 8.0}).sort_values()
+        fig = cape_page.get_cape_snapshot_figure(snapshot, [])
+        assert fig.layout.xaxis.range[1] > 40.0
+
 
 class TestMainCallback:
     def test_history_mode(self, cape_page, patched_indicator):
@@ -69,6 +76,17 @@ class TestMainCallback:
             )
         assert fig.data[0].type == "bar"
         assert len(fig.data[0].y) == 26
+
+    def test_snapshot_mobile_keeps_country_labels_outside(self, cape_page, patched_indicator):
+        # adopt_small_screens moves y ticks inside on mobile; for the snapshot
+        # bar the y ticks are country names and must stay outside the bars
+        # (same exception as the Compare correlation matrix).
+        small_screen = {"width": 375, "height": 800, "in_width": 375, "in_height": 800}
+        with patch.object(cape_page, "get_or_create", side_effect=lambda **kw: (kw["constructor_fn"](), "k")):
+            fig, config, grid = cape_page.update_cape_page(
+                small_screen, 0, ["USA_CAPE10.RATIO"], "snapshot", None, None
+            )
+        assert fig.layout.yaxis.ticklabelposition == "outside"
 
     def test_decimal_formatter_in_grid(self, cape_page, patched_indicator):
         *_, grid = cape_page.update_cape_page(None, 0, ["USA_CAPE10.RATIO"], "history", None, None)

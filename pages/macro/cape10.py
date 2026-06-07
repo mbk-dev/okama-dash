@@ -103,6 +103,8 @@ def get_cape_snapshot_figure(snapshot: pd.Series, selected_symbols: list[str]) -
         xaxis_title="CAPE10",
         margin={"l": 110},
     )
+    # Headroom past the longest bar so its outside text label never clips.
+    fig.update_xaxes(range=[0, float(snapshot.max()) * 1.15])
     return fig
 
 
@@ -192,6 +194,11 @@ def update_cape_page(screen, n_clicks, symbols, plot_type, fd_value, ld_value):
         stats_df = build_describe_table([obj.describe() for obj in objects])
         grid = build_stats_grid(stats_df, "cape-describe-table-grid", value_format="decimal")
         fig, config = adopt_small_screens(fig, screen)
+        if plot_type == "snapshot":
+            # Snapshot bar tick labels are country names: keep them outside the
+            # plot (mobile mode moves y ticks inside, which would overlay the
+            # bars — same exception as the Compare correlation matrix).
+            fig.update_yaxes(ticklabelposition="outside")
         return fig, config, grid
     except Exception as e:
         alert_fig = go.Figure()
