@@ -17,7 +17,9 @@ def build_describe_table(describes: list[pd.DataFrame]) -> pd.DataFrame:
 
     Shared periods (YTD/1/5/10 years) align into one row; full-period rows with
     symbol-specific period strings stay as separate rows with NaN gaps, which
-    the grid renders as blank cells.
+    the grid renders as blank cells. (Verified: Dash serializes NaN props to
+    JSON null, and the Guarded formatters pass non-numbers through, so the
+    browser shows an empty cell — no NaN-handling needed in the JS formatters.)
     """
     merged = describes[0]
     for df in describes[1:]:
