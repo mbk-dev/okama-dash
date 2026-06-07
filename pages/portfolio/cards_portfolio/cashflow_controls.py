@@ -1241,3 +1241,15 @@ def disable_find_button(
     if goal == "survival_period" and target_sp_invalid:
         return True, "Target survival period must be an integer below the Monte Carlo forecast period."
     return False, ""
+
+
+@callback(
+    Output("pf-cf-find-result", "children", allow_duplicate=True),
+    Output("pf-cf-find-result", "className", allow_duplicate=True),
+    Input("pf-cf-strategy-type", "value"),
+    prevent_initial_call=True,
+)
+def reset_find_result(_strategy) -> tuple[str, str]:
+    """A found value targets one strategy's input — clear the stale result
+    text when the user switches to a different strategy."""
+    return "", "ms-2"

@@ -328,3 +328,10 @@ class TestFindMaxWithdrawalCallback:
         assert "boom" not in text  # generic message, no internals leaked
         assert css == "ms-2 text-danger"
         assert all(f is dash.no_update for f in fills)
+
+
+class TestResetFindResult:
+    def test_strategy_change_clears_result(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import reset_find_result
+
+        assert reset_find_result("percentage") == ("", "ms-2")
