@@ -673,9 +673,7 @@ def auto_estimate_distribution_parameters(
     return _format_params_output_by_distribution(distribution, params)
 
 
-def _update_graf_portfolio_inner(
-    screen,
-    log_on,
+def _build_cached_portfolio(
     assets,
     weights,
     ccy,
@@ -706,15 +704,11 @@ def _update_graf_portfolio_inner(
     cwd_reductions,
     ts_dates,
     ts_amounts,
-    plot_type,
     inflation_on,
-    rolling_window,
-    n_monte_carlo,
-    years_monte_carlo,
-    distribution_monte_carlo,
-    show_backtest,
-    distribution_parameters_monte_carlo=None,
-):
+) -> ok.Portfolio:
+    """Normalize form inputs and return the cached ok.Portfolio with its
+    cash-flow strategy assigned. Shared by the Submit and Find callbacks so
+    both build the identical dcf state."""
     assets = [i for i in assets if i is not None]
     weights = [i / 100.0 for i in weights if i is not None]
     symbol = symbol.replace(" ", "_")
@@ -809,6 +803,85 @@ def _update_graf_portfolio_inner(
             "cashflow_hash": cf_hash,
         },
         ttl_seconds=TTL_PORTFOLIO,
+    )
+
+    return pf_object
+
+
+def _update_graf_portfolio_inner(
+    screen,
+    log_on,
+    assets,
+    weights,
+    ccy,
+    rebalancing_period,
+    rebal_abs_deviation,
+    rebal_rel_deviation,
+    fd_value,
+    ld_value,
+    initial_amount,
+    discount_rate,
+    symbol,
+    cf_strategy,
+    cf_frequency,
+    cf_amount,
+    cf_indexation,
+    cf_percentage,
+    vds_percentage,
+    vds_min_withdrawal,
+    vds_max_withdrawal,
+    vds_adjust_minmax,
+    vds_floor,
+    vds_ceiling,
+    vds_adjust_fc,
+    vds_indexation,
+    cwd_amount,
+    cwd_indexation,
+    cwd_thresholds,
+    cwd_reductions,
+    ts_dates,
+    ts_amounts,
+    plot_type,
+    inflation_on,
+    rolling_window,
+    n_monte_carlo,
+    years_monte_carlo,
+    distribution_monte_carlo,
+    show_backtest,
+    distribution_parameters_monte_carlo=None,
+):
+    pf_object = _build_cached_portfolio(
+        assets,
+        weights,
+        ccy,
+        rebalancing_period,
+        rebal_abs_deviation,
+        rebal_rel_deviation,
+        fd_value,
+        ld_value,
+        initial_amount,
+        discount_rate,
+        symbol,
+        cf_strategy,
+        cf_frequency,
+        cf_amount,
+        cf_indexation,
+        cf_percentage,
+        vds_percentage,
+        vds_min_withdrawal,
+        vds_max_withdrawal,
+        vds_adjust_minmax,
+        vds_floor,
+        vds_ceiling,
+        vds_adjust_fc,
+        vds_indexation,
+        cwd_amount,
+        cwd_indexation,
+        cwd_thresholds,
+        cwd_reductions,
+        ts_dates,
+        ts_amounts,
+        inflation_on,
     )
 
     fig, df_backtest, df_forecast, df_data = get_pf_figure(
@@ -1553,6 +1626,28 @@ def _get_distribution_figure(pf_object: ok.Portfolio) -> go.Figure:
     return fig
 
 
+def _prepare_dcf_forecast_state(
+    pf_object, last_backtest_value, distribution_mc, years_mc, n_mc, distribution_parameters_mc=None
+) -> bool:
+    """Set pf.dcf to the exact state the Submit forecast path uses: override
+    initial_investment with the backtest end value and set MC parameters.
+
+    Shared by the wealth forecast and the Find-max-withdrawal solver so the
+    two can never drift apart. Returns False when the backtest ended at zero
+    balance (no forecast possible).
+    """
+    if last_backtest_value <= 0:
+        return False
+    pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
+    pf_object.dcf.set_mc_parameters(
+        distribution=distribution_mc,
+        distribution_parameters=distribution_parameters_mc,
+        period=years_mc,
+        mc_number=n_mc,
+    )
+    return True
+
+
 def _get_wealth_data(
     pf_object,
     has_cashflow,
@@ -1589,14 +1684,9 @@ def _get_wealth_data(
         else settings.INITIAL_INVESTMENT_DEFAULT
     )
     last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
-    if last_backtest_value > 0:
-        pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
-        pf_object.dcf.set_mc_parameters(
-            distribution=distribution_mc,
-            distribution_parameters=distribution_parameters_mc,
-            period=years_mc,
-            mc_number=n_monte_carlo,
-        )
+    if _prepare_dcf_forecast_state(
+        pf_object, last_backtest_value, distribution_mc, years_mc, n_monte_carlo, distribution_parameters_mc
+    ):
         df_forecast = pf_object.dcf.monte_carlo_wealth(discounting="fv", include_negative_values=False)
         for scenario in df_forecast.columns:
             _nullify_after_first_zero(df_forecast, scenario)
