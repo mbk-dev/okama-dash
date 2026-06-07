@@ -11,7 +11,8 @@ Rates change stepwise, so the chart draws stepped lines at monthly
 granularity. The statistics table reports mean, median, maximum and minimum
 rates over YTD / 1 / 5 / 10 years and the whole selected period.
 
-Russian deposit rates and money-market rates (RUONIA, RUSFAR) are planned
-as additional series groups.
+Three series groups are available: central bank key rates, maximum deposit
+rates in Russian banks (RUB / RUB TOP-10 / USD / EUR) and Russian money-market
+rates (RUONIA and its averages, RUSFAR ON/1W/2W/1M/3M).
 """
 )

@@ -33,7 +33,13 @@ from pages.macro.cards_macro.macro_controls import (
 )
 from pages.macro.cards_macro.macro_description import macro_description_card
 from pages.macro.cards_macro.macro_stats import build_describe_table, build_stats_grid
-from pages.macro.macro_data import KEY_RATES_SERIES, MACRO_FIRST_DATE_DEFAULT, RATES_DEFAULTS, filter_known
+from pages.macro.macro_data import (
+    ALL_RATES_SERIES,
+    MACRO_FIRST_DATE_DEFAULT,
+    RATES_GROUPS,
+    filter_known,
+    rates_group_catalog,
+)
 from pages.macro.macro_link import build_macro_link
 
 dash.register_page(
@@ -52,9 +58,9 @@ today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 def get_rates_figure(objects: list) -> go.Figure:
     df = pd.concat([obj.values_monthly for obj in objects], axis=1) * 100
-    df.columns = [KEY_RATES_SERIES.get(col, col) for col in df.columns]
+    df.columns = [ALL_RATES_SERIES.get(col, col) for col in df.columns]
     ind = df.index.to_timestamp("M")
-    fig = px.line(df, x=ind, y=df.columns, title="Central bank key rates", height=600)
+    fig = px.line(df, x=ind, y=df.columns, title="Interest rates", height=600)
     fig.update_traces(line_shape="hv")  # rates change stepwise
     fig.update_xaxes(rangeslider_visible=True)
     fig.update_yaxes(title_text="Rate, %", zeroline=True, zerolinecolor="black", zerolinewidth=1)
@@ -62,14 +68,34 @@ def get_rates_figure(objects: list) -> go.Figure:
     return fig
 
 
-def layout(tickers=None, first_date=None, last_date=None, **kwargs):
-    selected = filter_known(make_list_from_string(tickers), KEY_RATES_SERIES) or RATES_DEFAULTS
+def layout(tickers=None, first_date=None, last_date=None, group=None, **kwargs):
+    group_value = group if group in RATES_GROUPS else "key"
+    catalog = rates_group_catalog(group_value)
+    group_defaults = RATES_GROUPS[group_value][2]
+    selected = filter_known(make_list_from_string(tickers), catalog) or group_defaults
     control_bar = dbc.Card(
         dbc.CardBody(
             [
                 dbc.Row(
                     [
-                        series_multiselect_column("rates", KEY_RATES_SERIES, selected),
+                        dbc.Col(
+                            [
+                                html.Label("Group"),
+                                dcc.Dropdown(
+                                    options=[
+                                        {"label": label, "value": value}
+                                        for value, (label, _, _) in RATES_GROUPS.items()
+                                    ],
+                                    value=group_value,
+                                    clearable=False,
+                                    id="rates-group",
+                                ),
+                            ],
+                            lg=2,
+                            md=3,
+                            sm=6,
+                        ),
+                        series_multiselect_column("rates", catalog, selected),
                         *date_columns("rates", first_date or MACRO_FIRST_DATE_DEFAULT, last_date or today_str),
                     ],
                     class_name="g-2",
@@ -142,6 +168,26 @@ def update_rates_page(screen, symbols, fd_value, ld_value):
 
 
 @callback(
+    Output("rates-series", "data"),
+    Output("rates-series", "value"),
+    Input("rates-group", "value"),
+    # The layout already renders the right options/values for the URL-prefilled
+    # group; firing on load would stomp prefilled tickers.
+    prevent_initial_call=True,
+)
+def switch_rates_group(group: str):
+    """Swap the series multiselect to the chosen group's catalog and defaults.
+
+    The value change then triggers the reactive main callback; the group is
+    deliberately NOT a main-callback Input (stale-series double-fire).
+    """
+    catalog = rates_group_catalog(group)
+    defaults = RATES_GROUPS.get(group, RATES_GROUPS["key"])[2]
+    options = [{"label": label, "value": symbol} for symbol, label in catalog.items()]
+    return options, defaults
+
+
+@callback(
     Output("rates-copy-link-button", "disabled"),
     Input("rates-series", "value"),
 )
@@ -155,11 +201,18 @@ def disable_copy_link_rates(selected):
     Input("rates-copy-link-button", "n_clicks"),
     State("rates-url", "href"),
     State("rates-series", "value"),
+    State("rates-group", "value"),
     State("rates-first-date", "value"),
     State("rates-last-date", "value"),
 )
-def update_rates_link(n_clicks, href, symbols, first_date, last_date):
-    return build_macro_link(href=href, tickers_list=symbols or [], first_date=first_date, last_date=last_date)
+def update_rates_link(n_clicks, href, symbols, group, first_date, last_date):
+    return build_macro_link(
+        href=href,
+        tickers_list=symbols or [],
+        first_date=first_date,
+        last_date=last_date,
+        group=(group, "key"),
+    )
 
 
 @callback(
