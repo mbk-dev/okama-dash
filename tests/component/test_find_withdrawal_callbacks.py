@@ -80,3 +80,58 @@ class TestValidateFindInputs:
     def test_target_sp_invalid_when_mc_years_not_int(self):
         assert self._validate(20, 25, None)[1] is True
         assert self._validate(20, 25, "abc")[1] is True
+
+
+class TestDisableFindButton:
+    def _disable(self, **overrides):
+        from pages.portfolio.cards_portfolio.cashflow_controls import disable_find_button
+
+        kwargs = {
+            "mc_number_valid": True,
+            "mc_years_valid": True,
+            "mc_number": 200,
+            "initial_amount": 1000,
+            "percentile_invalid": False,
+            "target_sp_invalid": False,
+            "goal": "maintain_balance_pv",
+        }
+        kwargs.update(overrides)
+        return disable_find_button(**kwargs)
+
+    def test_all_valid_enables_with_empty_hint(self):
+        assert self._disable() == (False, "")
+
+    def test_mc_number_zero_disables_with_hint(self):
+        disabled, hint = self._disable(mc_number=0)
+        assert disabled is True
+        assert "Monte Carlo" in hint
+
+    def test_mc_number_invalid_disables(self):
+        assert self._disable(mc_number_valid=False)[0] is True
+
+    def test_mc_years_invalid_disables(self):
+        assert self._disable(mc_years_valid=False)[0] is True
+
+    def test_empty_initial_amount_disables_with_hint(self):
+        disabled, hint = self._disable(initial_amount="")
+        assert disabled is True
+        assert "Initial amount" in hint
+
+    def test_none_initial_amount_disables(self):
+        assert self._disable(initial_amount=None)[0] is True
+
+    def test_invalid_percentile_disables(self):
+        disabled, hint = self._disable(percentile_invalid=True)
+        assert disabled is True
+        assert "Percentile" in hint
+
+    def test_invalid_target_sp_disables_only_for_survival_goal(self):
+        assert self._disable(target_sp_invalid=True, goal="survival_period")[0] is True
+        assert self._disable(target_sp_invalid=True, goal="maintain_balance_pv")[0] is False
+
+    def test_positional_contract_matches_inputs_order(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import disable_find_button
+
+        # Dash passes Inputs positionally: this call mirrors the decorator's
+        # Input order, guarding against a reorder that the kwargs helper hides.
+        assert disable_find_button(True, True, 200, 1000, False, False, "maintain_balance_pv") == (False, "")

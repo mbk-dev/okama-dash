@@ -1211,3 +1211,33 @@ def validate_find_inputs(percentile, target_sp, mc_years):
     percentile_ok = isinstance(percentile, int) and 0 <= percentile <= 100
     target_ok = isinstance(target_sp, int) and target_sp >= 1 and isinstance(mc_years, int) and target_sp < mc_years
     return not percentile_ok, not target_ok
+
+
+@callback(
+    Output("pf-cf-find-button", "disabled"),
+    Output("pf-cf-find-hint", "children"),
+    Input("pf-monte-carlo-number", "valid"),
+    Input("pf-monte-carlo-years", "valid"),
+    Input("pf-monte-carlo-number", "value"),
+    Input("pf-initial-amount", "value"),
+    Input("pf-cf-find-percentile", "invalid"),
+    Input("pf-cf-find-target-sp", "invalid"),
+    Input("pf-cf-find-goal", "value"),
+)
+def disable_find_button(
+    mc_number_valid, mc_years_valid, mc_number, initial_amount, percentile_invalid, target_sp_invalid, goal
+) -> tuple[bool, str]:
+    """Gate the Find button on the same validity the solver needs.
+
+    The hint explains the first failing condition; empty when enabled.
+    """
+    mc_on = isinstance(mc_number, int) and mc_number > 0
+    if not mc_number_valid or not mc_years_valid or not mc_on:
+        return True, "Requires Monte Carlo simulations > 0 and a valid forecast period."
+    if initial_amount in (None, ""):
+        return True, "Set the Initial amount."
+    if percentile_invalid:
+        return True, "Percentile must be an integer between 0 and 100."
+    if goal == "survival_period" and target_sp_invalid:
+        return True, "Target survival period must be an integer below the Monte Carlo forecast period."
+    return False, ""
