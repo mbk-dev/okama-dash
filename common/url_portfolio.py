@@ -8,6 +8,9 @@ a synthetic chip (its symbol) inside the page's tickers MultiSelect.
 
 import re
 
+import okama as ok
+
+from common.object_cache import TTL_PORTFOLIO, get_or_create
 from common.parse_query import make_list_from_string
 
 PF_REBAL_DEFAULT = "month"
@@ -97,3 +100,43 @@ def pf_cache_token(pf_def: dict | None) -> str | None:
         return None
     pairs = ",".join(f"{t}:{w:g}" for t, w in zip(pf_def["tickers"], pf_def["weights"], strict=True))
     return _CACHE_KEY_UNSAFE.sub("_", f"{pairs};{pf_def['rebal']};{pf_def['symbol']}")
+
+
+def get_or_create_url_portfolio(pf_def: dict, *, ccy: str, first_date: str, last_date: str) -> ok.Portfolio:
+    """Cached ok.Portfolio built from the parsed pf_* group.
+
+    Same object-cache pattern as the EF handoff (ef_cache.get_portfolio_point),
+    but returns the object itself: it goes into ok.AssetList as an asset.
+    inflation=False is correct inside AssetList(inflation=True) — the AssetList
+    computes inflation itself.
+    """
+    weights = [w / 100.0 for w in pf_def["weights"]]
+
+    def _construct() -> ok.Portfolio:
+        return ok.Portfolio(
+            assets=pf_def["tickers"],
+            weights=weights,
+            ccy=ccy,
+            first_date=first_date,
+            last_date=last_date,
+            inflation=False,
+            rebalancing_strategy=ok.Rebalance(period=pf_def["rebal"]),
+            symbol=pf_def["symbol"],
+        )
+
+    pf, _ = get_or_create(
+        obj_type="portfolio",
+        constructor_fn=_construct,
+        # pf_cache_token (sanitized) identifies tickers+weights+rebal+symbol in
+        # one filename-safe value: raw URL-controlled strings must never reach
+        # the pickle filename via _build_cache_key's f-string interpolation.
+        cache_key_params={
+            "ccy": ccy,
+            "first_date": first_date,
+            "last_date": last_date,
+            "pf": pf_cache_token(pf_def),
+            "purpose": "url_portfolio",
+        },
+        ttl_seconds=TTL_PORTFOLIO,
+    )
+    return pf

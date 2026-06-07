@@ -117,3 +117,57 @@ class TestPfCacheToken:
         token = pf_cache_token(pf_def)
         assert "/" not in token
         assert token == "AA_PL.US:60,MSFT.US:40;year;a_b.PF"
+
+
+class TestGetOrCreateUrlPortfolio:
+    def test_wires_object_cache(self):
+        from unittest.mock import MagicMock, patch
+
+        import common.url_portfolio as up
+
+        sentinel = MagicMock()
+        with patch.object(up, "get_or_create", return_value=(sentinel, "k.pkl")) as goc:
+            result = up.get_or_create_url_portfolio(PF_DEF, ccy="EUR", first_date="2015-01", last_date="2020-12")
+
+        assert result is sentinel
+        kwargs = goc.call_args.kwargs
+        assert kwargs["obj_type"] == "portfolio"
+        assert kwargs["ttl_seconds"] == up.TTL_PORTFOLIO
+        key = kwargs["cache_key_params"]
+        assert key["ccy"] == "EUR"
+        assert key["first_date"] == "2015-01"
+        assert key["last_date"] == "2020-12"
+        # Sanitized single discriminator — raw URL strings must not reach the
+        # pickle filename (see pf_cache_token).
+        assert key["pf"] == "AAPL.US:60,MSFT.US:40;year;MyPF.PF"
+        assert key["purpose"] == "url_portfolio"
+        assert "symbols" not in key
+        assert "symbol" not in key
+        assert "weights" not in key
+
+    def test_constructor_builds_portfolio(self):
+        from unittest.mock import patch
+
+        import common.url_portfolio as up
+
+        def run_constructor(*, obj_type, constructor_fn, cache_key_params, ttl_seconds):
+            return constructor_fn(), "k.pkl"
+
+        with (
+            patch.object(up, "get_or_create", side_effect=run_constructor),
+            patch.object(up.ok, "Portfolio") as mock_pf,
+            patch.object(up.ok, "Rebalance") as mock_rebal,
+        ):
+            up.get_or_create_url_portfolio(PF_DEF, ccy="EUR", first_date="2015-01", last_date="2020-12")
+
+        mock_rebal.assert_called_once_with(period="year")
+        mock_pf.assert_called_once_with(
+            assets=["AAPL.US", "MSFT.US"],
+            weights=[0.6, 0.4],
+            ccy="EUR",
+            first_date="2015-01",
+            last_date="2020-12",
+            inflation=False,
+            rebalancing_strategy=mock_rebal.return_value,
+            symbol="MyPF.PF",
+        )
