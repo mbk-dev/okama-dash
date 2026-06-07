@@ -10,7 +10,13 @@ import pickle
 import pandas as pd
 import pytest
 
-from tests.mocks.okama_mock import PicklableIndicator, PicklableInflation, PicklableRate
+from tests.mocks.okama_mock import (
+    PicklableAsset,
+    PicklableAssetList,
+    PicklableIndicator,
+    PicklableInflation,
+    PicklableRate,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -57,3 +63,39 @@ class TestPicklableRateAndIndicator:
         obj = PicklableRate("US_EFFR.RATE")
         restored = pickle.loads(pickle.dumps(obj))
         assert restored.symbol == "US_EFFR.RATE"
+
+
+class TestPicklableAsset:
+    def test_surface(self):
+        a = PicklableAsset("MOW_PR.RE")
+        assert a.symbol == "MOW_PR.RE"
+        assert a.currency == "RUB"
+        assert isinstance(a.close_monthly, pd.Series)
+        assert a.close_monthly.index.freqstr == "M"
+        assert a.close_monthly.min() > 1000  # price per m², not a return
+
+    def test_pickles(self):
+        a = PicklableAsset("RUS_PR.RE")
+        restored = pickle.loads(pickle.dumps(a))
+        pd.testing.assert_series_equal(restored.close_monthly, a.close_monthly)
+
+
+class TestPicklableAssetListExtensions:
+    def test_inflation_column_added_when_requested(self):
+        al = PicklableAssetList(["MOW_PR.RE"], ccy="RUB", inflation=True)
+        assert list(al.wealth_indexes.columns) == ["MOW_PR.RE", "RUB.INFL"]
+        al_usd = PicklableAssetList(["MOW_PR.RE"], ccy="USD", inflation=True)
+        assert "USD.INFL" in al_usd.wealth_indexes.columns
+
+    def test_no_inflation_column_by_default(self):
+        # Existing consumers (compare/benchmark e2e) must keep their column set.
+        al = PicklableAssetList(["AAPL.US", "MSFT.US"])
+        assert list(al.wealth_indexes.columns) == ["AAPL.US", "MSFT.US"]
+
+    def test_price_conversion_mirrors_private_okama_api(self):
+        al = PicklableAssetList(["MOW_PR.RE"], ccy="USD")
+        price = PicklableAsset("MOW_PR.RE").close_monthly
+        converted = al._adjust_price_to_currency_monthly(price, "RUB")
+        assert (converted < price).all()  # USD numbers are smaller than RUB
+        al_rub = PicklableAssetList(["MOW_PR.RE"], ccy="RUB")
+        pd.testing.assert_series_equal(al_rub._adjust_price_to_currency_monthly(price, "RUB"), price)

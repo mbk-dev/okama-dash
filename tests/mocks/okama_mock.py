@@ -207,6 +207,12 @@ class PicklableAssetList:
         wealth_data = np.cumprod(1 + rng.normal(0.005, 0.03, (n, n_assets)), axis=0) * 1000
         self.wealth_indexes = pd.DataFrame(wealth_data, index=dates, columns=symbols)
 
+        # Real AssetList appends the list-currency inflation column when
+        # inflation=True (verified live: columns = symbols + f"{ccy}.INFL").
+        if kwargs.get("inflation"):
+            infl_col = f"{self.currency}.INFL"
+            self.wealth_indexes[infl_col] = np.cumprod(1 + rng.normal(0.003, 0.002, n)) * 1000
+
         ror_data = rng.normal(0.005, 0.03, (n, n_assets))
         self.assets_ror = pd.DataFrame(ror_data, index=dates, columns=symbols)
         self.inflation_ts = pd.Series(dtype=float)
@@ -292,6 +298,14 @@ class PicklableAssetList:
 
     def index_beta(self, rolling_window: int | None = None) -> pd.DataFrame:
         return self._beta_data
+
+    def _adjust_price_to_currency_monthly(self, price: pd.Series, asset_currency: str) -> pd.Series:
+        """Mirror of okama's private converter used by the RE page (guarded by
+        tests/unit/test_macro_objects.py upgrade guard). RUB->USD divides by a
+        fixed mock rate; same-currency passes through."""
+        if self.currency == asset_currency:
+            return price
+        return price / 80.0
 
 
 # ---------------------------------------------------------------------------
@@ -383,6 +397,22 @@ class PicklableIndicator:
                 self.symbol: [38.67, 39.21, 47.13, 8.06],
             }
         )
+
+
+class PicklableAsset:
+    """Mock for ok.Asset (RE namespace): per-m² prices in native RUB."""
+
+    def __init__(self, symbol: str = "MOW_PR.RE", *args, **kwargs):
+        self.symbol = symbol
+        self.currency = "RUB"
+        dates = pd.period_range("2020-01", "2024-12", freq="M")
+        rng = np.random.default_rng(42)
+        # A drifting price level around 250k RUB/m².
+        self.close_monthly = pd.Series(
+            250_000 * np.cumprod(1 + rng.normal(0.005, 0.01, len(dates))), index=dates, name=symbol
+        )
+        self.first_date = dates[0].to_timestamp()
+        self.last_date = dates[-1].to_timestamp()
 
 
 # ---------------------------------------------------------------------------
