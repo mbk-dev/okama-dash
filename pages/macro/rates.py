@@ -1,8 +1,9 @@
-"""/macro/rates — central bank key rates (Macro section, stage 1).
+"""/macro/rates — interest rates in three series groups (Macro section).
 
-Stage 2 adds the "Deposit rates RU" and "Money market RU" series groups with a
-group selector; stage 1 ships the key-rates group only, so there is no group
-control yet (spec section 5.2).
+A group selector switches between central bank key rates, Russian bank deposit
+rates and Russian money-market rates (RUONIA/RUSFAR); switching swaps the
+series multiselect options and defaults, and the reactive main callback
+recalculates through the series Input (spec section 5.2).
 """
 
 import dash

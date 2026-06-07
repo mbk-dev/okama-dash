@@ -31,7 +31,7 @@ INFLATION_TO_KEY_RATE = {
     "CNY.INFL": "CHN_LPR1.RATE",
 }
 
-# /macro/rates — RATE namespace, handled by ok.Rate. Stage 1 ships key rates only.
+# /macro/rates — RATE namespace, handled by ok.Rate. Key-rates group (see RATES_GROUPS below).
 KEY_RATES_SERIES = {
     "RUS_CBR.RATE": "Bank of Russia key rate",
     "US_EFFR.RATE": "US Fed effective funds rate",
