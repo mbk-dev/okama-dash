@@ -45,6 +45,58 @@ KEY_RATES_SERIES = {
 }
 RATES_DEFAULTS = ["RUS_CBR.RATE", "US_EFFR.RATE", "EU_MRO.RATE"]
 
+# /macro/rates stage-2 groups. Display labels follow the DB names trimmed for
+# the legend (full names verified in the live RATE namespace dump).
+DEPOSIT_RATES_SERIES = {
+    "RUS_RUB.RATE": "Max deposit rates (RUB)",
+    "RUS_RUB_TOP10.RATE": "Max deposit rates TOP-10 (RUB)",
+    "RUS_USD.RATE": "Max deposit rates (USD)",
+    "RUS_EUR.RATE": "Max deposit rates (EUR)",
+}
+DEPOSIT_RATES_DEFAULTS = ["RUS_RUB_TOP10.RATE"]
+
+# Money market RU: RUONIA family + base RUSFAR tenors. RT/compound/N variants,
+# CNY/USD RUSFAR, RUSFARIND and RUSFAR2M are deliberately excluded (spec §2);
+# the tenor list is a one-line edit here.
+MONEY_MARKET_SERIES = {
+    "RUONIA.RATE": "RUONIA",
+    "RUONIA_AVG_1M.RATE": "RUONIA Average 1M",
+    "RUONIA_AVG_3M.RATE": "RUONIA Average 3M",
+    "RUONIA_AVG_6M.RATE": "RUONIA Average 6M",
+    "RUSFAR.RATE": "RUSFAR ON",
+    "RUSFAR1W.RATE": "RUSFAR 1W",
+    "RUSFAR2W.RATE": "RUSFAR 2W",
+    "RUSFAR1M.RATE": "RUSFAR 1M",
+    "RUSFAR3M.RATE": "RUSFAR 3M",
+}
+MONEY_MARKET_DEFAULTS = ["RUONIA.RATE"]
+
+# Group registry for the /macro/rates group selector: value -> (label, catalog, defaults).
+RATES_GROUPS = {
+    "key": ("Key rates", KEY_RATES_SERIES, RATES_DEFAULTS),
+    "deposit": ("Deposit rates RU", DEPOSIT_RATES_SERIES, DEPOSIT_RATES_DEFAULTS),
+    "mm": ("Money market RU", MONEY_MARKET_SERIES, MONEY_MARKET_DEFAULTS),
+}
+
+# Union catalog for figure legend labels regardless of the active group.
+ALL_RATES_SERIES = {**KEY_RATES_SERIES, **DEPOSIT_RATES_SERIES, **MONEY_MARKET_SERIES}
+
+
+def rates_group_catalog(group: str | None) -> dict[str, str]:
+    """Catalog of the requested rates group; unknown/None falls back to key rates."""
+    return RATES_GROUPS.get(group, RATES_GROUPS["key"])[1]
+
+
+# /macro/real-estate — RE namespace; real estate is an ASSET (ok.Asset/AssetList,
+# not the macro classes): prices per m² in native RUB, currency-convertible.
+RE_SERIES = {
+    "MOW_PR.RE": "Moscow primary market",
+    "MOW_SEC.RE": "Moscow secondary market",
+    "RUS_PR.RE": "Russia primary market",
+    "RUS_SEC.RE": "Russia secondary market",
+}
+RE_DEFAULTS = ["MOW_PR.RE", "MOW_SEC.RE"]
+
 # /macro/cape10 — RATIO namespace, handled by ok.Indicator (all 26 DB countries)
 CAPE10_SERIES = {
     "USA_CAPE10.RATIO": "USA",
