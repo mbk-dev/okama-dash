@@ -627,14 +627,26 @@ def card_controls(
                             n_clicks=0,
                             color="primary",
                         ),
-                        dbc.Button(
-                            "Go to EF",
-                            id="pf-go-to-ef-button",
-                            outline=True,
-                            color="primary",
-                            external_link=True,
-                            target="_blank",
-                            class_name="ms-2",
+                        dbc.DropdownMenu(
+                            label="Go to",
+                            id="pf-goto-menu",
+                            # Outline look to match the previous Go to EF button:
+                            # DropdownMenu has no outline prop, the toggle takes
+                            # the class directly. d-inline-block keeps the menu
+                            # wrapper on the Submit line (its default div is block).
+                            toggle_class_name="btn-outline-primary",
+                            class_name="d-inline-block ms-2",
+                            children=[
+                                dbc.DropdownMenuItem(
+                                    "Efficient Frontier", id="pf-goto-ef", external_link=True, target="_blank"
+                                ),
+                                dbc.DropdownMenuItem(
+                                    "Compare Assets", id="pf-goto-compare", external_link=True, target="_blank"
+                                ),
+                                dbc.DropdownMenuItem(
+                                    "Benchmark", id="pf-goto-benchmark", external_link=True, target="_blank"
+                                ),
+                            ],
                         ),
                         create_submit_spinner("pf-submit-spinner"),
                     ],
@@ -880,7 +892,7 @@ def update_link_pf(
 
 
 @callback(
-    Output("pf-go-to-ef-button", "href"),
+    Output("pf-goto-ef", "href"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),  # weights
     Input("pf-base-currency", "value"),
@@ -1086,7 +1098,7 @@ def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy, frequ
     Output("pf-submit-button", "disabled"),
     Output("pf-copy-link-button", "disabled"),
     Output("dynamic-add-filter", "disabled"),
-    Output("pf-go-to-ef-button", "disabled"),
+    Output("pf-goto-menu", "disabled"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
     Input("pf-rolling-window", "value"),
@@ -1113,7 +1125,7 @@ def disable_submit_add_link_buttons(
     - "Submit"
     - number of tickers is more than allowed (in settings)
 
-    disable "Go to EF" conditions:
+    disable "Go to" menu conditions (one gate for all three items):
     - "Copy Link"
     - number of unique tickers is < 2 (a frontier needs at least two assets)
     """

@@ -100,3 +100,40 @@ class TestGoToEfGating:
             True,
         )
         assert go_disabled is True
+
+
+def _walk(component):
+    yield component
+    children = getattr(component, "children", None)
+    if children is None:
+        return
+    if not isinstance(children, (list, tuple)):
+        children = [children]
+    for child in children:
+        yield from _walk(child)
+
+
+def _find(node, component_id):
+    for item in _walk(node):
+        if getattr(item, "id", None) == component_id:
+            return item
+    raise AssertionError(f"id {component_id!r} not found")
+
+
+class TestGoToMenuMarkup:
+    def test_menu_replaces_button_with_three_link_items(self, mock_okama_symbols, null_cache):
+        import dash_bootstrap_components as dbc
+
+        from pages.portfolio.cards_portfolio.portfolio_controls import card_controls
+
+        card = card_controls(None, None, None, None, None, None, None, None, None, None)
+
+        menu = _find(card, "pf-goto-menu")
+        assert isinstance(menu, dbc.DropdownMenu)
+        item_ids = [getattr(item, "id", None) for item in menu.children]
+        assert item_ids == ["pf-goto-ef", "pf-goto-compare", "pf-goto-benchmark"]
+        for item in menu.children:
+            assert item.external_link is True
+            assert item.target == "_blank"
+        with pytest.raises(AssertionError):
+            _find(card, "pf-go-to-ef-button")

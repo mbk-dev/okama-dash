@@ -85,8 +85,8 @@ class TestShareableLinks:
             f"{dash_server_url}/portfolio?tickers=AAPL.US,MSFT.US&weights=60,40",
             wait_until="domcontentloaded",
         )
-        button = page.locator("#pf-go-to-ef-button")
-        button.wait_for(state="visible", timeout=10_000)
+        button = page.locator("#pf-goto-ef")
+        button.wait_for(state="attached", timeout=10_000)
         expect(button).to_have_attribute("href", re.compile(r"weights="), timeout=10_000)
 
         href = button.get_attribute("href")
