@@ -631,9 +631,11 @@ def card_controls(
                             label="Go to",
                             id="pf-goto-menu",
                             # Outline look to match the previous Go to EF button:
-                            # DropdownMenu has no outline prop, the toggle takes
-                            # the class directly. d-inline-block keeps the menu
-                            # wrapper on the Submit line (its default div is block).
+                            # DropdownMenu has no outline prop; btn-outline-primary
+                            # supplies the outline palette while assets/forms.css
+                            # neutralizes the solid btn-primary background that the
+                            # default color leaves behind. d-inline-block keeps the
+                            # menu wrapper on the Submit line (its default div is block).
                             toggle_class_name="btn-outline-primary",
                             class_name="d-inline-block ms-2",
                             children=[
@@ -1109,7 +1111,7 @@ def disable_submit_add_link_buttons(
     tickers_list, weights_list, rolling_window_value, mc_number_valid, mc_years_valid
 ) -> Tuple[bool, bool, bool, bool]:
     """
-    Disable "Add Asset", "Submit" and "Copy Link" buttons.
+    Disable "Add Asset", "Submit", "Copy Link" buttons and the "Go to" menu.
 
     disable "Add Asset" conditions:
     - weights and assets forms are not empty (don't have None)

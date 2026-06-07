@@ -52,3 +52,13 @@
 #pf-cf-ts-accordion.ts-plain .accordion-item {
     background-color: var(--bs-tertiary-bg);
 }
+
+/* "Go to" dropdown (Portfolio): dbc.DropdownMenu's default color renders the
+   toggle as solid btn-primary; btn-outline-primary (toggle_class_name) wins
+   every --bs-btn-* variable it declares, but never declares the background.
+   Neutralize bg (incl. disabled) so the toggle looks like the outline button
+   it replaced — hover/active fills still come from btn-outline-primary. */
+#pf-goto-menu .dropdown-toggle {
+    --bs-btn-bg: transparent;
+    --bs-btn-disabled-bg: transparent;
+}
