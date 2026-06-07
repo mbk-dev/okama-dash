@@ -1156,6 +1156,27 @@ def _build_cashflow_strategy(
     return strategy
 
 
+def _map_find_result(strategy_type: str, result) -> float:
+    """Value (sign and units) for the active strategy's withdrawal input.
+
+    Result.withdrawal_abs is negative; withdrawal_rel is a positive fraction.
+    Amount strategies (indexation, cwd) take the absolute amount; percentage
+    strategies (percentage, vds) take the negated relative size in percent.
+    """
+    if strategy_type in ("percentage", "vds"):
+        return round(-float(result.withdrawal_rel) * 100, 2)
+    return round(float(result.withdrawal_abs), 2)
+
+
+def _format_find_result(strategy_type: str, result) -> str:
+    """Human-readable Find result shown next to the button."""
+    accuracy = f"accuracy ±{abs(float(result.error_rel)) * 100:.1f}%"
+    if strategy_type in ("percentage", "vds"):
+        return f"Withdrawal: {-float(result.withdrawal_rel) * 100:.1f}% · {accuracy}"
+    rel_pct = float(result.withdrawal_rel) * 100
+    return f"Withdrawal: {format_points(float(result.withdrawal_abs))} ({rel_pct:.1f}% of initial) · {accuracy}"
+
+
 def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
     data = pf_object.ror.dropna()
     mu, std = norm.fit(data)
