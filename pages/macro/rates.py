@@ -1,0 +1,179 @@
+"""/macro/rates — central bank key rates (Macro section, stage 1).
+
+Stage 2 adds the "Deposit rates RU" and "Money market RU" series groups with a
+group selector; stage 1 ships the key-rates group only, so there is no group
+control yet (spec section 5.2).
+"""
+
+import dash
+import dash_bootstrap_components as dbc
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from dash import callback, dcc, html
+from dash.dependencies import Input, Output, State
+
+from common.date_input import register_date_validation
+from common.html_elements.copy_link_div import create_copy_link_div
+from common.html_elements.grid_export import (
+    create_grid_header_with_export,
+    percent_column_formats,
+    rowdata_to_xlsx_download,
+)
+from common.html_elements.submit_spinner import submit_spinner_running
+from common.mobile_screens import adopt_small_screens
+from common.parse_query import make_list_from_string
+from pages.macro import macro_objects
+from pages.macro.cards_macro.eng.rates_description_txt import rates_description_text
+from pages.macro.cards_macro.macro_chart import macro_chart_card
+from pages.macro.cards_macro.macro_controls import (
+    date_columns,
+    make_submit_guard,
+    series_multiselect_column,
+    submit_button_column,
+)
+from pages.macro.cards_macro.macro_description import macro_description_card
+from pages.macro.cards_macro.macro_stats import build_describe_table, build_stats_grid
+from pages.macro.macro_data import KEY_RATES_SERIES, MACRO_FIRST_DATE_DEFAULT, RATES_DEFAULTS, filter_known
+from pages.macro.macro_link import build_macro_link
+
+dash.register_page(
+    __name__,
+    path="/macro/rates",
+    title="Key rates : okama",
+    name="Rates",
+    description=(
+        "Okama.io widget: central bank key rates — Bank of Russia, US Fed EFFR, ECB, "
+        "Bank of England, Bank of Israel, PBoC LPR"
+    ),
+)
+
+today_str = pd.Timestamp.today().strftime("%Y-%m")
+
+
+def get_rates_figure(objects: list) -> go.Figure:
+    df = pd.concat([obj.values_monthly for obj in objects], axis=1) * 100
+    df.columns = [KEY_RATES_SERIES.get(col, col) for col in df.columns]
+    ind = df.index.to_timestamp("M")
+    fig = px.line(df, x=ind, y=df.columns, title="Central bank key rates", height=600)
+    fig.update_traces(line_shape="hv")  # rates change stepwise
+    fig.update_xaxes(rangeslider_visible=True)
+    fig.update_yaxes(title_text="Rate, %", zeroline=True, zerolinecolor="black", zerolinewidth=1)
+    fig.update_layout(xaxis_title=None, legend_title="Series")
+    return fig
+
+
+def layout(tickers=None, first_date=None, last_date=None, **kwargs):
+    selected = filter_known(make_list_from_string(tickers), KEY_RATES_SERIES) or RATES_DEFAULTS
+    control_bar = dbc.Card(
+        dbc.CardBody(
+            [
+                dbc.Row(
+                    [
+                        series_multiselect_column("rates", KEY_RATES_SERIES, selected),
+                        *date_columns("rates", first_date or MACRO_FIRST_DATE_DEFAULT, last_date or today_str),
+                        submit_button_column("rates"),
+                    ],
+                    class_name="g-2",
+                    align="end",
+                ),
+                dbc.Row(
+                    create_copy_link_div(
+                        location_id="rates-url",
+                        hidden_div_with_url_id="rates-show-url",
+                        button_id="rates-copy-link-button",
+                        card_name="widget",
+                    ),
+                ),
+            ]
+        ),
+        class_name="mb-3",
+    )
+    stats_card = dbc.Card(
+        dbc.CardBody(
+            [
+                create_grid_header_with_export("Statistics", "rates-statistics-export-btn"),
+                dcc.Download(id="rates-statistics-download"),
+                html.Div(id="rates-describe-table"),
+            ]
+        ),
+        class_name="mb-3",
+    )
+    return dbc.Container(
+        [
+            html.H2("Key rates", className="my-2"),
+            control_bar,
+            macro_chart_card("rates"),
+            stats_card,
+            macro_description_card("Key rates widget", rates_description_text),
+        ],
+        class_name="mt-2",
+        fluid="md",
+    )
+
+
+@callback(
+    Output("rates-chart", "figure"),
+    Output("rates-chart", "config"),
+    Output("rates-describe-table", "children"),
+    Input("store", "data"),
+    Input("rates-submit-button", "n_clicks"),
+    State("rates-series", "value"),
+    State("rates-first-date", "value"),
+    State("rates-last-date", "value"),
+    running=submit_spinner_running("rates-submit-spinner"),
+    # NB: no prevent_initial_call — the chart auto-renders on page load (spec §4).
+)
+def update_rates_page(screen, n_clicks, symbols, fd_value, ld_value):
+    if not symbols:
+        raise dash.exceptions.PreventUpdate
+    try:
+        objects = [macro_objects.get_rate_object(s, fd_value, ld_value) for s in symbols]
+        fig = get_rates_figure(objects)
+        stats_df = build_describe_table([obj.describe() for obj in objects])
+        grid = build_stats_grid(stats_df, "rates-describe-table-grid", value_format="percent")
+        fig, config = adopt_small_screens(fig, screen)
+        return fig, config, grid
+    except Exception as e:
+        alert_fig = go.Figure()
+        alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
+        return alert_fig, {}, None
+
+
+@callback(
+    Output("rates-submit-button", "disabled"),
+    Output("rates-copy-link-button", "disabled"),
+    Input("rates-series", "value"),
+)
+def disable_actions_rates(selected):
+    # Empty selection disables both Submit and Copy link (see inflation page).
+    disabled = make_submit_guard()(selected)
+    return disabled, disabled
+
+
+@callback(
+    Output("rates-show-url", "children"),
+    Input("rates-copy-link-button", "n_clicks"),
+    State("rates-url", "href"),
+    State("rates-series", "value"),
+    State("rates-first-date", "value"),
+    State("rates-last-date", "value"),
+)
+def update_rates_link(n_clicks, href, symbols, first_date, last_date):
+    return build_macro_link(href=href, tickers_list=symbols or [], first_date=first_date, last_date=last_date)
+
+
+@callback(
+    Output("rates-statistics-download", "data"),
+    Input("rates-statistics-export-btn", "n_clicks"),
+    State("rates-describe-table-grid", "rowData"),
+    prevent_initial_call=True,
+)
+def export_rates_stats(n_clicks, row_data):
+    return rowdata_to_xlsx_download(
+        n_clicks, row_data, "rates_statistics.xlsx", column_formats=percent_column_formats(row_data)
+    )
+
+
+register_date_validation("rates-first-date")
+register_date_validation("rates-last-date")
