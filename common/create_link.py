@@ -114,7 +114,7 @@ def _quote_value(val) -> str:
 
 # Param values that stay raw in the URL: comma/colon are legal in query strings
 # (the tickers CSV proves it end-to-end) and keep pair values human-readable.
-_UNQUOTED_PARAMS = {"weights", "vds_adj_mm", "vds_adj_fc", "cwd_tr", "cf_ts"}
+_UNQUOTED_PARAMS = {"weights", "vds_adj_mm", "vds_adj_fc", "cwd_tr", "cf_ts", "pf_tickers", "pf_weights"}
 
 
 def _format_query_param(name, value, rule) -> str | None:
@@ -157,6 +157,12 @@ def create_link(
     symbol=None,
     # benchmark
     benchmark=None,
+    # portfolio handoff group (issue #23): a bare rebalanced portfolio carried
+    # to Compare/Benchmark as its own self-contained params
+    pf_tickers=None,
+    pf_weights=None,
+    pf_rebal=None,
+    pf_symbol=None,
     # rebalancing deviation
     abs_dev=None,
     rel_dev=None,
@@ -190,6 +196,10 @@ def create_link(
         ("ccy", ccy, ("skip_if_default", "USD")),
         ("first_date", first_date, ("skip_if_default", "2000-01")),
         ("last_date", last_date, ("skip_if_default", today_str)),
+        ("pf_tickers", ",".join(_quote_value(s) for s in pf_tickers) if pf_tickers else None, "if_not_none"),
+        ("pf_weights", ",".join(f"{w:g}" for w in pf_weights) if pf_weights else None, "if_not_none"),
+        ("pf_rebal", pf_rebal, ("skip_if_default", "month")),
+        ("pf_symbol", pf_symbol, ("skip_if_default", "PORTFOLIO")),
         ("weights", ",".join(str(w) for w in weights_list) if weights_list else None, "if_not_none"),
         ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
         ("benchmark", benchmark, "if_not_none"),
@@ -217,16 +227,19 @@ def create_link(
         ("cf_ts", cf_ts, "if_not_none"),
     ]
 
-    tickers_str = "tickers=" + ",".join(_quote_value(s) for s in tickers_list)
+    # tickers= is omitted for an empty list: handoff links to Compare/Benchmark
+    # carry only the pf_* group, and "?tickers=&pf_tickers=..." would be noise.
     reset_href = href.split("?")[0]
-    parts = [f"{reset_href}?{tickers_str}"]
+    query_parts = []
+    if tickers_list:
+        query_parts.append("tickers=" + ",".join(_quote_value(s) for s in tickers_list))
 
     for name, value, rule in params:
         formatted = _format_query_param(name, value, rule)
         if formatted is not None:
-            parts.append(formatted)
+            query_parts.append(formatted)
 
-    return "&".join(parts)
+    return f"{reset_href}?{'&'.join(query_parts)}"
 
 
 def compute_cashflow_hash(**params) -> str | None:
