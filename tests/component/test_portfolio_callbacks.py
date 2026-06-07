@@ -892,7 +892,8 @@ class TestManageTsRows:
     @staticmethod
     def _row_values(row):
         date_input = row.children[0].children[0]
-        amount_input = row.children[1].children
+        # amount is a dmc.NumberInput wrapped in a MantineProvider
+        amount_input = row.children[1].children.children
         return date_input.value, amount_input.value
 
     def test_initial_load_collapsed_creates_no_rows(self):
@@ -1023,3 +1024,74 @@ class TestCashflowAmountNumberInputs:
 
         assert _find_by_id(item, "pf-initial-amount").value == settings.INITIAL_INVESTMENT_DEFAULT
         assert _find_by_id(item, "pf-cf-amount").value == 0
+
+
+class TestBigAmountNumberInputs:
+    """CWD/VDS amounts and custom cash-flow rows group digits with a space.
+
+    Same rationale as issue #17 (Initial/Cash flow amount): these money fields
+    routinely hold values above 10 000 (placeholders -60000, 40000, 100000),
+    and an HTML input[type=number] cannot display thousands separators — so
+    they are dmc.NumberInput(thousandSeparator=" ").
+    """
+
+    PANEL_AMOUNT_IDS = ("pf-cf-cwd-amount", "pf-cf-vds-min-withdrawal", "pf-cf-vds-max-withdrawal")
+    TS_AMOUNT_ID = {"type": "pf-cf-ts-amount", "index": 0}
+
+    def _build(self, **kwargs):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        return cashflow_accordion_item(**kwargs)
+
+    @pytest.mark.parametrize("target", PANEL_AMOUNT_IDS)
+    def test_field_is_number_input_with_space_separator(self, target):
+        node = _find_by_id(self._build(), target)
+        assert type(node).__name__ == "NumberInput"
+        assert node.thousandSeparator == " "
+
+    def test_cwd_amount_keeps_max_zero(self):
+        assert _find_by_id(self._build(), "pf-cf-cwd-amount").max == 0
+
+    @pytest.mark.parametrize("target", ("pf-cf-vds-min-withdrawal", "pf-cf-vds-max-withdrawal"))
+    def test_vds_bounds_keep_min_zero(self, target):
+        assert _find_by_id(self._build(), target).min == 0
+
+    @pytest.mark.parametrize("target", PANEL_AMOUNT_IDS)
+    def test_fields_render_inside_mantine_provider(self, target):
+        # dmc components fail to render without a MantineProvider ancestor.
+        item = self._build()
+        assert any(
+            type(node).__name__ == "MantineProvider" and _find_by_id(node, target) is not None
+            for node in _walk_components(item)
+        ), f"{target} must be wrapped in a MantineProvider"
+
+    def test_prefill_values_populate_inputs(self):
+        # portfolio.py coerces URL params to float before the layout builder.
+        item = self._build(cwd_amount=-60000.0, vds_min=40000.0, vds_max=100000.0)
+
+        assert _find_by_id(item, "pf-cf-cwd-amount").value == -60000
+        assert _find_by_id(item, "pf-cf-vds-min-withdrawal").value == 40000
+        assert _find_by_id(item, "pf-cf-vds-max-withdrawal").value == 100000
+
+    def test_defaults_without_prefill(self):
+        item = self._build()
+
+        assert _find_by_id(item, "pf-cf-cwd-amount").value == 0
+        assert getattr(_find_by_id(item, "pf-cf-vds-min-withdrawal"), "value", None) is None
+        assert getattr(_find_by_id(item, "pf-cf-vds-max-withdrawal"), "value", None) is None
+
+    def test_ts_amount_row_is_number_input_with_space_separator(self):
+        item = self._build(cf_ts=[("2030-01", "-50000")])
+
+        node = _find_by_id(item, self.TS_AMOUNT_ID)
+        assert type(node).__name__ == "NumberInput"
+        assert node.thousandSeparator == " "
+        assert node.value == -50000.0
+
+    def test_ts_amount_row_renders_inside_mantine_provider(self):
+        item = self._build(cf_ts=[("2030-01", "-50000")])
+
+        assert any(
+            type(node).__name__ == "MantineProvider" and _find_by_id(node, self.TS_AMOUNT_ID) is not None
+            for node in _walk_components(item)
+        ), "pf-cf-ts-amount must be wrapped in a MantineProvider"

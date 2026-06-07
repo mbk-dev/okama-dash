@@ -431,12 +431,14 @@ def cashflow_accordion_item(
                                         className="text-nowrap",
                                     ),
                                     dbc.Tooltip(tl.pf_cf_vds_min_max, target="pf-info-vds-min"),
-                                    dbc.Input(
-                                        id="pf-cf-vds-min-withdrawal",
-                                        type="number",
-                                        min=0,
-                                        value=vds_min,
-                                        placeholder="40000",
+                                    search_provider(
+                                        dmc.NumberInput(
+                                            id="pf-cf-vds-min-withdrawal",
+                                            min=0,
+                                            value=_prefill_amount(vds_min, None),
+                                            thousandSeparator=" ",
+                                            placeholder="40 000",
+                                        )
                                     ),
                                 ],
                                 lg=6,
@@ -453,12 +455,14 @@ def cashflow_accordion_item(
                                         className="text-nowrap",
                                     ),
                                     dbc.Tooltip(tl.pf_cf_vds_min_max, target="pf-info-vds-max"),
-                                    dbc.Input(
-                                        id="pf-cf-vds-max-withdrawal",
-                                        type="number",
-                                        min=0,
-                                        value=vds_max,
-                                        placeholder="100000",
+                                    search_provider(
+                                        dmc.NumberInput(
+                                            id="pf-cf-vds-max-withdrawal",
+                                            min=0,
+                                            value=_prefill_amount(vds_max, None),
+                                            thousandSeparator=" ",
+                                            placeholder="100 000",
+                                        )
                                     ),
                                 ],
                                 lg=6,
@@ -617,12 +621,16 @@ def cashflow_accordion_item(
                                             ),
                                         ]
                                     ),
-                                    dbc.Input(
-                                        id="pf-cf-cwd-amount",
-                                        type="number",
-                                        max=0,
-                                        value=cwd_amount if cwd_amount else 0,
-                                        placeholder="-60000",
+                                    # NumberInput instead of dbc.Input: an HTML
+                                    # input[type=number] cannot group digits (#17).
+                                    search_provider(
+                                        dmc.NumberInput(
+                                            id="pf-cf-cwd-amount",
+                                            max=0,
+                                            value=_prefill_amount(cwd_amount, 0),
+                                            thousandSeparator=" ",
+                                            placeholder="-60 000",
+                                        )
                                     ),
                                     dbc.FormText("Must be negative or zero"),
                                     dbc.Tooltip(
@@ -990,11 +998,13 @@ def _ts_row(index, date_val=None, amount_val=None):
                 width=5,
             ),
             dbc.Col(
-                dbc.Input(
-                    id={"type": "pf-cf-ts-amount", "index": index},
-                    type="number",
-                    placeholder="-1000",
-                    value=amount_val,
+                search_provider(
+                    dmc.NumberInput(
+                        id={"type": "pf-cf-ts-amount", "index": index},
+                        placeholder="-1 000",
+                        value=amount_val,
+                        thousandSeparator=" ",
+                    )
                 ),
                 width=5,
             ),
