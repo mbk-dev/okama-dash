@@ -28,6 +28,12 @@
     min-height: 38px;
 }
 
+/* Rule 1: dmc.MultiSelect -> 38px base height (still grows as tags wrap,
+   min-height only lifts the single-line case to match its row neighbours). */
+.mantine-MultiSelect-input {
+    min-height: 38px;
+}
+
 /* Rule 1: dmc.NumberInput (Initial amount / Cash flow amount, #17) -> 38px
    so it lines up with the dbc.Input neighbours (Discount/Indexation rate). */
 .mantine-NumberInput-input {

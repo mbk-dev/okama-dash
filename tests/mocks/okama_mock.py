@@ -295,6 +295,97 @@ class PicklableAssetList:
 
 
 # ---------------------------------------------------------------------------
+# Picklable mocks for okama macro classes (Inflation, Rate, Indicator).
+# Real okama exposes every data member as a property; plain attributes give
+# the same read surface and survive pickling. Only describe() is a method.
+# first_date/last_date constructor params are accepted for API compatibility
+# but ignored — mocks always serve the fixed 2020-01..2024-12 range, same as
+# PicklablePortfolio/PicklableAssetList above.
+# ---------------------------------------------------------------------------
+
+
+def _monthly_period_series(symbol: str, base: float, scale: float) -> pd.Series:
+    dates = pd.period_range("2020-01", "2024-12", freq="M")
+    rng = np.random.default_rng(42)
+    return pd.Series(rng.normal(base, scale, len(dates)), index=dates, name=symbol)
+
+
+class PicklableInflation:
+    """Mock for ok.Inflation: monthly fractions (~0.4%/month)."""
+
+    def __init__(self, symbol: str = "RUB.INFL", first_date: str | None = None, last_date: str | None = None):
+        self.symbol = symbol
+        self.values_monthly = _monthly_period_series(symbol, base=0.004, scale=0.003)
+        dates = self.values_monthly.index
+        self.first_date = dates[0].to_timestamp()
+        self.last_date = dates[-1].to_timestamp()
+        self.cumulative_inflation = pd.Series(
+            np.cumprod(1 + self.values_monthly.to_numpy()) - 1.0, index=dates, name=symbol
+        )
+        # Property on the real class: 12-month rolling compound inflation.
+        # Mirrors okama's rolling-window product so the series starts at the
+        # 12th month (2020-12), not one month later.
+        self.rolling_inflation = ((self.values_monthly + 1.0).rolling(12).apply(np.prod, raw=True) - 1.0).dropna()
+        annual_idx = pd.period_range("2020", "2024", freq="Y")
+        rng = np.random.default_rng(7)
+        self.annual_inflation_ts = pd.Series(rng.normal(0.05, 0.02, len(annual_idx)), index=annual_idx, name=symbol)
+        self.purchasing_power_1000 = 785.0
+
+    def describe(self, years: tuple = (1, 5, 10)) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "property": [
+                    "compound inflation",
+                    "1000 purchasing power",
+                    "annual inflation",
+                    "max 12m inflation",
+                    "1000 purchasing power",
+                ],
+                "period": ["YTD", "YTD", "1 years", "2022-04", "1 years"],
+                self.symbol: [0.031, 969.7, 0.056, 0.178, 947.0],
+            }
+        )
+
+
+class PicklableRate:
+    """Mock for ok.Rate: monthly rate fractions (~10%/year)."""
+
+    def __init__(self, symbol: str = "RUS_CBR.RATE", first_date: str | None = None, last_date: str | None = None):
+        self.symbol = symbol
+        self.values_monthly = _monthly_period_series(symbol, base=0.10, scale=0.02)
+        self.first_date = self.values_monthly.index[0].to_timestamp()
+        self.last_date = self.values_monthly.index[-1].to_timestamp()
+
+    def describe(self, years: tuple = (1, 5, 10)) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "property": ["arithmetic mean", "median value", "max value", "min value"],
+                "period": ["YTD", "YTD", "2024-10", "2021-07"],
+                self.symbol: [0.15, 0.1475, 0.21, 0.065],
+            }
+        )
+
+
+class PicklableIndicator:
+    """Mock for ok.Indicator: raw decimal values (CAPE10-like, ~25)."""
+
+    def __init__(self, symbol: str = "USA_CAPE10.RATIO", first_date: str | None = None, last_date: str | None = None):
+        self.symbol = symbol
+        self.values_monthly = _monthly_period_series(symbol, base=25.0, scale=4.0)
+        self.first_date = self.values_monthly.index[0].to_timestamp()
+        self.last_date = self.values_monthly.index[-1].to_timestamp()
+
+    def describe(self, years: tuple = (1, 5, 10)) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "property": ["arithmetic mean", "median value", "max value", "min value"],
+                "period": ["YTD", "YTD", "2000-03", "1982-07"],
+                self.symbol: [38.67, 39.21, 47.13, 8.06],
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
 # MagicMock-based factories (used by component tests that don't pickle)
 # ---------------------------------------------------------------------------
 
