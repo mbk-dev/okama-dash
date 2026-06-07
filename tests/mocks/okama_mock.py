@@ -309,7 +309,7 @@ class PicklableAssetList:
 
 
 # ---------------------------------------------------------------------------
-# Picklable mocks for okama macro classes (Inflation, Rate, Indicator).
+# Picklable mocks for okama macro classes (Inflation, Rate, Indicator, Asset).
 # Real okama exposes every data member as a property; plain attributes give
 # the same read surface and survive pickling. Only describe() is a method.
 # first_date/last_date constructor params are accepted for API compatibility
