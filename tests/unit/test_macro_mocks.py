@@ -24,6 +24,8 @@ class TestPicklableInflation:
         assert isinstance(obj.annual_inflation_ts, pd.Series)
         assert isinstance(obj.cumulative_inflation, pd.Series)
         assert isinstance(obj.rolling_inflation, pd.Series)  # property, not a method
+        assert obj.rolling_inflation.name == "USD.INFL"
+        assert obj.rolling_inflation.index[0] == pd.Period("2020-12", freq="M")
         assert isinstance(obj.purchasing_power_1000, float)
 
     def test_describe_shape(self):
@@ -35,6 +37,7 @@ class TestPicklableInflation:
         obj = PicklableInflation("EUR.INFL")
         restored = pickle.loads(pickle.dumps(obj))
         pd.testing.assert_series_equal(restored.values_monthly, obj.values_monthly)
+        pd.testing.assert_series_equal(restored.rolling_inflation, obj.rolling_inflation)
 
 
 class TestPicklableRateAndIndicator:

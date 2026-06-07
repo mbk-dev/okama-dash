@@ -298,6 +298,9 @@ class PicklableAssetList:
 # Picklable mocks for okama macro classes (Inflation, Rate, Indicator).
 # Real okama exposes every data member as a property; plain attributes give
 # the same read surface and survive pickling. Only describe() is a method.
+# first_date/last_date constructor params are accepted for API compatibility
+# but ignored — mocks always serve the fixed 2020-01..2024-12 range, same as
+# PicklablePortfolio/PicklableAssetList above.
 # ---------------------------------------------------------------------------
 
 
@@ -320,10 +323,9 @@ class PicklableInflation:
             np.cumprod(1 + self.values_monthly.to_numpy()) - 1.0, index=dates, name=symbol
         )
         # Property on the real class: 12-month rolling compound inflation.
-        self.rolling_inflation = pd.Series(
-            pd.Series(np.cumprod(1 + self.values_monthly.to_numpy()), index=dates).pct_change(12),
-            name=symbol,
-        ).dropna()
+        # Mirrors okama's rolling-window product so the series starts at the
+        # 12th month (2020-12), not one month later.
+        self.rolling_inflation = ((self.values_monthly + 1.0).rolling(12).apply(np.prod, raw=True) - 1.0).dropna()
         annual_idx = pd.period_range("2020", "2024", freq="Y")
         rng = np.random.default_rng(7)
         self.annual_inflation_ts = pd.Series(rng.normal(0.05, 0.02, len(annual_idx)), index=annual_idx, name=symbol)
