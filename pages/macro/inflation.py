@@ -70,7 +70,9 @@ def get_purchasing_power_cards(objects: list) -> dbc.Row:
         start = obj.first_date.strftime("%b %Y")
         end = obj.last_date.strftime("%b %Y")
         value = obj.purchasing_power_1000
-        value_txt = f"{value:,.1f}".replace(",", " ") if value >= 1 else f"{value:.2f}"
+        # Two decimals below 10 (e.g. 1.23 must not collapse to "1.2"); space
+        # thousands separator with one decimal for larger values.
+        value_txt = f"{value:,.1f}".replace(",", " ") if value >= 10 else f"{value:.2f}"
         cards.append(
             dbc.Col(
                 dbc.Card(
