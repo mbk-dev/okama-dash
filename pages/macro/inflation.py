@@ -148,7 +148,9 @@ today_str = pd.Timestamp.today().strftime("%Y-%m")
 def layout(tickers=None, first_date=None, last_date=None, plot=None, rates=None, **kwargs):
     selected = filter_known(make_list_from_string(tickers), INFLATION_SERIES) or INFLATION_DEFAULTS
     plot_type = plot if plot in _PLOT_VALUES else "annual"
-    overlay_value = ["on"] if rates == "true" else []
+    # Overlay only applies to annual/rolling plots; drop a stray rates=true
+    # from the URL so the checkbox never renders checked-but-about-to-disable.
+    overlay_value = ["on"] if rates == "true" and plot_type in _OVERLAY_PLOTS else []
     control_bar = dbc.Card(
         dbc.CardBody(
             [
@@ -253,7 +255,7 @@ def update_inflation_page(screen, n_clicks, symbols, plot_type, overlay, fd_valu
     except Exception as e:
         alert_fig = go.Figure()
         alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
-        return alert_fig, {}, [], None
+        return alert_fig, {}, None, None
 
 
 @callback(
