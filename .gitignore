@@ -5,4 +5,5 @@ __pycache__
 /.venv
 poetry.lock
 /docs/superpowers/
+/.superpowers/
 /.playwright-mcp/
