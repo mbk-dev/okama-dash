@@ -43,7 +43,7 @@ class TestRatesFigure:
 class TestMainCallback:
     def test_returns_figure_and_grid(self, rates_page, patched_rates):
         fig, config, grid = rates_page.update_rates_page(
-            None, 0, ["RUS_CBR.RATE", "US_EFFR.RATE"], "2000-01", "2026-05"
+            None, ["RUS_CBR.RATE", "US_EFFR.RATE"], "2000-01", "2026-05"
         )
         assert isinstance(fig, go.Figure)
         assert len(fig.data) == 2
@@ -51,11 +51,11 @@ class TestMainCallback:
 
     def test_empty_selection_prevents_update(self, rates_page):
         with pytest.raises(dash.exceptions.PreventUpdate):
-            rates_page.update_rates_page(None, 0, [], None, None)
+            rates_page.update_rates_page(None, [], None, None)
 
     def test_error_renders_annotation(self, rates_page):
         with patch.object(rates_page.macro_objects, "get_rate_object", side_effect=ValueError("api down")):
-            fig, config, grid = rates_page.update_rates_page(None, 0, ["RUS_CBR.RATE"], None, None)
+            fig, config, grid = rates_page.update_rates_page(None, ["RUS_CBR.RATE"], None, None)
         assert fig.layout.annotations[0].text == "api down"
         assert grid is None
 
@@ -64,6 +64,21 @@ class TestMainCallback:
 
         spec = next(s for s in GLOBAL_CALLBACK_LIST if "rates-chart.figure" in str(s["output"]))
         assert not spec["prevent_initial_call"]
+
+    def test_every_control_is_an_input(self, rates_page):
+        # Reactive page: all controls are Inputs, no Submit, no States.
+        from dash._callback import GLOBAL_CALLBACK_LIST
+
+        spec = next(s for s in GLOBAL_CALLBACK_LIST if "rates-chart.figure" in str(s["output"]))
+        inputs = str(spec["inputs"])
+        for control in ("rates-series", "rates-first-date", "rates-last-date"):
+            assert control in inputs
+        assert "submit" not in inputs
+        assert not spec["state"]
+
+    def test_half_typed_date_prevents_update(self, rates_page, patched_rates):
+        with pytest.raises(dash.exceptions.PreventUpdate):
+            rates_page.update_rates_page(None, ["RUS_CBR.RATE"], "2010-", None)
 
 
 class TestLayoutAndLink:
@@ -84,9 +99,9 @@ class TestLayoutAndLink:
         with pytest.raises(dash.exceptions.PreventUpdate):
             rates_page.export_rates_stats(None, [{"property": "x"}])
 
-    def test_empty_selection_disables_submit_and_copy_link(self, rates_page):
-        assert rates_page.disable_actions_rates([]) == (True, True)
-        assert rates_page.disable_actions_rates(["RUS_CBR.RATE"]) == (False, False)
+    def test_empty_selection_disables_copy_link(self, rates_page):
+        assert rates_page.disable_copy_link_rates([]) is True
+        assert rates_page.disable_copy_link_rates(["RUS_CBR.RATE"]) is False
 
 
 def _find_by_id(component, component_id):

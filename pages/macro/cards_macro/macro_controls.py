@@ -1,19 +1,23 @@
 """Control-bar building blocks shared by all macro pages.
 
 Macro pages use a compact one-row control bar above the chart (chart-first
-template, spec section 4) instead of the controls-card/info-card pair. Each
-page assembles its own dbc.Row from these column factories; the row uses
-Bootstrap gutters (g-2) so controls keep the standard gap when the bar wraps
-on narrow screens.
+template, spec section 4) instead of the controls-card/info-card pair, and
+recalculate reactively: every control is an Input of the page's main callback
+— there is no Submit button. Each page assembles its own dbc.Row from these
+column factories; the row uses Bootstrap gutters (g-2) so controls keep the
+standard gap when the bar wraps on narrow screens.
 """
+
+import re
 
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 from dash import html
 
 from common.date_input import date_input
-from common.html_elements.submit_spinner import create_submit_spinner
 from common.mantine import search_provider
+
+_COMPLETE_DATE_RE = re.compile(r"\d{4}-\d{2}")
 
 
 def options_from_catalog(catalog: dict[str, str]) -> list[dict]:
@@ -59,23 +63,19 @@ def date_columns(page_prefix: str, first_date: str, last_date: str) -> list[dbc.
     ]
 
 
-def submit_button_column(page_prefix: str, label: str = "Submit") -> dbc.Col:
-    return dbc.Col(
-        html.Div(
-            [
-                dbc.Button(label, id=f"{page_prefix}-submit-button", n_clicks=0, color="primary"),
-                create_submit_spinner(f"{page_prefix}-submit-spinner"),
-            ]
-        ),
-        width="auto",
-        class_name="ms-auto",
-    )
-
-
 def make_submit_guard():
-    """Disable-submit predicate: True (disabled) when no series are selected."""
+    """Disable predicate for the Copy-link button: True when no series selected."""
 
     def guard(selected: list | None) -> bool:
         return not selected
 
     return guard
+
+
+def dates_ready(*values: str | None) -> bool:
+    """True when every date field is empty or a complete YYYY-MM value.
+
+    Reactive recalculation fires on every keystroke in the date inputs; a
+    half-typed date ("202", "2026-") must not reach okama.
+    """
+    return all(not value or _COMPLETE_DATE_RE.fullmatch(value) for value in values)

@@ -64,7 +64,7 @@ class TestSnapshot:
 class TestMainCallback:
     def test_history_mode(self, cape_page, patched_indicator):
         fig, config, grid = cape_page.update_cape_page(
-            None, 0, ["USA_CAPE10.RATIO", "RUS_CAPE10.RATIO"], "history", "2000-01", "2026-05"
+            None, ["USA_CAPE10.RATIO", "RUS_CAPE10.RATIO"], "history", "2000-01", "2026-05"
         )
         assert len(fig.data) == 2
         assert grid.id == "cape-describe-table-grid"
@@ -72,7 +72,7 @@ class TestMainCallback:
     def test_snapshot_mode_renders_bar(self, cape_page, patched_indicator):
         with patch.object(cape_page, "get_or_create", side_effect=lambda **kw: (kw["constructor_fn"](), "k")):
             fig, config, grid = cape_page.update_cape_page(
-                None, 0, ["USA_CAPE10.RATIO"], "snapshot", None, None
+                None, ["USA_CAPE10.RATIO"], "snapshot", None, None
             )
         assert fig.data[0].type == "bar"
         assert len(fig.data[0].y) == 26
@@ -84,12 +84,12 @@ class TestMainCallback:
         small_screen = {"width": 375, "height": 800, "in_width": 375, "in_height": 800}
         with patch.object(cape_page, "get_or_create", side_effect=lambda **kw: (kw["constructor_fn"](), "k")):
             fig, config, grid = cape_page.update_cape_page(
-                small_screen, 0, ["USA_CAPE10.RATIO"], "snapshot", None, None
+                small_screen, ["USA_CAPE10.RATIO"], "snapshot", None, None
             )
         assert fig.layout.yaxis.ticklabelposition == "outside"
 
     def test_decimal_formatter_in_grid(self, cape_page, patched_indicator):
-        *_, grid = cape_page.update_cape_page(None, 0, ["USA_CAPE10.RATIO"], "history", None, None)
+        *_, grid = cape_page.update_cape_page(None, ["USA_CAPE10.RATIO"], "history", None, None)
         value_col = next(d for d in grid.columnDefs if d["field"] == "USA_CAPE10.RATIO")
         assert value_col["valueFormatter"]["function"] == "formatDecimalGuarded(params.value)"
 
@@ -99,16 +99,31 @@ class TestMainCallback:
         spec = next(s for s in GLOBAL_CALLBACK_LIST if "cape-chart.figure" in str(s["output"]))
         assert not spec["prevent_initial_call"]
 
+    def test_every_control_is_an_input(self, cape_page):
+        # Reactive page: all controls are Inputs, no Submit, no States.
+        from dash._callback import GLOBAL_CALLBACK_LIST
+
+        spec = next(s for s in GLOBAL_CALLBACK_LIST if "cape-chart.figure" in str(s["output"]))
+        inputs = str(spec["inputs"])
+        for control in ("cape-series", "cape-plot-type", "cape-first-date", "cape-last-date"):
+            assert control in inputs
+        assert "submit" not in inputs
+        assert not spec["state"]
+
+    def test_half_typed_date_prevents_update(self, cape_page, patched_indicator):
+        with pytest.raises(dash.exceptions.PreventUpdate):
+            cape_page.update_cape_page(None, ["USA_CAPE10.RATIO"], "history", "20", None)
+
     def test_error_renders_annotation(self, cape_page):
         with patch.object(cape_page.macro_objects, "get_indicator_object", side_effect=ValueError("nope")):
-            fig, config, grid = cape_page.update_cape_page(None, 0, ["USA_CAPE10.RATIO"], "history", None, None)
+            fig, config, grid = cape_page.update_cape_page(None, ["USA_CAPE10.RATIO"], "history", None, None)
         assert fig.layout.annotations[0].text == "nope"
 
     def test_empty_selection_prevents_update(self, cape_page):
         # Symmetry with the inflation/rates pages: the callback itself guards
         # against an empty selection, not only the disabled buttons.
         with pytest.raises(dash.exceptions.PreventUpdate):
-            cape_page.update_cape_page(None, 0, [], "history", None, None)
+            cape_page.update_cape_page(None, [], "history", None, None)
 
 
 class TestLayoutAndLink:
@@ -125,9 +140,9 @@ class TestLayoutAndLink:
         )
         assert "plot=snapshot" in link
 
-    def test_empty_selection_disables_submit_and_copy_link(self, cape_page):
-        assert cape_page.disable_actions_cape([]) == (True, True)
-        assert cape_page.disable_actions_cape(["USA_CAPE10.RATIO"]) == (False, False)
+    def test_empty_selection_disables_copy_link(self, cape_page):
+        assert cape_page.disable_copy_link_cape([]) is True
+        assert cape_page.disable_copy_link_cape(["USA_CAPE10.RATIO"]) is False
 
 
 def _find_by_id(component, component_id):

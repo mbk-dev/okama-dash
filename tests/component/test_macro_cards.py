@@ -1,13 +1,13 @@
-"""Wiring tests for the shared macro card factories (ids, defaults, submit guard)."""
+"""Wiring tests for the shared macro card factories (ids, defaults, reactive guards)."""
 
 import pytest
 
 from pages.macro.cards_macro.macro_chart import macro_chart_card
 from pages.macro.cards_macro.macro_controls import (
     date_columns,
+    dates_ready,
     make_submit_guard,
     series_multiselect_column,
-    submit_button_column,
 )
 from pages.macro.macro_data import INFLATION_SERIES
 
@@ -42,15 +42,25 @@ class TestControlFactories:
             ids |= _collect_ids(col)
         assert {"cape-first-date", "cape-last-date"} <= ids
 
-    def test_submit_column_has_button_and_spinner(self):
-        ids = _collect_ids(submit_button_column("rates"))
-        assert {"rates-submit-button", "rates-submit-spinner"} <= ids
-
     def test_submit_guard_disables_on_empty_selection(self):
+        # Gates the Copy-link button on reactive macro pages.
         guard = make_submit_guard()
         assert guard([]) is True
         assert guard(None) is True
         assert guard(["RUB.INFL"]) is False
+
+
+class TestDatesReady:
+    def test_complete_or_empty_dates_pass(self):
+        assert dates_ready("2000-01", "2026-05") is True
+        assert dates_ready("", None) is True
+        assert dates_ready("2000-01", "") is True
+
+    def test_half_typed_date_blocks_recalculation(self):
+        # Reactive callbacks fire per keystroke; "202" must not reach okama.
+        assert dates_ready("202", "2026-05") is False
+        assert dates_ready("2000-01", "2026-") is False
+        assert dates_ready("20000-01", "2026-05") is False
 
 
 class TestChartCard:

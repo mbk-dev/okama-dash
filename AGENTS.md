@@ -138,7 +138,7 @@ Rules for this repo:
 
 ## Test suite
 
-700 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+707 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -211,11 +211,11 @@ tests/
 │   ├── test_submit_spinner.py        # all 4 main data callbacks toggle the submit-button spinner via the `running` spec (chart's dcc.Loading is below the fold on mobile) (4 tests)
 │   ├── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │   │                                        # get_y_title (6 plot types), rolling-window disabled for annual_return + cumulative_return (compare + portfolio) (21 tests)
-│   ├── test_macro_cards.py          # shared card factories: page-prefixed ids, multiselect defaults, submit guard, chart-card class (5 tests)
+│   ├── test_macro_cards.py          # shared card factories: page-prefixed ids, multiselect defaults, copy-link guard, dates_ready keystroke guard, chart-card class (6 tests)
 │   ├── test_macro_inflation_figures.py  # inflation figure builders: annual grouped bars / rolling / cumulative / monthly ×100, key-rate overlay (step-dot traces via catalog mapping), purchasing-power cards (7 tests)
-│   ├── test_macro_inflation_page.py  # /macro/inflation page: main callback (figure+PP cards+grid, PP rows dropped), overlay gating by plot type, AUTO-RENDER registration (no prevent_initial_call), URL prefill, link/export/disable-actions callbacks (13 tests)
-│   ├── test_macro_rates_page.py     # /macro/rates: step-lines (hv) with catalog labels, ×100, auto-render, prefill, link, export guard, disable actions (10 tests)
-│   └── test_macro_cape10_page.py    # /macro/cape10: history lines (raw decimals), 26-country snapshot (sorted, cached per month, highlight colors, x-range headroom for outside labels, mobile keeps country ticks outside), decimal formatter, auto-render, PreventUpdate guard (14 tests)
+│   ├── test_macro_inflation_page.py  # /macro/inflation page: REACTIVE main callback (every control an Input, no Submit; figure+PP cards+grid, PP rows dropped), overlay gating by plot type, half-typed-date guard, URL prefill, link/export/copy-link-guard callbacks (15 tests)
+│   ├── test_macro_rates_page.py     # /macro/rates: step-lines (hv) with catalog labels, ×100, reactive Inputs wiring + date guard, prefill, link, export guard, copy-link guard (12 tests)
+│   └── test_macro_cape10_page.py    # /macro/cape10: history lines (raw decimals), 26-country snapshot (sorted, cached per month, highlight colors, x-range headroom for outside labels, mobile keeps country ticks outside), decimal formatter, reactive Inputs wiring + date guard, PreventUpdate guard (16 tests)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
     ├── conftest.py                  # Gunicorn server (TESTING=1, 2 workers) + Playwright
     ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
@@ -231,10 +231,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 240 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 428 | ~7s |
+| `poetry run pytest -m component` | Dash callbacks | 435 | ~7s |
 | `poetry run pytest -m e2e` | Playwright browser | 32 | ~82s |
-| `poetry run pytest -q` | Everything | 700 | ~92s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 668 | ~9s |
+| `poetry run pytest -q` | Everything | 707 | ~92s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 675 | ~9s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -252,7 +252,7 @@ to a file in `tmp/` instead of `PIPE`.
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
-| **Macro (Inflation / Rates / CAPE10)** | catalog integrity + overlay mapping (ECB=MRO), cached accessors wiring, describe-merge + grid formatters, link builder, mocks API surface | per-page main callbacks with auto-render (no prevent_initial_call) + error annotation, overlay gating, snapshot (26 countries, monthly cache, highlight + mobile outside ticks), URL prefill via filter_known, combined Submit/Copy-link guard, xlsx export n_clicks guard | auto-render w/o Submit (3 pages), stats grid percent via DOM, navbar dropdown, prefill, mobile |
+| **Macro (Inflation / Rates / CAPE10)** | catalog integrity + overlay mapping (ECB=MRO), cached accessors wiring, describe-merge + grid formatters, link builder, mocks API surface | per-page REACTIVE main callbacks (every control an Input, no Submit; half-typed-date guard) + error annotation, overlay gating, snapshot (26 countries, monthly cache, highlight + mobile outside ticks), URL prefill via filter_known, Copy-link guard, xlsx export n_clicks guard | auto-render w/o Submit (3 pages), stats grid percent via DOM, navbar dropdown, prefill, mobile |
 | **common/ & tools/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_subtitle, format_points), dump_callbacks (callback wiring map formatter) | change_style_for_hidden_row, grid_export (xlsx via dcc.Download + rowdata_to_xlsx_download; Excel number formats mirror the on-page grid formatters), grid sorting disabled on every AG Grid (all 6 grid-building files) | — |
 
 ### Known gaps
@@ -463,7 +463,7 @@ so prefer fixing the shared stylesheet/convention over per-component patches.
   `defaultColDef={"resizable": False, "sortable": False}` (AG Grid columns are sortable
   by default). New grids must follow suit; `tests/component/test_grid_sorting.py` asserts
   the wiring on all existing grid builders.
-- **Macro pages are chart-first and auto-render.** `/macro/*` pages use a one-row control bar above the chart (no controls/info card pair) and render the chart immediately on page load: the main data callback deliberately omits `prevent_initial_call` (deviation approved in the macro spec). Submit applies changes; an empty series selection disables both Submit and Copy link.
+- **Macro pages are chart-first and fully reactive.** `/macro/*` pages use a one-row control bar above the chart (no controls/info card pair, no Submit button) and recalculate on every control change: all controls are Inputs of the main callback, which also omits `prevent_initial_call` so the chart renders on page load. `dates_ready` guards against half-typed YYYY-MM dates reaching okama; an empty series selection keeps the last chart (PreventUpdate) and disables Copy link. The control row is top-aligned (`align="start"`) so all 38px controls share one line while the dates' FormText hangs below.
 - These are visual/markup changes — verify by eye on the live local site (see below), no
   unit test per the TDD-skip rule for non-logic changes.
 

@@ -15,7 +15,6 @@ from common.html_elements.grid_export import (
     percent_column_formats,
     rowdata_to_xlsx_download,
 )
-from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens
 from common.parse_query import make_list_from_string
 from pages.macro import macro_objects
@@ -23,9 +22,9 @@ from pages.macro.cards_macro.eng.inflation_description_txt import inflation_desc
 from pages.macro.cards_macro.macro_chart import macro_chart_card
 from pages.macro.cards_macro.macro_controls import (
     date_columns,
+    dates_ready,
     make_submit_guard,
     series_multiselect_column,
-    submit_button_column,
 )
 from pages.macro.cards_macro.macro_description import macro_description_card
 from pages.macro.cards_macro.macro_stats import build_describe_table, build_stats_grid
@@ -172,20 +171,28 @@ def layout(tickers=None, first_date=None, last_date=None, plot=None, rates=None,
                             sm=6,
                         ),
                         dbc.Col(
-                            dbc.Checklist(
-                                options=[{"label": "Show key rates", "value": "on"}],
-                                value=overlay_value,
-                                id="infl-rates-overlay",
-                                switch=True,
-                            ),
+                            [
+                                # Non-breaking-space label keeps the switch on the
+                                # same baseline as the labeled controls around it.
+                                html.Label(" ", className="d-block"),
+                                dbc.Checklist(
+                                    options=[{"label": "Show key rates", "value": "on"}],
+                                    value=overlay_value,
+                                    id="infl-rates-overlay",
+                                    switch=True,
+                                    class_name="pt-2",
+                                ),
+                            ],
                             width="auto",
-                            class_name="align-self-end pb-2",
                         ),
                         *date_columns("infl", first_date or MACRO_FIRST_DATE_DEFAULT, last_date or today_str),
-                        submit_button_column("infl"),
                     ],
                     class_name="g-2",
-                    align="end",
+                    # Top-aligned: every column starts with a one-line Label, so
+                    # the 38px controls land on one horizontal line; the dates'
+                    # FormText hangs below without pushing inputs up (the old
+                    # align="end" let it do exactly that).
+                    align="start",
                 ),
                 dbc.Row(
                     create_copy_link_div(
@@ -229,18 +236,19 @@ def layout(tickers=None, first_date=None, last_date=None, plot=None, rates=None,
     Output("infl-pp-cards", "children"),
     Output("infl-describe-table", "children"),
     Input("store", "data"),
-    Input("infl-submit-button", "n_clicks"),
-    State("infl-series", "value"),
-    State("infl-plot-type", "value"),
-    State("infl-rates-overlay", "value"),
-    State("infl-first-date", "value"),
-    State("infl-last-date", "value"),
-    running=submit_spinner_running("infl-submit-spinner"),
-    # NB: no prevent_initial_call — the chart auto-renders on page load (spec §4).
+    # Reactive page: every control is an Input — changing any of them
+    # recalculates immediately, and the missing prevent_initial_call renders
+    # the chart on page load. There is no Submit button.
+    Input("infl-series", "value"),
+    Input("infl-plot-type", "value"),
+    Input("infl-rates-overlay", "value"),
+    Input("infl-first-date", "value"),
+    Input("infl-last-date", "value"),
 )
-def update_inflation_page(screen, n_clicks, symbols, plot_type, overlay, fd_value, ld_value):
-    if not symbols:
+def update_inflation_page(screen, symbols, plot_type, overlay, fd_value, ld_value):
+    if not symbols or not dates_ready(fd_value, ld_value):
         raise dash.exceptions.PreventUpdate
+    fd_value, ld_value = fd_value or None, ld_value or None
     try:
         objects = [macro_objects.get_inflation_object(s, fd_value, ld_value) for s in symbols]
         fig = get_inflation_figure(objects, plot_type)
@@ -268,17 +276,15 @@ def toggle_overlay_availability(plot_type: str) -> list[dict]:
 
 
 @callback(
-    Output("infl-submit-button", "disabled"),
     Output("infl-copy-link-button", "disabled"),
     Input("infl-series", "value"),
 )
-def disable_actions_inflation(selected):
-    # Empty selection disables both actions: Submit (nothing to plot) and
-    # Copy link (a "?tickers=" URL is broken). Unlike benchmark's
-    # check_if_list_empty_or_big, no upper bound: CAPE10 legitimately
-    # allows all 26 catalog countries.
-    disabled = make_submit_guard()(selected)
-    return disabled, disabled
+def disable_copy_link_inflation(selected):
+    # Empty selection disables Copy link (a "?tickers=" URL is broken); the
+    # chart itself just keeps its last state via PreventUpdate. Unlike
+    # benchmark's check_if_list_empty_or_big, no upper bound: CAPE10
+    # legitimately allows all 26 catalog countries.
+    return make_submit_guard()(selected)
 
 
 @callback(

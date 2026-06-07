@@ -11,7 +11,6 @@ from dash.dependencies import Input, Output, State
 from common.date_input import register_date_validation
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.html_elements.grid_export import create_grid_header_with_export, rowdata_to_xlsx_download
-from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens
 from common.object_cache import TTL_EFFICIENT_FRONTIER, get_or_create
 from common.parse_query import make_list_from_string
@@ -20,9 +19,9 @@ from pages.macro.cards_macro.eng.cape10_description_txt import cape10_descriptio
 from pages.macro.cards_macro.macro_chart import macro_chart_card
 from pages.macro.cards_macro.macro_controls import (
     date_columns,
+    dates_ready,
     make_submit_guard,
     series_multiselect_column,
-    submit_button_column,
 )
 from pages.macro.cards_macro.macro_description import macro_description_card
 from pages.macro.cards_macro.macro_stats import build_describe_table, build_stats_grid
@@ -129,10 +128,11 @@ def layout(tickers=None, first_date=None, last_date=None, plot=None, **kwargs):
                             sm=6,
                         ),
                         *date_columns("cape", first_date or MACRO_FIRST_DATE_DEFAULT, last_date or today_str),
-                        submit_button_column("cape"),
                     ],
                     class_name="g-2",
-                    align="end",
+                    # Top-aligned: every column starts with a one-line Label, so
+                    # the 38px controls land on one horizontal line.
+                    align="start",
                 ),
                 dbc.Row(
                     create_copy_link_div(
@@ -174,17 +174,18 @@ def layout(tickers=None, first_date=None, last_date=None, plot=None, **kwargs):
     Output("cape-chart", "config"),
     Output("cape-describe-table", "children"),
     Input("store", "data"),
-    Input("cape-submit-button", "n_clicks"),
-    State("cape-series", "value"),
-    State("cape-plot-type", "value"),
-    State("cape-first-date", "value"),
-    State("cape-last-date", "value"),
-    running=submit_spinner_running("cape-submit-spinner"),
-    # NB: no prevent_initial_call — the chart auto-renders on page load (spec §4).
+    # Reactive page: every control is an Input — changing any of them
+    # recalculates immediately, and the missing prevent_initial_call renders
+    # the chart on page load. There is no Submit button.
+    Input("cape-series", "value"),
+    Input("cape-plot-type", "value"),
+    Input("cape-first-date", "value"),
+    Input("cape-last-date", "value"),
 )
-def update_cape_page(screen, n_clicks, symbols, plot_type, fd_value, ld_value):
-    if not symbols:
+def update_cape_page(screen, symbols, plot_type, fd_value, ld_value):
+    if not symbols or not dates_ready(fd_value, ld_value):
         raise dash.exceptions.PreventUpdate
+    fd_value, ld_value = fd_value or None, ld_value or None
     try:
         objects = [macro_objects.get_indicator_object(s, fd_value, ld_value) for s in symbols]
         if plot_type == "snapshot":
@@ -207,14 +208,12 @@ def update_cape_page(screen, n_clicks, symbols, plot_type, fd_value, ld_value):
 
 
 @callback(
-    Output("cape-submit-button", "disabled"),
     Output("cape-copy-link-button", "disabled"),
     Input("cape-series", "value"),
 )
-def disable_actions_cape(selected):
-    # Empty selection disables both Submit and Copy link (see inflation page).
-    disabled = make_submit_guard()(selected)
-    return disabled, disabled
+def disable_copy_link_cape(selected):
+    # Empty selection disables Copy link (see inflation page).
+    return make_submit_guard()(selected)
 
 
 @callback(

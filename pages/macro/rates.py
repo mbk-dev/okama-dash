@@ -20,7 +20,6 @@ from common.html_elements.grid_export import (
     percent_column_formats,
     rowdata_to_xlsx_download,
 )
-from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens
 from common.parse_query import make_list_from_string
 from pages.macro import macro_objects
@@ -28,9 +27,9 @@ from pages.macro.cards_macro.eng.rates_description_txt import rates_description_
 from pages.macro.cards_macro.macro_chart import macro_chart_card
 from pages.macro.cards_macro.macro_controls import (
     date_columns,
+    dates_ready,
     make_submit_guard,
     series_multiselect_column,
-    submit_button_column,
 )
 from pages.macro.cards_macro.macro_description import macro_description_card
 from pages.macro.cards_macro.macro_stats import build_describe_table, build_stats_grid
@@ -72,10 +71,11 @@ def layout(tickers=None, first_date=None, last_date=None, **kwargs):
                     [
                         series_multiselect_column("rates", KEY_RATES_SERIES, selected),
                         *date_columns("rates", first_date or MACRO_FIRST_DATE_DEFAULT, last_date or today_str),
-                        submit_button_column("rates"),
                     ],
                     class_name="g-2",
-                    align="end",
+                    # Top-aligned: every column starts with a one-line Label, so
+                    # the 38px controls land on one horizontal line.
+                    align="start",
                 ),
                 dbc.Row(
                     create_copy_link_div(
@@ -117,16 +117,17 @@ def layout(tickers=None, first_date=None, last_date=None, **kwargs):
     Output("rates-chart", "config"),
     Output("rates-describe-table", "children"),
     Input("store", "data"),
-    Input("rates-submit-button", "n_clicks"),
-    State("rates-series", "value"),
-    State("rates-first-date", "value"),
-    State("rates-last-date", "value"),
-    running=submit_spinner_running("rates-submit-spinner"),
-    # NB: no prevent_initial_call — the chart auto-renders on page load (spec §4).
+    # Reactive page: every control is an Input — changing any of them
+    # recalculates immediately, and the missing prevent_initial_call renders
+    # the chart on page load. There is no Submit button.
+    Input("rates-series", "value"),
+    Input("rates-first-date", "value"),
+    Input("rates-last-date", "value"),
 )
-def update_rates_page(screen, n_clicks, symbols, fd_value, ld_value):
-    if not symbols:
+def update_rates_page(screen, symbols, fd_value, ld_value):
+    if not symbols or not dates_ready(fd_value, ld_value):
         raise dash.exceptions.PreventUpdate
+    fd_value, ld_value = fd_value or None, ld_value or None
     try:
         objects = [macro_objects.get_rate_object(s, fd_value, ld_value) for s in symbols]
         fig = get_rates_figure(objects)
@@ -141,14 +142,12 @@ def update_rates_page(screen, n_clicks, symbols, fd_value, ld_value):
 
 
 @callback(
-    Output("rates-submit-button", "disabled"),
     Output("rates-copy-link-button", "disabled"),
     Input("rates-series", "value"),
 )
-def disable_actions_rates(selected):
-    # Empty selection disables both Submit and Copy link (see inflation page).
-    disabled = make_submit_guard()(selected)
-    return disabled, disabled
+def disable_copy_link_rates(selected):
+    # Empty selection disables Copy link (see inflation page).
+    return make_submit_guard()(selected)
 
 
 @callback(

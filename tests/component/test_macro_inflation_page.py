@@ -39,7 +39,7 @@ def patched_objects(infl_page):
 class TestMainCallback:
     def test_returns_figure_cards_and_grid(self, infl_page, patched_objects):
         fig, config, pp_cards, grid = infl_page.update_inflation_page(
-            None, 0, ["RUB.INFL", "USD.INFL"], "annual", [], "2000-01", "2026-05"
+            None, ["RUB.INFL", "USD.INFL"], "annual", [], "2000-01", "2026-05"
         )
         assert isinstance(fig, go.Figure)
         assert len(fig.data) == 2
@@ -48,44 +48,62 @@ class TestMainCallback:
 
     def test_overlay_on_adds_rate_traces(self, infl_page, patched_objects):
         fig, *_ = infl_page.update_inflation_page(
-            None, 0, ["RUB.INFL"], "rolling12m", ["on"], "2000-01", "2026-05"
+            None, ["RUB.INFL"], "rolling12m", ["on"], "2000-01", "2026-05"
         )
         assert len(fig.data) == 2  # 1 inflation line + 1 rate step-line
         assert fig.data[-1].line.shape == "hv"
 
     def test_overlay_ignored_for_cumulative(self, infl_page, patched_objects):
         fig, *_ = infl_page.update_inflation_page(
-            None, 0, ["RUB.INFL"], "cumulative", ["on"], "2000-01", "2026-05"
+            None, ["RUB.INFL"], "cumulative", ["on"], "2000-01", "2026-05"
         )
         assert len(fig.data) == 1
 
     def test_purchasing_power_rows_dropped_from_grid(self, infl_page, patched_objects):
-        *_, grid = infl_page.update_inflation_page(None, 0, ["RUB.INFL"], "annual", [], None, None)
+        *_, grid = infl_page.update_inflation_page(None, ["RUB.INFL"], "annual", [], None, None)
         properties = {row["property"] for row in grid.rowData}
         assert "1000 purchasing power" not in properties
         assert "compound inflation" in properties
 
     def test_empty_selection_prevents_update(self, infl_page):
         with pytest.raises(dash.exceptions.PreventUpdate):
-            infl_page.update_inflation_page(None, 0, [], "annual", [], None, None)
+            infl_page.update_inflation_page(None, [], "annual", [], None, None)
 
     def test_okama_error_renders_annotation_figure(self, infl_page):
         with patch.object(infl_page.macro_objects, "get_inflation_object", side_effect=ValueError("boom")):
             fig, config, pp_cards, grid = infl_page.update_inflation_page(
-                None, 0, ["RUB.INFL"], "annual", [], None, None
+                None, ["RUB.INFL"], "annual", [], None, None
             )
         assert fig.layout.annotations[0].text == "boom"
         assert grid is None
 
+    def test_half_typed_date_prevents_update(self, infl_page, patched_objects):
+        # Reactive callbacks fire per keystroke in the date inputs; a partial
+        # date must not reach okama.
+        with pytest.raises(dash.exceptions.PreventUpdate):
+            infl_page.update_inflation_page(None, ["RUB.INFL"], "annual", [], "202", None)
 
-class TestAutoRender:
+
+class TestReactiveWiring:
     def test_main_callback_fires_on_page_load(self, infl_page):
-        # The chart must render without a Submit click (spec section 4):
-        # the registration must NOT suppress the initial call.
+        # The chart must render without any click: the registration must NOT
+        # suppress the initial call.
         from dash._callback import GLOBAL_CALLBACK_LIST
 
         spec = next(s for s in GLOBAL_CALLBACK_LIST if "infl-chart.figure" in str(s["output"]))
         assert not spec["prevent_initial_call"]
+
+    def test_every_control_is_an_input(self, infl_page):
+        # Reactive page: changing any control recalculates immediately — all
+        # controls are Inputs (no Submit button, no States).
+        from dash._callback import GLOBAL_CALLBACK_LIST
+
+        spec = next(s for s in GLOBAL_CALLBACK_LIST if "infl-chart.figure" in str(s["output"]))
+        inputs = str(spec["inputs"])
+        for control in ("infl-series", "infl-plot-type", "infl-rates-overlay", "infl-first-date", "infl-last-date"):
+            assert control in inputs
+        assert "submit" not in inputs
+        assert not spec["state"]
 
 
 class TestLayout:
@@ -126,11 +144,11 @@ class TestSecondaryCallbacks:
         with pytest.raises(dash.exceptions.PreventUpdate):
             infl_page.export_inflation_stats(None, [{"property": "x"}])
 
-    def test_empty_selection_disables_submit_and_copy_link(self, infl_page):
-        # Both actions share the guard: Submit has nothing to plot, and a
-        # copied "?tickers=" URL would be broken.
-        assert infl_page.disable_actions_inflation([]) == (True, True)
-        assert infl_page.disable_actions_inflation(["RUB.INFL"]) == (False, False)
+    def test_empty_selection_disables_copy_link(self, infl_page):
+        # A copied "?tickers=" URL would be broken (no Submit button anymore —
+        # the chart simply keeps its last state on empty selection).
+        assert infl_page.disable_copy_link_inflation([]) is True
+        assert infl_page.disable_copy_link_inflation(["RUB.INFL"]) is False
 
 
 def _find_by_id(component, component_id):
