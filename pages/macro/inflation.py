@@ -65,8 +65,17 @@ def get_inflation_figure(objects: list, plot_type: str) -> tuple[go.Figure, pd.D
         ind = df.index.to_timestamp(freq=freq)
         fig = px.bar(df, x=ind, y=df.columns, barmode="group", title=_Y_TITLES[plot_type].rsplit(",", 1)[0], height=600)
         if plot_type == "monthly":
-            for trace in fig.data:
-                trace.marker.color = [_MUTED_COLOR] * (len(df) - 1) + [_HIGHLIGHT_COLOR]
+            # Highlight each country's last PUBLISHED month. Using its last valid
+            # bar (not the global last row) keeps the accent on the real value
+            # when a country trails the others — e.g. EUR.INFL whose current
+            # month is unpublished (NaN) at the end of the outer-join concat.
+            n = len(df)
+            for trace, col in zip(fig.data, df.columns, strict=True):
+                last_valid = df[col].reset_index(drop=True).last_valid_index()
+                colors = [_MUTED_COLOR] * n
+                if last_valid is not None:
+                    colors[last_valid] = _HIGHLIGHT_COLOR
+                trace.marker.color = colors
         else:
             fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
     else:

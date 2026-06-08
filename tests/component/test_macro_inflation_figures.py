@@ -61,6 +61,28 @@ class TestInflationFigure:
         assert isinstance(colors, (list, tuple))
         assert colors[-1] != colors[0]
 
+    def test_monthly_highlights_last_valid_bar_per_country(self):
+        # A country with a trailing-NaN month (EUR.INFL has an unpublished
+        # current month) must highlight its last REAL bar, not the invisible
+        # NaN bar that the outer-join concat appends.
+        from pages.macro.inflation import _HIGHLIGHT_COLOR, get_inflation_figure
+
+        class _Obj:
+            def __init__(self, symbol, vals):
+                self.symbol = symbol
+                self.values_monthly = pd.Series(
+                    vals, index=pd.period_range("2024-01", periods=len(vals), freq="M"), name=symbol
+                )
+
+        rub = _Obj("RUB.INFL", [0.01, 0.02, 0.03])  # full 3 months
+        eur = _Obj("EUR.INFL", [0.01, 0.02, float("nan")])  # last month not yet published
+        fig, df = get_inflation_figure([rub, eur], "monthly")
+        by_name = {t.name: list(t.marker.color) for t in fig.data}
+        assert by_name["Russia"][-1] == _HIGHLIGHT_COLOR  # last bar highlighted
+        # EU's last valid bar is the 2nd, not the trailing NaN 3rd
+        assert by_name["EU"][1] == _HIGHLIGHT_COLOR
+        assert by_name["EU"][2] != _HIGHLIGHT_COLOR
+
 
 class TestKeyRateOverlay:
     def test_overlay_adds_step_traces_for_mapped_rates(self, objects):
