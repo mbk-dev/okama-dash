@@ -26,6 +26,7 @@ from pages.macro.cards_macro.macro_description import macro_description_card
 from pages.macro.cards_macro.macro_download import register_macro_download
 from pages.macro.macro_data import (
     ALL_RATES_SERIES,
+    MACRO_FIRST_DATE_DEFAULT,
     RATE_TO_INFLATION,
     RATES_GROUPS,
     filter_known,
@@ -57,9 +58,21 @@ _HIGHLIGHT_COLOR = "#636efa"
 _MUTED_COLOR = "#c8d0dd"
 
 
+def _clip_to_default_start(df: pd.DataFrame) -> pd.DataFrame:
+    """Clip to the 2000-01 default start.
+
+    The page has no date controls, so without this the axis spans the full
+    history: nominal rates reach back to 1954 (US_EFFR), and real rates inherit
+    Russia's 1990s hyperinflation (real ЦБ rate to ~−2500%), which flattens
+    every modern value. 2000-01 was the previous default start.
+    """
+    return df[df.index >= pd.Period(MACRO_FIRST_DATE_DEFAULT, freq="M")]
+
+
 def get_rates_figure(objects: list) -> tuple[go.Figure, pd.DataFrame]:
     df = pd.concat([obj.values_monthly for obj in objects], axis=1) * 100
     df.columns = [ALL_RATES_SERIES.get(col, col) for col in df.columns]
+    df = _clip_to_default_start(df)
     ind = df.index.to_timestamp("M")
     fig = px.line(df, x=ind, y=df.columns, title="Interest rates", height=600)
     fig.update_traces(line_shape="hv")  # rates change stepwise
@@ -82,7 +95,7 @@ def get_real_rates_figure(pairs: dict) -> tuple[go.Figure, pd.DataFrame]:
         infl = infl_obj.rolling_inflation
         common = nominal.index.intersection(infl.index)
         cols[ALL_RATES_SERIES.get(symbol, symbol)] = (nominal.loc[common] - infl.loc[common]) * 100
-    df = pd.DataFrame(cols)
+    df = _clip_to_default_start(pd.DataFrame(cols))
     ind = df.index.to_timestamp("M")
     fig = px.line(df, x=ind, y=df.columns, title="Real interest rates (nominal − 12m inflation)", height=600)
     fig.update_traces(line_shape="hv")

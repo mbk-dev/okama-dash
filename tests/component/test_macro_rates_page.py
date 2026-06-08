@@ -43,6 +43,21 @@ class TestRatesFigure:
         fig, _ = rates_page.get_rates_figure(objects)
         assert max(fig.data[0].y) > 1  # fractions ×100
 
+    def test_history_clips_to_default_start(self, rates_page):
+        # Without date controls, drop the very long pre-2000 history (US_EFFR
+        # since 1954, RU 1990s) so the axis stays readable.
+        import pandas as pd
+
+        class _Long:
+            def __init__(self, symbol):
+                self.symbol = symbol
+                self.values_monthly = pd.Series(
+                    0.1, index=pd.period_range("1990-01", "2024-12", freq="M"), name=symbol
+                )
+
+        fig, df = rates_page.get_rates_figure([_Long("RUS_CBR.RATE")])
+        assert str(df.index.min()) == "2000-01"
+
 
 class TestRealRateFigure:
     def test_real_rate_uses_rate_minus_inflation(self, rates_page):
@@ -59,6 +74,22 @@ class TestRealRateFigure:
         # opaque RangeIndex.to_timestamp crash (caught by the page as an annotation).
         with pytest.raises(ValueError, match="inflation"):
             rates_page.get_real_rates_figure({})
+
+    def test_real_rate_clips_pre_2000_hyperinflation(self, rates_page):
+        # Russia's 1990s hyperinflation pushes the real ЦБ rate to ~−2500%,
+        # which flattens every modern value — clip to the 2000-01 default start.
+        import pandas as pd
+
+        class _Long:
+            def __init__(self, symbol):
+                idx = pd.period_range("1990-01", "2024-12", freq="M")
+                self.symbol = symbol
+                self.values_monthly = pd.Series(0.1, index=idx, name=symbol)
+                self.rolling_inflation = pd.Series(0.05, index=idx, name=symbol)
+
+        r = _Long("RUS_CBR.RATE")
+        fig, df = rates_page.get_real_rates_figure({"RUS_CBR.RATE": (r, r)})
+        assert str(df.index.min()) == "2000-01"
 
 
 class TestMainCallback:
