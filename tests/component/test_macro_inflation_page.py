@@ -38,12 +38,13 @@ def patched_objects(infl_page):
 
 class TestMainCallback:
     def test_returns_figure_cards_and_grid(self, infl_page, patched_objects):
-        fig, config, pp_cards, grid = infl_page.update_inflation_page(
+        fig, config, pp_cards, store, grid = infl_page.update_inflation_page(
             None, ["RUB.INFL", "USD.INFL"], "annual", [], "2000-01", "2026-05"
         )
         assert isinstance(fig, go.Figure)
         assert len(fig.data) == 2
         assert len(pp_cards.children) == 2
+        assert isinstance(store, str)
         assert grid.id == "infl-describe-table-grid"
 
     def test_overlay_on_adds_rate_traces(self, infl_page, patched_objects):
@@ -60,10 +61,19 @@ class TestMainCallback:
         assert len(fig.data) == 1
 
     def test_purchasing_power_rows_dropped_from_grid(self, infl_page, patched_objects):
-        *_, grid = infl_page.update_inflation_page(None, ["RUB.INFL"], "annual", [], None, None)
+        *_, store, grid = infl_page.update_inflation_page(None, ["RUB.INFL"], "annual", [], None, None)
         properties = {row["property"] for row in grid.rowData}
         assert "1000 purchasing power" not in properties
         assert "compound inflation" in properties
+
+    def test_stats_grid_limited_to_three_properties(self, infl_page, patched_objects):
+        *_, store, grid = infl_page.update_inflation_page(None, ["RUB.INFL"], "annual", [], None, None)
+        properties = {row["property"] for row in grid.rowData}
+        assert properties == {"max 12m inflation", "compound inflation", "annual inflation"}
+
+    def test_main_callback_emits_chart_store_json(self, infl_page, patched_objects):
+        fig, config, pp, store, grid = infl_page.update_inflation_page(None, ["RUB.INFL"], "annual", [], None, None)
+        assert isinstance(store, str) and "columns" in store
 
     def test_empty_selection_prevents_update(self, infl_page):
         with pytest.raises(dash.exceptions.PreventUpdate):
@@ -71,7 +81,7 @@ class TestMainCallback:
 
     def test_okama_error_renders_annotation_figure(self, infl_page):
         with patch.object(infl_page.macro_objects, "get_inflation_object", side_effect=ValueError("boom")):
-            fig, config, pp_cards, grid = infl_page.update_inflation_page(
+            fig, config, pp_cards, store, grid = infl_page.update_inflation_page(
                 None, ["RUB.INFL"], "annual", [], None, None
             )
         assert fig.layout.annotations[0].text == "boom"

@@ -27,6 +27,7 @@ from pages.macro.cards_macro.macro_controls import (
     series_multiselect_column,
 )
 from pages.macro.cards_macro.macro_description import macro_description_card
+from pages.macro.cards_macro.macro_download import register_macro_download
 from pages.macro.cards_macro.macro_stats import build_describe_table, build_stats_grid
 from pages.macro.macro_data import (
     INFLATION_DEFAULTS,
@@ -47,19 +48,27 @@ _Y_TITLES = {
 _SERIES_ATTRS = {
     "rolling12m": "rolling_inflation",
     "cumulative": "cumulative_inflation",
-    "monthly": "values_monthly",
 }
 _OVERLAY_PLOTS = ("annual", "rolling12m")
+_HIGHLIGHT_COLOR = "#636efa"
+_MUTED_COLOR = "#b9c2d6"
+_BAR_PLOTS = ("annual", "monthly")
 
 
-def get_inflation_figure(objects: list, plot_type: str) -> go.Figure:
+def get_inflation_figure(objects: list, plot_type: str) -> tuple[go.Figure, pd.DataFrame]:
     labels = {obj.symbol: INFLATION_SERIES.get(obj.symbol, obj.symbol) for obj in objects}
-    if plot_type == "annual":
-        df = pd.concat([obj.annual_inflation_ts for obj in objects], axis=1) * 100
+    if plot_type in _BAR_PLOTS:
+        attr = "annual_inflation_ts" if plot_type == "annual" else "values_monthly"
+        df = pd.concat([getattr(obj, attr) for obj in objects], axis=1) * 100
         df.columns = [labels[col] for col in df.columns]
-        ind = df.index.to_timestamp(freq="Y")
-        fig = px.bar(df, x=ind, y=df.columns, barmode="group", title="Annual inflation", height=600)
-        fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
+        freq = "Y" if plot_type == "annual" else "M"
+        ind = df.index.to_timestamp(freq=freq)
+        fig = px.bar(df, x=ind, y=df.columns, barmode="group", title=_Y_TITLES[plot_type].rsplit(",", 1)[0], height=600)
+        if plot_type == "monthly":
+            for trace in fig.data:
+                trace.marker.color = [_MUTED_COLOR] * (len(df) - 1) + [_HIGHLIGHT_COLOR]
+        else:
+            fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
     else:
         attr = _SERIES_ATTRS[plot_type]
         df = pd.concat([getattr(obj, attr) for obj in objects], axis=1) * 100
@@ -69,7 +78,7 @@ def get_inflation_figure(objects: list, plot_type: str) -> go.Figure:
         fig.update_xaxes(rangeslider_visible=True)
     fig.update_yaxes(title_text=_Y_TITLES[plot_type], zeroline=True, zerolinecolor="black", zerolinewidth=1)
     fig.update_layout(xaxis_title=None, legend_title="Country")
-    return fig
+    return fig, df
 
 
 def add_key_rate_overlay(fig: go.Figure, symbols: list[str], first_date: str | None, last_date: str | None) -> None:
@@ -99,6 +108,9 @@ def get_purchasing_power_cards(objects: list) -> dbc.Row:
         start = obj.first_date.strftime("%b %Y")
         end = obj.last_date.strftime("%b %Y")
         value = obj.purchasing_power_1000
+        if value != value:  # NaN: okama propagates a trailing-NaN month (e.g. EUR.INFL)
+            cum = obj.cumulative_inflation.dropna()
+            value = 1000.0 / (1.0 + cum.iloc[-1]) if len(cum) else value
         # Two decimals below 10 (e.g. 1.23 must not collapse to "1.2"); space
         # thousands separator with one decimal for larger values.
         value_txt = f"{value:,.1f}".replace(",", " ") if value >= 10 else f"{value:.2f}"
@@ -234,6 +246,7 @@ def layout(tickers=None, first_date=None, last_date=None, plot=None, rates=None,
     Output("infl-chart", "figure"),
     Output("infl-chart", "config"),
     Output("infl-pp-cards", "children"),
+    Output("infl-store-chart-data", "data"),
     Output("infl-describe-table", "children"),
     Input("store", "data"),
     # Reactive page: every control is an Input — changing any of them
@@ -251,19 +264,20 @@ def update_inflation_page(screen, symbols, plot_type, overlay, fd_value, ld_valu
     fd_value, ld_value = fd_value or None, ld_value or None
     try:
         objects = [macro_objects.get_inflation_object(s, fd_value, ld_value) for s in symbols]
-        fig = get_inflation_figure(objects, plot_type)
+        fig, df = get_inflation_figure(objects, plot_type)
         if overlay and plot_type in _OVERLAY_PLOTS:
             add_key_rate_overlay(fig, symbols, fd_value, ld_value)
         pp_cards = get_purchasing_power_cards(objects)
         stats_df = build_describe_table([obj.describe() for obj in objects])
-        stats_df = stats_df[stats_df["property"] != "1000 purchasing power"]
+        stats_df = stats_df[stats_df["property"].isin(["max 12m inflation", "compound inflation", "annual inflation"])]
         grid = build_stats_grid(stats_df, "infl-describe-table-grid", value_format="percent")
+        store_json = df.to_json(orient="split", default_handler=str)
         fig, config = adopt_small_screens(fig, screen)
-        return fig, config, pp_cards, grid
+        return fig, config, pp_cards, store_json, grid
     except Exception as e:
         alert_fig = go.Figure()
         alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
-        return alert_fig, {}, None, None
+        return alert_fig, {}, None, None, None
 
 
 @callback(
@@ -322,3 +336,4 @@ def export_inflation_stats(n_clicks, row_data):
 
 register_date_validation("infl-first-date")
 register_date_validation("infl-last-date")
+register_macro_download("infl")
