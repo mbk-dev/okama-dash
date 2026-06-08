@@ -19,7 +19,7 @@ okama-dash/
 │   ├── benchmark/           # "/benchmark" — performance vs benchmark index
 │   ├── portfolio/           # "/portfolio" — portfolio analysis, rebalancing, cashflows
 │   ├── database/            # "/database" — search financial DB (stocks, ETFs, currencies)
-│   └── macro/               # "/macro/*" — macro indicators: inflation, rates (3 groups), CAPE10, real estate
+│   └── macro/               # "/macro/*" — macro indicators: inflation, rates (key rates), CAPE10, real estate
 │
 ├── common/                  # Shared modules used across pages
 │   ├── settings.py          # App-wide constants (max tickers, MC limits, defaults)
@@ -138,7 +138,7 @@ Rules for this repo:
 
 ## Test suite
 
-823 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+819 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -165,7 +165,7 @@ tests/
 │   ├── test_ef_portfolio_card.py    # EF portfolio card builder: stat blocks, title/badge, allocation rows with percent + stacked bar (plotly palette colors, zero-weight segments skipped), None-weights note (9 tests)
 │   ├── test_find_withdrawal_helpers.py  # Find result helpers (#22): _map_find_result sign/units per strategy (abs amount for indexation/cwd, -rel% for percentage/vds), _format_find_result display strings (space thousands separator, accuracy from error_rel) (7 tests)
 │   ├── test_dump_callbacks.py       # tools/dump_callbacks formatter: file:line via inspect.unwrap of the dash wrapper, single/multi Output, dict (pattern-matching) ids, clientside entries (no Python "callback" key), state omitted when empty, sorted by location (6 tests)
-│   ├── test_macro_data.py           # curated macro catalog integrity: namespaces, overlay mapping covers all 6 INFL currencies (ECB=MRO), defaults ⊆ catalogs, filter_known URL guard; rates groups registry (key/mm — deposit hidden), RE catalog; 25 CAPE countries (Russia suspended); RATE_TO_INFLATION real-rate map (rate→currency INFL, mm→RUB) (20 tests)
+│   ├── test_macro_data.py           # curated macro catalog integrity: namespaces, overlay mapping covers all 6 INFL currencies (ECB=MRO), defaults ⊆ catalogs, filter_known URL guard; rates groups registry (key only — deposit+money-market hidden), RE catalog; 25 CAPE countries (Russia suspended); RATE_TO_INFLATION real-rate map (rate→currency INFL, mm→RUB) (20 tests)
 │   ├── test_macro_mocks.py          # PicklableInflation/Rate/Indicator/Asset API surface (all data members are attributes, only describe() a method), rolling_inflation starts at the 12th month (window alignment regression), pickle round-trips; AssetList inflation column only when inflation=True (compare/benchmark regression guard) + private price-converter mirror (11 tests)
 │   ├── test_macro_objects.py        # cached accessors wire get_or_create: obj_type per class, date bounds into ctor, TTL_ASSET_LIST; stage-2: Asset (full-history, no dates) + AssetList (5-param key shared with benchmark/compare pickles) + okama private-API upgrade guard (_adjust_price_to_currency_monthly) (6 tests)
 │   ├── test_macro_stats.py          # describe-table outer merge on (property, period) incl. mismatched full-period rows; stats grid percent/decimal formatter wiring, sortable=False, suppressFieldDotNotation (6 tests)
@@ -219,9 +219,9 @@ tests/
 │   ├── test_macro_cards.py          # shared card factories: page-prefixed ids, multiselect defaults, copy-link guard, dates_ready keystroke guard, chart-card class + Download-data block ids (7 tests)
 │   ├── test_macro_download.py       # per-chart Download-data helper: download_from_store guards (no clicks / no data → PreventUpdate), returns xlsx dict (benchmark pattern, shared by all macro pages) (3 tests)
 │   ├── test_macro_inflation_figures.py  # inflation figure builders: annual grouped bars / rolling / cumulative / monthly ×100, key-rate overlay (step-dot traces via catalog mapping), purchasing-power cards (7 tests)
-│   ├── test_macro_inflation_page.py  # /macro/inflation page: REACTIVE main callback (every control an Input, no Submit; figure+PP cards+chart-store+grid), overlay gating, stats trimmed to 3 properties (max 12m/compound/annual), EUR purchasing-power NaN fallback, half-typed-date guard, URL prefill, link/export/copy-link/download callbacks (17 tests)
-│   ├── test_macro_rates_page.py     # /macro/rates: 3 plot types — Rates (step-lines hv ×100), Real rates (nominal − 12m rolling inflation via RATE_TO_INFLATION; empty-pairs guard), Current snapshot (nominal bar, group inferred from selection); no dates/stats; group switch swaps options+defaults (group NOT a main-callback Input); prefill, link carries group+plot, copy-link/download (20 tests)
-│   ├── test_macro_cape10_page.py    # /macro/cape10: history lines (raw decimals), 25-country snapshot (Russia suspended; sorted, cached per month, highlight colors, x-range headroom, mobile ticks outside), no stats table/dates, chart-store + download, reactive Inputs (series/plot only), PreventUpdate guard (14 tests)
+│   ├── test_macro_inflation_page.py  # /macro/inflation page: REACTIVE main callback (every control an Input, no Submit; figure+PP cards+chart-store+grid), overlay gating, stats trimmed to 3 headline metrics at the full period only (max 12m/compound/annual, drop_duplicates keep=last), EUR purchasing-power NaN fallback, half-typed-date guard, URL prefill, link/export/copy-link/download callbacks (17 tests)
+│   ├── test_macro_rates_page.py     # /macro/rates (key central-bank rates only — money-market/deposit groups unexposed, no group selector): 3 plot types — Rates (step-lines hv ×100), Real rates (nominal − 12m rolling inflation via RATE_TO_INFLATION; empty-pairs guard), Current snapshot (nominal bar); charts clipped to 2000-01; prefill, link carries plot, copy-link/download (17 tests)
+│   ├── test_macro_cape10_page.py    # /macro/cape10: Current snapshot DEFAULT (25-country bar, Russia suspended; sorted, cached per month, highlight, x-range headroom, mobile ticks outside) + history lines via URL, no stats table/dates, chart-store + download, reactive Inputs (series/plot only), PreventUpdate guard (14 tests)
 │   ├── test_macro_real_estate_figures.py  # RE figure builders: trim_future (future-date insurance after the 2026-06-07 source incident), price-per-m² labels + ccy y-title, wealth-vs-inflation lines (5 tests)
 │   └── test_macro_real_estate_page.py  # /macro/real-estate (hidden from navbar, reachable by URL): reactive main callback (price RUB/USD via okama private converter, wealth+inflation line, date masks, chart-store), ccy case-normalized prefill, link plot/ccy params, export/copy-link/download guards (13 tests)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
@@ -238,11 +238,11 @@ tests/
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 266 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 521 | ~9s |
-| `poetry run pytest -m e2e` | Playwright browser | 36 | ~93s |
-| `poetry run pytest -q` | Everything | 823 | ~105s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 787 | ~10s |
+| `poetry run pytest -m unit` | Pure logic | 265 | ~2s |
+| `poetry run pytest -m component` | Dash callbacks | 517 | ~9s |
+| `poetry run pytest -m e2e` | Playwright browser | 37 | ~95s |
+| `poetry run pytest -q` | Everything | 819 | ~104s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 782 | ~10s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
