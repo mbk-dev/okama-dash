@@ -73,11 +73,12 @@ class TestFilterKnown:
 
 
 class TestRateGroups:
-    def test_deposit_group_temporarily_unexposed(self):
-        # Deposit rates removed from the UI per live review; the catalog stays
-        # defined for an easy return but is not in the group registry.
+    def test_deposit_and_mm_groups_temporarily_unexposed(self):
+        # Deposit and money-market rates removed from the UI; catalogs stay
+        # defined for an easy return but are not in the group registry.
         assert "deposit" not in RATES_GROUPS
-        assert set(RATES_GROUPS) == {"key", "mm"}
+        assert "mm" not in RATES_GROUPS
+        assert set(RATES_GROUPS) == {"key"}
 
     def test_money_market_group_has_9_rate_series(self):
         assert len(MONEY_MARKET_SERIES) == 9
@@ -99,10 +100,10 @@ class TestRateGroups:
         assert not keys & set(MONEY_MARKET_SERIES)
 
     def test_rates_group_catalog_resolves_and_falls_back(self):
-        assert rates_group_catalog("mm") is MONEY_MARKET_SERIES
         assert rates_group_catalog("unknown") is KEY_RATES_SERIES  # safe default
         assert rates_group_catalog(None) is KEY_RATES_SERIES
         assert rates_group_catalog("deposit") is KEY_RATES_SERIES  # removed, falls back
+        assert rates_group_catalog("mm") is KEY_RATES_SERIES  # removed, falls back
 
 
 class TestRealEstateCatalog:
@@ -119,14 +120,9 @@ class TestRateToInflation:
     def test_every_grouped_rate_maps_to_an_inflation_series(self):
         from pages.macro.macro_data import RATE_TO_INFLATION
 
-        grouped = set(KEY_RATES_SERIES) | set(MONEY_MARKET_SERIES)
+        grouped = set(KEY_RATES_SERIES)
         assert grouped <= set(RATE_TO_INFLATION)
         assert all(v.endswith(".INFL") for v in RATE_TO_INFLATION.values())
-
-    def test_money_market_rates_map_to_rub_inflation(self):
-        from pages.macro.macro_data import MONEY_MARKET_SERIES, RATE_TO_INFLATION
-
-        assert all(RATE_TO_INFLATION[s] == "RUB.INFL" for s in MONEY_MARKET_SERIES)
 
     def test_currency_mapping_spot_checks(self):
         from pages.macro.macro_data import RATE_TO_INFLATION

@@ -99,17 +99,16 @@ class TestStage2:
         traces.first.wait_for(state="attached", timeout=15_000)
         assert traces.count() == 2  # asset + inflation reference
 
-    def test_rates_group_switch_recalculates_reactively(self, page, dash_server_url):
+    def test_rates_plot_type_switch_recalculates_reactively(self, page, dash_server_url):
         page.goto(f"{dash_server_url}/macro/rates", wait_until="domcontentloaded")
         traces = page.locator("#rates-chart .cartesianlayer .scatterlayer .js-line")
         traces.first.wait_for(state="attached", timeout=15_000)
-        assert traces.count() == 3  # key-rates defaults
-        # Switch the group; the chart re-renders to the single money-market default
-        # without any Submit click (fully reactive chain: group -> series -> chart).
-        page.locator("#rates-group").click()
-        page.get_by_text("Money market RU", exact=True).click()
+        assert traces.count() == 3  # key-rates defaults, nominal history
+        # Switch to Current snapshot -> horizontal bar, no Submit
+        page.locator("#rates-plot-type").click()
+        page.get_by_role("listbox").get_by_text("Current snapshot", exact=True).click()
         page.wait_for_function(
-            "() => document.querySelectorAll('#rates-chart .cartesianlayer .scatterlayer .js-line').length === 1",
+            "() => document.querySelectorAll('#rates-chart .barlayer .trace').length >= 1",
             timeout=15_000,
         )
 

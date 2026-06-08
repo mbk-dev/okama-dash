@@ -1,9 +1,8 @@
-"""/macro/rates — interest rates in three series groups (Macro section).
+"""/macro/rates — central bank key rates (Macro section).
 
-A group selector switches between central bank key rates, Russian bank deposit
-rates and Russian money-market rates (RUONIA/RUSFAR); switching swaps the
-series multiselect options and defaults, and the reactive main callback
-recalculates through the series Input (spec section 5.2).
+The page plots nominal rates, real rates (nominal - trailing-12m inflation), or
+a current snapshot (horizontal bar chart). The reactive main callback recalculates
+on series or plot-type change.
 """
 
 import dash
@@ -26,11 +25,11 @@ from pages.macro.cards_macro.macro_description import macro_description_card
 from pages.macro.cards_macro.macro_download import register_macro_download
 from pages.macro.macro_data import (
     ALL_RATES_SERIES,
+    KEY_RATES_SERIES,
     MACRO_FIRST_DATE_DEFAULT,
     RATE_TO_INFLATION,
-    RATES_GROUPS,
+    RATES_DEFAULTS,
     filter_known,
-    rates_group_catalog,
 )
 from pages.macro.macro_link import build_macro_link
 
@@ -105,17 +104,9 @@ def get_real_rates_figure(pairs: dict) -> tuple[go.Figure, pd.DataFrame]:
     return fig, df
 
 
-def _group_of(symbols: list[str]) -> str:
-    for group, (_, catalog, _) in RATES_GROUPS.items():
-        if any(s in catalog for s in symbols):
-            return group
-    return "key"
-
-
-def get_rates_snapshot(group: str) -> pd.Series:
-    """Latest rate (%) for every series in the group (cached per month)."""
+def get_rates_snapshot() -> pd.Series:
+    """Latest rate (%) for every key-rate series (cached per month)."""
     month = pd.Timestamp.today().strftime("%Y-%m")
-    catalog = rates_group_catalog(group)
 
     def build() -> pd.Series:
         values = {
@@ -123,14 +114,14 @@ def get_rates_snapshot(group: str) -> pd.Series:
                 macro_objects.get_rate_object(sym, None, None).values_monthly.iloc[-1]
             )
             * 100
-            for sym in catalog
+            for sym in KEY_RATES_SERIES
         }
         return pd.Series(values).sort_values()
 
     snapshot, _ = get_or_create(
         obj_type="rates_snapshot",
         constructor_fn=build,
-        cache_key_params={"symbols": sorted(catalog), "month": month},
+        cache_key_params={"symbols": sorted(KEY_RATES_SERIES), "month": month},
         ttl_seconds=TTL_EFFICIENT_FRONTIER,
     )
     return snapshot
@@ -155,35 +146,15 @@ def get_rates_snapshot_figure(snapshot: pd.Series, selected_labels: set) -> go.F
     return fig
 
 
-def layout(tickers=None, plot=None, group=None, **kwargs):
-    group_value = group if group in RATES_GROUPS else "key"
-    catalog = rates_group_catalog(group_value)
-    group_defaults = RATES_GROUPS[group_value][2]
-    selected = filter_known(make_list_from_string(tickers), catalog) or group_defaults
+def layout(tickers=None, plot=None, **kwargs):
+    selected = filter_known(make_list_from_string(tickers), KEY_RATES_SERIES) or RATES_DEFAULTS
     plot_type = plot if plot in _PLOT_VALUES else "history"
     control_bar = dbc.Card(
         dbc.CardBody(
             [
                 dbc.Row(
                     [
-                        dbc.Col(
-                            [
-                                html.Label("Group"),
-                                dcc.Dropdown(
-                                    options=[
-                                        {"label": label, "value": value}
-                                        for value, (label, _, _) in RATES_GROUPS.items()
-                                    ],
-                                    value=group_value,
-                                    clearable=False,
-                                    id="rates-group",
-                                ),
-                            ],
-                            lg=2,
-                            md=3,
-                            sm=6,
-                        ),
-                        series_multiselect_column("rates", catalog, selected),
+                        series_multiselect_column("rates", KEY_RATES_SERIES, selected),
                         dbc.Col(
                             [
                                 html.Label("Plot"),
@@ -236,8 +207,7 @@ def update_rates_page(screen, symbols, plot_type):
         raise dash.exceptions.PreventUpdate
     try:
         if plot_type == "snapshot":
-            group = _group_of(symbols)
-            snapshot = get_rates_snapshot(group)
+            snapshot = get_rates_snapshot()
             selected = {ALL_RATES_SERIES.get(s, s) for s in symbols}
             fig = get_rates_snapshot_figure(snapshot, selected)
             store_df = snapshot.to_frame("Rate, %")
@@ -266,26 +236,6 @@ def update_rates_page(screen, symbols, plot_type):
 
 
 @callback(
-    Output("rates-series", "data"),
-    Output("rates-series", "value"),
-    Input("rates-group", "value"),
-    # The layout already renders the right options/values for the URL-prefilled
-    # group; firing on load would stomp prefilled tickers.
-    prevent_initial_call=True,
-)
-def switch_rates_group(group: str):
-    """Swap the series multiselect to the chosen group's catalog and defaults.
-
-    The value change then triggers the reactive main callback; the group is
-    deliberately NOT a main-callback Input (stale-series double-fire).
-    """
-    catalog = rates_group_catalog(group)
-    defaults = RATES_GROUPS.get(group, RATES_GROUPS["key"])[2]
-    options = [{"label": label, "value": symbol} for symbol, label in catalog.items()]
-    return options, defaults
-
-
-@callback(
     Output("rates-copy-link-button", "disabled"),
     Input("rates-series", "value"),
 )
@@ -299,16 +249,14 @@ def disable_copy_link_rates(selected):
     Input("rates-copy-link-button", "n_clicks"),
     State("rates-url", "href"),
     State("rates-series", "value"),
-    State("rates-group", "value"),
     State("rates-plot-type", "value"),
 )
-def update_rates_link(n_clicks, href, symbols, group, plot):
+def update_rates_link(n_clicks, href, symbols, plot):
     return build_macro_link(
         href=href,
         tickers_list=symbols or [],
         first_date=None,
         last_date=None,
-        group=(group, "key"),
         plot=(plot, "history"),
     )
 

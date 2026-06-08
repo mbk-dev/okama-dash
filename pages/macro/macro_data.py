@@ -59,6 +59,7 @@ DEPOSIT_RATES_DEFAULTS = ["RUS_RUB_TOP10.RATE"]
 # Money market RU: RUONIA family + base RUSFAR tenors. RT/compound/N variants,
 # CNY/USD RUSFAR, RUSFARIND and RUSFAR2M are deliberately excluded (spec §2);
 # the tenor list is a one-line edit here.
+# Temporarily not exposed in the UI (live review 2026-06-08); kept for an easy return.
 MONEY_MARKET_SERIES = {
     "RUONIA.RATE": "RUONIA",
     "RUONIA_AVG_1M.RATE": "RUONIA Average 1M",
@@ -75,7 +76,6 @@ MONEY_MARKET_DEFAULTS = ["RUONIA.RATE"]
 # Group registry for the /macro/rates group selector: value -> (label, catalog, defaults).
 RATES_GROUPS = {
     "key": ("Key rates", KEY_RATES_SERIES, RATES_DEFAULTS),
-    "mm": ("Money market RU", MONEY_MARKET_SERIES, MONEY_MARKET_DEFAULTS),
 }
 
 # Union catalog for figure legend labels regardless of the active group.
@@ -103,8 +103,6 @@ _RATE_CURRENCY = {
     "CHN_LPR5.RATE": "CNY",
 }
 RATE_TO_INFLATION = {rate: f"{ccy}.INFL" for rate, ccy in _RATE_CURRENCY.items()}
-# Money market series are all RUB.
-RATE_TO_INFLATION.update(dict.fromkeys(MONEY_MARKET_SERIES, "RUB.INFL"))
 
 
 # /macro/real-estate — RE namespace; real estate is an ASSET (ok.Asset/AssetList,
