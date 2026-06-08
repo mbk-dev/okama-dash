@@ -81,10 +81,20 @@ drown in test hits. Conventions:
 
 ## Running locally
 
+Run the local site through **Gunicorn**, not the Werkzeug dev server (`python app.py`).
+The single-threaded dev server stalls after ~13 navigations per session (the same reason
+e2e uses Gunicorn); Gunicorn with `--reload` gives the same hot-reload while staying
+prod-like (`run_gunicorn:server` is the production entry point).
+
 ```bash
 poetry install
-poetry run python app.py          # http://localhost:8050, debug=True (hot reload)
+poetry run gunicorn run_gunicorn:server -b 127.0.0.1:8050 -w 2 --reload --timeout 120
+# http://localhost:8050 — real okama (do NOT set TESTING=1 for live review)
 ```
+
+`--reload` restarts workers on file change (hot reload). Do not pass `TESTING=1` when
+serving for visual review — that swaps in the mocked okama. If port 8050 is taken by a
+parallel worktree's server, pick another port; never kill a server you didn't start.
 
 **Environment variables** (all optional, with defaults):
 
@@ -483,9 +493,10 @@ spacing, ordering, wrappers — anything whose effect is *seen* rather than comp
 user reviews the result on the running site **before** it is committed. Before reporting
 such work as done:
 
-- **Check whether the local dev server is running** (default `http://localhost:8050`). If
-  it is not up, start it (`poetry run python app.py`, debug=True) so the user can open the
-  page and see the change live.
+- **Check whether the local site is running** (default `http://localhost:8050`). If it is
+  not up, start it via Gunicorn (`poetry run gunicorn run_gunicorn:server -b 127.0.0.1:8050
+  -w 2 --reload --timeout 120`, see "Running locally") so the user can open the page and see
+  the change live. Run it in the background and leave it running between turns.
 - **Point the user to where to look** — the route/page and which control or panel changed —
   so they can review it on the live site.
 - **Don't commit a visual change until the user has had the chance to see it live** (commit
