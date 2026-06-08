@@ -22,7 +22,12 @@ from pages.benchmark.cards_benchmark.benchmark_controls import benchmark_card_co
 
 from pages.benchmark.cards_benchmark.benchmark_description import card_benchmark_description
 from pages.benchmark.cards_benchmark.benchmark_info import card_benchmark_info
-from common.url_portfolio import parse_url_portfolio_group
+from common.url_portfolio import (
+    get_or_create_url_portfolio,
+    parse_url_portfolio_group,
+    pf_cache_token,
+    split_portfolio_from_selection,
+)
 
 dash.register_page(
     __name__,
@@ -90,6 +95,7 @@ def layout(
     State("benchmark-plot-option", "value"),
     State("benchmark-chart-expanding-rolling", "value"),
     State("benchmark-rolling-window", "value"),
+    State("benchmark-url-portfolio", "data"),
     # Show the spinner under the Compare button while computing (the chart's
     # own dcc.Loading spinner is below the fold on mobile).
     running=submit_spinner_running("benchmark-submit-spinner"),
@@ -107,12 +113,19 @@ def update_graf_benchmark(
     plot_type: str,
     expanding_rolling: str,
     rolling_window: int,
+    pf_def: dict | None,
 ):
     if not selected_symbols or not benchmark:
         raise dash.exceptions.PreventUpdate
     try:
-        tickers = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
-        symbols = [benchmark] + tickers
+        tickers_raw = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
+        tickers, has_pf = split_portfolio_from_selection(tickers_raw, pf_def)
+        assets: list = list(tickers)
+        if has_pf:
+            # Cached ok.Portfolio from the URL handoff joins the list as a tested asset.
+            assets = [get_or_create_url_portfolio(pf_def, ccy=ccy, first_date=fd_value, last_date=ld_value)] + assets
+        # The benchmark stays first: okama tracking methods treat asset 0 as the benchmark.
+        symbols = [benchmark] + assets
         al_object, _ = get_or_create(
             obj_type="assetlist",
             constructor_fn=lambda: ok.AssetList(
@@ -123,11 +136,14 @@ def update_graf_benchmark(
                 inflation=False,
             ),
             cache_key_params={
-                "symbols": symbols,
+                "symbols": [benchmark] + tickers,
                 "ccy": ccy,
                 "first_date": fd_value,
                 "last_date": ld_value,
                 "inflation": False,
+                # An AssetList with the URL portfolio must not share a cache
+                # slot with the plain one for the same tickers.
+                "pf": pf_cache_token(pf_def) if has_pf else None,
             },
             ttl_seconds=TTL_ASSET_LIST,
         )

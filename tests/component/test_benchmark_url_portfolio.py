@@ -3,7 +3,7 @@
 The portfolio is a tested asset: it lands as a chip in benchmark-assets-list;
 the benchmark select keeps its own param and default (SP500TR.INDX)."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -107,3 +107,56 @@ class TestBenchmarkInfoTokenFilter:
             benchmark_info.pf_update_asset_names_info(["MyPF.PF", "AAPL.US"], "SP500TR.INDX", "USD", PF_DEF)
 
         assert mock_al_cls.call_args.args[0] == ["SP500TR.INDX", "AAPL.US"]
+
+
+class TestBenchmarkMainCallbackWithPortfolio:
+    @staticmethod
+    def _run(selected_symbols, pf_def):
+        from pages.benchmark.benchmark import update_graf_benchmark
+        from tests.mocks.okama_mock import make_mock_asset_list
+
+        pf_object = MagicMock()
+        pf_object.symbol = "MyPF.PF"
+        al = make_mock_asset_list(["SP500TR.INDX", "MyPF.PF"])
+        captured = {}
+
+        def fake_get_or_create(*, obj_type, constructor_fn, cache_key_params, ttl_seconds):
+            captured["cache_key_params"] = cache_key_params
+            return constructor_fn(), "test.pkl"
+
+        with (
+            patch("pages.benchmark.benchmark.get_or_create", side_effect=fake_get_or_create),
+            patch("pages.benchmark.benchmark.get_or_create_url_portfolio", return_value=pf_object) as mock_pf,
+            patch("pages.benchmark.benchmark.ok.AssetList", return_value=al) as mock_al_cls,
+        ):
+            update_graf_benchmark(
+                None,  # screen
+                1,  # n_clicks
+                "SP500TR.INDX",
+                selected_symbols,
+                "USD",
+                "2020-01",
+                "2024-12",
+                "annualized_td",
+                "expanding",
+                2,
+                pf_def,
+            )
+        return mock_pf, mock_al_cls, captured
+
+    def test_benchmark_stays_first_portfolio_second(self):
+        mock_pf, mock_al_cls, captured = self._run(["MyPF.PF"], PF_DEF)
+
+        mock_pf.assert_called_once_with(PF_DEF, ccy="USD", first_date="2020-01", last_date="2024-12")
+        symbols = mock_al_cls.call_args.args[0]
+        assert symbols[0] == "SP500TR.INDX"
+        assert symbols[1] is mock_pf.return_value
+        assert captured["cache_key_params"]["symbols"] == ["SP500TR.INDX"]
+        assert captured["cache_key_params"]["pf"] == "AAPL.US:60,MSFT.US:40;year;MyPF.PF"
+
+    def test_without_chip_nothing_changes(self):
+        mock_pf, mock_al_cls, captured = self._run(["GOOG.US"], PF_DEF)
+
+        mock_pf.assert_not_called()
+        assert mock_al_cls.call_args.args[0] == ["SP500TR.INDX", "GOOG.US"]
+        assert captured["cache_key_params"]["pf"] is None
