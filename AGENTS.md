@@ -82,8 +82,27 @@ drown in test hits. Conventions:
 
 ```bash
 poetry install
-poetry run python app.py          # http://localhost:8050, debug=True (hot reload)
+poetry run python app.py          # http://localhost:8050, debug=True (hot reload) — manual dev
 ```
+
+**Agent-launched local server: Gunicorn on port 8051.** When the agent (Claude) needs
+to bring the app up itself — for a live review, a headless check, or a screenshot — it
+MUST start it as:
+
+```bash
+.venv/bin/gunicorn run_gunicorn:server -b 127.0.0.1:8051 -w 2 --timeout 120
+```
+
+launched through the harness's background mechanism (`run_in_background`), with **no**
+`TESTING=1` (real okama data). Rationale, all verified on this host:
+- **Port 8051, not 8050** — a manual `python app.py` dev server (or one from a parallel
+  git worktree) often already holds 8050; sharing it serves a stale build. 8051 keeps the
+  agent's server distinct.
+- **Gunicorn, not `app.run` in the background** — `python app.py` (werkzeug) dies when
+  detached: okama pulls in loky/joblib whose semaphores don't survive a `nohup &`/`setsid`
+  detach in this WSL2 environment. A plain `&` also gets reaped when the Bash tool call
+  ends. The Gunicorn master under harness background-tracking stays up.
+- **No hot reload** — Gunicorn won't pick up edits; restart it after code changes.
 
 **Environment variables** (all optional, with defaults):
 
@@ -482,9 +501,10 @@ spacing, ordering, wrappers — anything whose effect is *seen* rather than comp
 user reviews the result on the running site **before** it is committed. Before reporting
 such work as done:
 
-- **Check whether the local dev server is running** (default `http://localhost:8050`). If
-  it is not up, start it (`poetry run python app.py`, debug=True) so the user can open the
-  page and see the change live.
+- **Check whether the local dev server is running.** If the user runs it themselves it is
+  `http://localhost:8050` (`poetry run python app.py`). When the agent brings it up, use the
+  Gunicorn-on-8051 recipe from "Running locally" above (`http://localhost:8051`) — don't try
+  to background `app.py`. Either way, point the user at the running URL.
 - **Point the user to where to look** — the route/page and which control or panel changed —
   so they can review it on the live site.
 - **Don't commit a visual change until the user has had the chance to see it live** (commit
