@@ -28,6 +28,7 @@ from common.parse_query import make_list_from_string
 from pages.macro import macro_objects
 from pages.macro.cards_macro.eng.real_estate_description_txt import real_estate_description_text
 from pages.macro.cards_macro.macro_chart import macro_chart_card
+from pages.macro.cards_macro.macro_download import register_macro_download
 from pages.macro.cards_macro.macro_controls import (
     date_columns,
     dates_ready,
@@ -194,6 +195,7 @@ def _price_series(symbols: list[str], ccy: str, fd: str | None, ld: str | None) 
 @callback(
     Output("re-chart", "figure"),
     Output("re-chart", "config"),
+    Output("re-store-chart-data", "data"),
     Output("re-describe-table", "children"),
     Input("store", "data"),
     # Reactive page: every control is an Input — changing any of them
@@ -215,8 +217,11 @@ def update_re_page(screen, symbols, plot_type, ccy, fd_value, ld_value):
                 symbols, ccy=ccy, first_date=fd_value, last_date=ld_value, inflation=True
             )
             fig = get_re_wealth_figure(al_object)
+            store_df = al_object.wealth_indexes
         else:
-            fig = get_re_price_figure(_price_series(symbols, ccy, fd_value, ld_value), ccy)
+            prices = _price_series(symbols, ccy, fd_value, ld_value)
+            fig = get_re_price_figure(prices, ccy)
+            store_df = pd.DataFrame(prices)
         # Stats always come from the inflation=True AssetList: describe() then
         # reports CAGR next to the inflation column — the core question of the
         # page ("does real estate beat inflation") in both plot modes.
@@ -228,12 +233,13 @@ def update_re_page(screen, symbols, plot_type, ccy, fd_value, ld_value):
         # the real okama frame and the mock shape).
         stats_df = stats_df[~stats_df["property"].isin(["Inception date", "Last asset date", "Common last data date"])]
         grid = build_stats_grid(stats_df, "re-describe-table-grid", value_format="percent")
+        store_json = store_df.to_json(orient="split", default_handler=str)
         fig, config = adopt_small_screens(fig, screen)
-        return fig, config, grid
+        return fig, config, store_json, grid
     except Exception as e:
         alert_fig = go.Figure()
         alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
-        return alert_fig, {}, None
+        return alert_fig, {}, None, None
 
 
 @callback(
@@ -278,5 +284,6 @@ def export_re_stats(n_clicks, row_data):
     )
 
 
+register_macro_download("re")
 register_date_validation("re-first-date")
 register_date_validation("re-last-date")

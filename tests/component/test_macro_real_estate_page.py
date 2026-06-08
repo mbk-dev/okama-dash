@@ -38,11 +38,15 @@ def patched_assets(re_page):
 
 class TestMainCallback:
     def test_price_mode_rub(self, re_page, patched_assets):
-        fig, config, grid = re_page.update_re_page(None, ["MOW_PR.RE", "MOW_SEC.RE"], "price", "RUB", None, None)
+        fig, config, store, grid = re_page.update_re_page(None, ["MOW_PR.RE", "MOW_SEC.RE"], "price", "RUB", None, None)
         assert isinstance(fig, go.Figure)
         assert len(fig.data) == 2
         assert "RUB" in fig.layout.yaxis.title.text
         assert grid.id == "re-describe-table-grid"
+
+    def test_main_callback_emits_chart_store(self, re_page, patched_assets):
+        fig, config, store, grid = re_page.update_re_page(None, ["MOW_PR.RE"], "price", "RUB", None, None)
+        assert isinstance(store, str) and "columns" in store
 
     def test_price_mode_usd_converts(self, re_page, patched_assets):
         fig_rub, *_ = re_page.update_re_page(None, ["MOW_PR.RE"], "price", "RUB", None, None)
@@ -69,7 +73,7 @@ class TestMainCallback:
 
     def test_error_renders_annotation(self, re_page):
         with patch.object(re_page.macro_objects, "get_asset_object", side_effect=ValueError("api down")):
-            fig, config, grid = re_page.update_re_page(None, ["MOW_PR.RE"], "price", "RUB", None, None)
+            fig, config, store, grid = re_page.update_re_page(None, ["MOW_PR.RE"], "price", "RUB", None, None)
         assert fig.layout.annotations[0].text == "api down"
         assert grid is None
 
