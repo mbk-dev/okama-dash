@@ -518,6 +518,39 @@ such work as done:
 - **No screenshots by default.** Do not capture or attach screenshots unless the user
   explicitly asks for them — the live local site is the review surface, not an image.
 
+## Layout decomposition (no monolithic layouts)
+
+A layout — a function that builds a Dash component tree, or a card/page module that pairs
+a layout with its callbacks — must not grow into one giant blob. Split it into parts across
+modules instead.
+
+- **Decompose a large builder function into per-section builders.** When one
+  component-building function spans many panels/rows, extract each visual section into its
+  own small builder (`_strategy_selector()`, `_vds_panel()`, `_find_block()`, …) and have the
+  top function just assemble them. The assembler should read as a short list of sections, not
+  a hundreds-of-lines literal.
+- **When a card/page module gets large, split it into a feature package.** Turn `foo.py` into
+  a `foo/` package: a thin `layout.py` assembler plus one submodule per feature, each owning
+  *its* sub-layout, *its* callbacks and *its* helpers together (high cohesion). Keep genuinely
+  shared pieces in `constants.py` / `helpers.py` / `common.py`.
+- **Preserve the import surface with `__init__` re-exports.** The package `__init__.py`
+  re-exports the public names so every existing `from …foo import <name>` (production *and*
+  tests) keeps working unchanged. Importing the feature submodules also registers their Dash
+  `@callback`s (registration is an import side effect), and callback wiring is by string id —
+  so splitting never breaks wiring as long as the submodules are imported from the package.
+- **Guideline, not a hard limit.** Treat a builder function over ~150–200 lines, or a module
+  mixing a large layout with many callbacks, as a signal to split. Cohesion matters more than
+  the exact line count — use judgement.
+- **It is a behavior-preserving refactor.** Carve sections verbatim, change only imports. Per
+  the TDD-skip rule it needs no new test (pure move, no logic change), but the existing suite
+  is the safety net: run `poetry run pytest -q` and confirm the same green, plus
+  `poetry run python tools/dump_callbacks.py` to confirm every callback still registers from
+  its new file.
+
+Reference implementation: `pages/portfolio/cards_portfolio/cashflow_controls/` (split out of a
+1265-line single file into constants / helpers / common / vds / cwd / find / timeseries /
+layout).
+
 ## Release gate (master)
 
 Before ANY release to `master` (merging `dev`/a feature branch into `master`, or
