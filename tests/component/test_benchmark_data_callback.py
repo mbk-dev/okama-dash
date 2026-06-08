@@ -33,6 +33,7 @@ class TestUpdateGrafBenchmark:
             plot_type=plot_type,
             expanding_rolling="rolling",
             rolling_window=2,
+            pf_def=None,
         )
         assert isinstance(fig, go.Figure)
         assert isinstance(config, dict)
@@ -52,6 +53,7 @@ class TestUpdateGrafBenchmark:
             plot_type="annual_td_bar",
             expanding_rolling="rolling",
             rolling_window=2,
+            pf_def=None,
         )
         assert isinstance(fig, go.Figure)
         assert any(isinstance(t, go.Bar) for t in fig.data)
@@ -72,6 +74,7 @@ class TestUpdateGrafBenchmark:
                 plot_type="td",
                 expanding_rolling="rolling",
                 rolling_window=2,
+                pf_def=None,
             )
 
     def test_no_benchmark_raises_prevent_update(self):
@@ -90,6 +93,7 @@ class TestUpdateGrafBenchmark:
                 plot_type="td",
                 expanding_rolling="rolling",
                 rolling_window=2,
+                pf_def=None,
             )
 
     def test_exception_returns_error_figure(self):
@@ -107,6 +111,7 @@ class TestUpdateGrafBenchmark:
                 plot_type="td",
                 expanding_rolling="rolling",
                 rolling_window=2,
+                pf_def=None,
             )
         assert isinstance(fig, go.Figure)
         assert json_data is None
@@ -125,5 +130,6 @@ class TestUpdateGrafBenchmark:
             plot_type="td",
             expanding_rolling="expanding",
             rolling_window=2,
+            pf_def=None,
         )
         mock_al.tracking_difference.assert_called_with(rolling_window=None)

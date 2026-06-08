@@ -627,14 +627,28 @@ def card_controls(
                             n_clicks=0,
                             color="primary",
                         ),
-                        dbc.Button(
-                            "Go to EF",
-                            id="pf-go-to-ef-button",
-                            outline=True,
-                            color="primary",
-                            external_link=True,
-                            target="_blank",
-                            class_name="ms-2",
+                        dbc.DropdownMenu(
+                            label="Go to",
+                            id="pf-goto-menu",
+                            # Outline look to match the previous Go to EF button:
+                            # DropdownMenu has no outline prop; btn-outline-primary
+                            # supplies the outline palette while assets/forms.css
+                            # neutralizes the solid btn-primary background that the
+                            # default color leaves behind. d-inline-block keeps the
+                            # menu wrapper on the Submit line (its default div is block).
+                            toggle_class_name="btn-outline-primary",
+                            class_name="d-inline-block ms-2",
+                            children=[
+                                dbc.DropdownMenuItem(
+                                    "Efficient Frontier", id="pf-goto-ef", external_link=True, target="_blank"
+                                ),
+                                dbc.DropdownMenuItem(
+                                    "Compare Assets", id="pf-goto-compare", external_link=True, target="_blank"
+                                ),
+                                dbc.DropdownMenuItem(
+                                    "Benchmark", id="pf-goto-benchmark", external_link=True, target="_blank"
+                                ),
+                            ],
                         ),
                         create_submit_spinner("pf-submit-spinner"),
                     ],
@@ -880,7 +894,9 @@ def update_link_pf(
 
 
 @callback(
-    Output("pf-go-to-ef-button", "href"),
+    Output("pf-goto-ef", "href"),
+    Output("pf-goto-compare", "href"),
+    Output("pf-goto-benchmark", "href"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),  # weights
     Input("pf-base-currency", "value"),
@@ -888,8 +904,10 @@ def update_link_pf(
     Input("pf-last-date", "value"),
     Input("pf-rebalancing-period", "value"),
     Input("pf-ticker", "value"),
+    Input("pf-rebal-abs-deviation", "value"),
+    Input("pf-rebal-rel-deviation", "value"),
 )
-def update_go_to_ef_link(
+def update_go_to_links(
     tickers_list: Optional[list],
     weights_list: Optional[list],
     ccy: str,
@@ -897,16 +915,26 @@ def update_go_to_ef_link(
     last_date: str,
     rebal: str,
     symbol: Optional[str],
-) -> str:
-    """Build the EF-page link carrying the portfolio.
+    abs_dev: Optional[float],
+    rel_dev: Optional[float],
+) -> tuple[str, str, str]:
+    """Build the three "Go to" hrefs carrying the portfolio.
 
-    Standard frontier params (tickers/ccy/dates/rebal) define the frontier;
-    the portfolio section is just weights + symbol. Same vocabulary as the
-    EF "Backtest portfolio" link, in reverse.
+    EF keeps the page-level vocabulary (tickers define the frontier, weights +
+    symbol are the portfolio section) — same as the EF "Backtest portfolio"
+    link, in reverse. Compare/Benchmark take the portfolio as its own pf_*
+    param group + ccy/dates, including the rebalancing deviations (abs/rel):
+    their page-level tickers keep their own meaning, and no cash-flow params
+    travel. EF gets the period only — okama's EfficientFrontier ignores the
+    deviations (issue #23).
     """
     tickers = [t for t in tickers_list if t]
-    weights = [w for w in weights_list if w is not None]
-    return create_link(
+    # Drop cleared rows ("" from a blanked dcc number input) so create_link's
+    # "{w:g}" pf_weights formatting can't raise on an empty string — this single
+    # callback drives all three hrefs, so one raise would blank the EF link too.
+    # Types are preserved (int/str), so the EF link's str(w) format is unchanged.
+    weights = [w for w in weights_list if w not in (None, "")]
+    ef_href = create_link(
         href="/",
         tickers_list=tickers,
         ccy=ccy,
@@ -916,6 +944,19 @@ def update_go_to_ef_link(
         weights_list=weights,
         symbol=symbol,
     )
+    handoff = {
+        "tickers_list": [],
+        "ccy": ccy,
+        "first_date": first_date,
+        "last_date": last_date,
+        "pf_tickers": tickers,
+        "pf_weights": weights,
+        "pf_rebal": rebal,
+        "pf_symbol": symbol,
+        "pf_abs_dev": abs_dev,
+        "pf_rel_dev": rel_dev,
+    }
+    return ef_href, create_link(href="/compare", **handoff), create_link(href="/benchmark", **handoff)
 
 
 @callback(
@@ -1086,7 +1127,7 @@ def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy, frequ
     Output("pf-submit-button", "disabled"),
     Output("pf-copy-link-button", "disabled"),
     Output("dynamic-add-filter", "disabled"),
-    Output("pf-go-to-ef-button", "disabled"),
+    Output("pf-goto-menu", "disabled"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),
     Input("pf-rolling-window", "value"),
@@ -1097,7 +1138,7 @@ def disable_submit_add_link_buttons(
     tickers_list, weights_list, rolling_window_value, mc_number_valid, mc_years_valid
 ) -> Tuple[bool, bool, bool, bool]:
     """
-    Disable "Add Asset", "Submit" and "Copy Link" buttons.
+    Disable "Add Asset", "Submit", "Copy Link" buttons and the "Go to" menu.
 
     disable "Add Asset" conditions:
     - weights and assets forms are not empty (don't have None)
@@ -1113,7 +1154,7 @@ def disable_submit_add_link_buttons(
     - "Submit"
     - number of tickers is more than allowed (in settings)
 
-    disable "Go to EF" conditions:
+    disable "Go to" menu conditions (one gate for all three items):
     - "Copy Link"
     - number of unique tickers is < 2 (a frontier needs at least two assets)
     """

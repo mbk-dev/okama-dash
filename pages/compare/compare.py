@@ -4,7 +4,7 @@ import dash
 import dash.exceptions
 import dash_ag_grid as dag
 import plotly
-from dash import State, callback
+from dash import State, callback, dcc
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 
@@ -26,6 +26,12 @@ from common.chart_helpers import (
     format_points,
     make_error_alert,
 )
+from common.url_portfolio import (
+    get_or_create_url_portfolio,
+    parse_url_portfolio_group,
+    pf_cache_token,
+    split_portfolio_from_selection,
+)
 import plotly.graph_objects as go
 
 from common.html_elements.submit_spinner import submit_spinner_running
@@ -46,12 +52,28 @@ dash.register_page(
 )
 
 
-def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
+def layout(
+    tickers=None,
+    first_date=None,
+    last_date=None,
+    ccy=None,
+    pf_tickers=None,
+    pf_weights=None,
+    pf_rebal=None,
+    pf_symbol=None,
+    pf_abs_dev=None,
+    pf_rel_dev=None,
+    **kwargs,
+):
+    # Portfolio handed off from the Portfolio page via URL (issue #23);
+    # None for ordinary links without a pf_* group.
+    pf_def = parse_url_portfolio_group(pf_tickers, pf_weights, pf_rebal, pf_symbol, pf_abs_dev, pf_rel_dev)
     page = dbc.Container(
         [
+            dcc.Store(id="al-url-portfolio", data=pf_def),
             dbc.Row(
                 [
-                    dbc.Col(card_controls(tickers, first_date, last_date, ccy), lg=7),
+                    dbc.Col(card_controls(tickers, first_date, last_date, ccy, pf_def), lg=7),
                     dbc.Col(card_assets_info, lg=5),
                 ]
             ),
@@ -86,6 +108,7 @@ def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
     State(component_id="al-plot-option", component_property="value"),
     State(component_id="al-inflation-switch", component_property="value"),
     State(component_id="al-rolling-window", component_property="value"),
+    State(component_id="al-url-portfolio", component_property="data"),
     # Show the spinner under the Compare button while computing (the chart's
     # own dcc.Loading spinner is below the fold on mobile).
     running=submit_spinner_running("al-submit-spinner"),
@@ -103,6 +126,7 @@ def update_graf_compare(
     plot_type: str,
     inflation_on: bool,
     rolling_window: int,
+    pf_def: dict | None,
 ):
     trigger = dash.ctx.triggered_id
     if trigger == "logarithmic-scale-switch":
@@ -119,7 +143,7 @@ def update_graf_compare(
         raise dash.exceptions.PreventUpdate
     try:
         return _update_graf_compare_inner(
-            screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window
+            screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window, pf_def
         )
     except Exception as e:
         alert = make_error_alert(e)
@@ -127,24 +151,32 @@ def update_graf_compare(
 
 
 def _update_graf_compare_inner(
-    screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window
+    screen, log_on, selected_symbols, ccy, fd_value, ld_value, plot_type, inflation_on, rolling_window, pf_def=None
 ):
     symbols = selected_symbols if isinstance(selected_symbols, list) else [selected_symbols]
+    tickers, has_pf = split_portfolio_from_selection(symbols, pf_def)
+    assets: list = list(tickers)
+    if has_pf:
+        # Cached ok.Portfolio from the URL handoff joins the AssetList as an asset.
+        assets = [get_or_create_url_portfolio(pf_def, ccy=ccy, first_date=fd_value, last_date=ld_value)] + assets
     al_object, _ = get_or_create(
         obj_type="assetlist",
         constructor_fn=lambda: ok.AssetList(
-            symbols,
+            assets,
             first_date=fd_value,
             last_date=ld_value,
             ccy=ccy,
             inflation=inflation_on,
         ),
         cache_key_params={
-            "symbols": symbols,
+            "symbols": tickers,
             "ccy": ccy,
             "first_date": fd_value,
             "last_date": ld_value,
             "inflation": inflation_on,
+            # An AssetList with the URL portfolio must not share a cache slot
+            # with the plain one for the same tickers.
+            "pf": pf_cache_token(pf_def) if has_pf else None,
         },
         ttl_seconds=TTL_ASSET_LIST,
     )

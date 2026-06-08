@@ -202,6 +202,7 @@ class TestUpdateGrafCompareOuter:
                     plot_type="wealth",
                     inflation_on=False,
                     rolling_window=2,
+                    pf_def=None,
                 )
 
     def test_exception_returns_empty_figure(self):
@@ -223,6 +224,7 @@ class TestUpdateGrafCompareOuter:
                 plot_type="wealth",
                 inflation_on=False,
                 rolling_window=2,
+                pf_def=None,
             )
         assert isinstance(fig, go.Figure)
         assert len(fig.data) == 0

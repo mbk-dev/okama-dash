@@ -306,9 +306,12 @@ class TestUrlParamGrouping:
         url = create_link(**BASE_PARAMS, symbol="PORTFOLIO1", rebal="year", abs_dev=20, rel_dev=50)
         assert "rebal=year&abs_dev=20&rel_dev=50" in url
 
-    def test_symbol_precedes_rebalancing_group(self):
+    def test_symbol_follows_rebalancing_group(self):
+        # okama order (Portfolio.weights -> rebalancing_strategy -> Portfolio.symbol):
+        # symbol is emitted AFTER the rebalancing group, keeping rebal/abs_dev/rel_dev
+        # contiguous.
         url = create_link(**BASE_PARAMS, symbol="PORTFOLIO1", rebal="year", abs_dev=20)
-        assert url.index("symbol=") < url.index("rebal=")
+        assert url.index("rebal=") < url.index("symbol=")
 
     def test_cashflow_params_grouped(self):
         url = create_link(
@@ -667,3 +670,133 @@ class TestFormatQueryParamEmptyString:
     def test_skip_if_default_treats_empty_string_as_unset(self):
         # An emptied Initial amount must not leak "initial_amount=" into the link.
         assert _format_query_param("initial_amount", "", ("skip_if_default", 1000)) is None
+
+
+class TestCreateLinkPortfolioGroup:
+    """pf_* group: the portfolio travels to Compare/Benchmark as its own params (issue #23)."""
+
+    def test_pf_group_emitted(self):
+        url = create_link(
+            href="/compare",
+            tickers_list=[],
+            ccy="EUR",
+            first_date="2015-01",
+            last_date="2020-12",
+            pf_tickers=["AAPL.US", "MSFT.US"],
+            pf_weights=[60, 40],
+            pf_rebal="year",
+            pf_symbol="MyPF",
+        )
+        assert url.startswith("/compare?")
+        assert "pf_tickers=AAPL.US,MSFT.US" in url
+        assert "pf_weights=60,40" in url
+        assert "pf_rebal=year" in url
+        assert "pf_symbol=MyPF" in url
+        assert "ccy=EUR" in url
+
+    def test_pf_group_defaults_omitted(self):
+        today_str = pd.Timestamp.today().strftime("%Y-%m")
+        url = create_link(
+            href="/compare",
+            tickers_list=[],
+            ccy="USD",
+            first_date="2000-01",
+            last_date=today_str,
+            pf_tickers=["AAPL.US", "MSFT.US"],
+            pf_weights=[60, 40],
+            pf_rebal="month",
+            pf_symbol="PORTFOLIO",
+        )
+        assert "pf_rebal=" not in url
+        assert "pf_symbol=" not in url
+        assert "pf_tickers=AAPL.US,MSFT.US" in url
+
+    def test_float_weights_formatted_without_trailing_zero(self):
+        url = create_link(
+            href="/compare",
+            tickers_list=[],
+            ccy="USD",
+            first_date="2015-01",
+            last_date="2020-12",
+            pf_tickers=["AAPL.US", "MSFT.US"],
+            pf_weights=[60.0, 40.0],
+        )
+        assert "pf_weights=60,40" in url
+
+    def test_tickers_param_omitted_for_empty_list(self):
+        url = create_link(
+            href="/compare",
+            tickers_list=[],
+            ccy="USD",
+            first_date="2015-01",
+            last_date="2020-12",
+            pf_tickers=["AAPL.US", "MSFT.US"],
+            pf_weights=[60, 40],
+        )
+        # "?tickers="/"&tickers=" must be absent; "pf_tickers=" must not be
+        # mistaken for it (different prefix chars, safe substrings).
+        assert "?tickers=" not in url
+        assert "&tickers=" not in url
+        assert "pf_tickers=AAPL.US,MSFT.US" in url
+
+    def test_no_pf_group_keeps_existing_behavior(self):
+        url = create_link(**BASE_PARAMS)
+        assert "pf_tickers" not in url
+        assert url.startswith("/portfolio?tickers=AAPL.US,MSFT.US")
+
+    def test_pf_deviations_emitted(self):
+        url = create_link(
+            href="/compare",
+            tickers_list=[],
+            ccy="USD",
+            first_date="2015-01",
+            last_date="2020-12",
+            pf_tickers=["AAPL.US", "MSFT.US"],
+            pf_weights=[60, 40],
+            pf_abs_dev=5,
+            pf_rel_dev=10,
+        )
+        assert "pf_abs_dev=5" in url
+        assert "pf_rel_dev=10" in url
+
+    def test_pf_group_compact_in_okama_order(self):
+        # Portfolio params travel as one compact block, ordered like okama's
+        # Portfolio/Rebalance signatures: assets -> weights -> rebalancing
+        # (period, abs_deviation, rel_deviation) -> symbol (#23). Guards against
+        # a param being appended out of order (which splits the rebalancing trio).
+        url = create_link(
+            href="/compare",
+            tickers_list=[],
+            ccy="USD",
+            first_date="2015-01",
+            last_date="2020-12",
+            pf_tickers=["A.US", "B.US"],
+            pf_weights=[60, 40],
+            pf_rebal="year",
+            pf_symbol="MyPF",
+            pf_abs_dev=5,
+            pf_rel_dev=10,
+        )
+        order = ["pf_tickers", "pf_weights", "pf_rebal", "pf_abs_dev", "pf_rel_dev", "pf_symbol"]
+        positions = [url.index(f"{name}=") for name in order]
+        assert positions == sorted(positions), url
+
+    def test_portfolio_params_compact_in_okama_order(self):
+        # The Portfolio/EF link's own portfolio params follow the same okama
+        # order as the pf_* group: weights -> rebalancing (rebal, abs_dev,
+        # rel_dev) -> symbol. Guards the EF backtest link (EF -> Portfolio).
+        url = create_link(
+            href="/portfolio",
+            tickers_list=["A.US", "B.US"],
+            ccy="USD",
+            first_date="2015-01",
+            last_date="2020-12",
+            weights_list=[60, 40],
+            symbol="MyPF",
+            rebal="year",
+            abs_dev=5,
+            rel_dev=10,
+        )
+        order = ["weights", "rebal", "abs_dev", "rel_dev", "symbol"]
+        positions = [url.index(f"{name}=") for name in order]
+        assert positions == sorted(positions), url
