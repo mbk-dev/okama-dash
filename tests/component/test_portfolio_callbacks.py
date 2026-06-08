@@ -766,59 +766,73 @@ class TestMonteCarloLimitsValidation:
         assert submit_disabled is True
 
 
-class TestTsAccordionActiveItem:
+class TestTsCollapseIsOpen:
     def test_collapsed_by_default(self):
-        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_accordion_active_item
+        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_collapse_is_open
 
-        assert _ts_accordion_active_item(None, []) is None
+        assert _ts_collapse_is_open(None, []) is False
 
-    def test_expanded_for_time_series_strategy(self):
-        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_accordion_active_item
+    def test_open_for_time_series_strategy(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_collapse_is_open
 
-        assert _ts_accordion_active_item("time_series", []) == "custom-cashflows"
+        assert _ts_collapse_is_open("time_series", []) is True
 
-    def test_expanded_when_rows_prefilled(self):
-        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_accordion_active_item
+    def test_open_when_rows_prefilled(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_collapse_is_open
 
         rows = [{"index": 0, "date": "2030-01", "amount": 100.0}]
-        assert _ts_accordion_active_item("indexation", rows) == "custom-cashflows"
+        assert _ts_collapse_is_open("indexation", rows) is True
 
 
-class TestCashflowNestedAccordionLayout:
+class TestCashflowCustomCashflowsCollapse:
+    """Custom cash flows mirrors the Find-max-withdrawal element: a clickable
+    chevron header + dbc.Collapse — except for the time_series strategy, where
+    the block IS the strategy so the header is hidden and the body stays the
+    plain bordered block (unchanged from the former accordion ts-plain mode)."""
+
     def test_present_and_collapsed_for_default_strategy(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
 
-        accordion = _find_by_id(cashflow_accordion_item(), "pf-cf-ts-accordion")
-        assert accordion is not None
-        assert accordion.start_collapsed is True
-        assert getattr(accordion, "active_item", None) is None
+        item = cashflow_accordion_item()
+        collapse = _find_by_id(item, "pf-cf-ts-collapse")
+        assert collapse is not None
+        assert collapse.is_open is False
+        toggle = _find_by_id(item, "pf-cf-ts-toggle")
+        assert toggle is not None
+        assert toggle.style == {"cursor": "pointer", "userSelect": "none"}
+        chevron = _find_by_id(item, "pf-cf-ts-chevron")
+        assert chevron.className == "bi bi-chevron-right me-2"
 
-    def test_expanded_for_time_series_strategy(self):
+    def test_open_and_headerless_for_time_series_strategy(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
 
-        accordion = _find_by_id(cashflow_accordion_item(cf_strategy="time_series"), "pf-cf-ts-accordion")
-        assert accordion.active_item == "custom-cashflows"
+        item = cashflow_accordion_item(cf_strategy="time_series")
+        collapse = _find_by_id(item, "pf-cf-ts-collapse")
+        assert collapse.is_open is True
+        toggle = _find_by_id(item, "pf-cf-ts-toggle")
+        assert toggle.style == {"display": "none"}
 
-    def test_expanded_when_cf_ts_prefilled(self):
+    def test_time_series_body_keeps_plain_block_styling(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
 
-        accordion = _find_by_id(
-            cashflow_accordion_item(cf_strategy="indexation", cf_ts=[("2030-01", 5000)]),
-            "pf-cf-ts-accordion",
-        )
-        assert accordion.active_item == "custom-cashflows"
+        item = cashflow_accordion_item(cf_strategy="time_series")
+        body = _find_by_id(item, "pf-cf-ts-body")
+        assert "border" in body.className
+        assert "bg-body-tertiary" in body.className
 
-    def test_plain_mode_class_for_time_series_strategy(self):
+    def test_other_strategy_body_has_no_block_border(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
 
-        accordion = _find_by_id(cashflow_accordion_item(cf_strategy="time_series"), "pf-cf-ts-accordion")
-        assert accordion.class_name == "mt-3 ts-plain"
+        item = cashflow_accordion_item(cf_strategy="indexation")
+        body = _find_by_id(item, "pf-cf-ts-body")
+        assert "border" not in body.className
 
-    def test_accordion_chrome_class_for_other_strategies(self):
+    def test_open_when_cf_ts_prefilled(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
 
-        accordion = _find_by_id(cashflow_accordion_item(cf_strategy="indexation"), "pf-cf-ts-accordion")
-        assert accordion.class_name == "mt-3"
+        item = cashflow_accordion_item(cf_strategy="indexation", cf_ts=[("2030-01", 5000)])
+        collapse = _find_by_id(item, "pf-cf-ts-collapse")
+        assert collapse.is_open is True
 
 
 class TestToggleStrategyPanels:
@@ -844,16 +858,39 @@ class TestToggleStrategyPanels:
         assert (percentage, vds, cwd) == (hide, hide, hide)
 
 
-class TestOpenTsAccordionOnStrategyChange:
-    def test_time_series_opens_accordion_in_plain_mode(self):
-        from pages.portfolio.cards_portfolio.cashflow_controls import open_ts_accordion_for_time_series
+class TestSetTsCollapseForStrategy:
+    def test_time_series_opens_and_hides_header(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_body_class, set_ts_collapse_for_strategy
 
-        assert open_ts_accordion_for_time_series("time_series") == ("custom-cashflows", "mt-3 ts-plain")
+        is_open, chevron, toggle_style, body_class = set_ts_collapse_for_strategy("time_series")
+        assert is_open is True
+        assert chevron == "bi bi-chevron-down me-2"
+        assert toggle_style == {"display": "none"}
+        assert body_class == _ts_body_class("time_series")
 
-    def test_other_strategy_closes_accordion_and_restores_chrome(self):
-        from pages.portfolio.cards_portfolio.cashflow_controls import open_ts_accordion_for_time_series
+    def test_other_strategy_closes_and_shows_header(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import _ts_body_class, set_ts_collapse_for_strategy
 
-        assert open_ts_accordion_for_time_series("indexation") == (None, "mt-3")
+        is_open, chevron, toggle_style, body_class = set_ts_collapse_for_strategy("indexation")
+        assert is_open is False
+        assert chevron == "bi bi-chevron-right me-2"
+        assert toggle_style == {"cursor": "pointer", "userSelect": "none"}
+        assert body_class == _ts_body_class("indexation")
+
+
+class TestToggleTsCollapse:
+    """Clicking the Custom cash flows header flips the collapse and its chevron,
+    mirroring the Find-max-withdrawal toggle."""
+
+    def test_opening_sets_down_chevron(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import toggle_ts_collapse
+
+        assert toggle_ts_collapse(1, False) == (True, "bi bi-chevron-down me-2")
+
+    def test_closing_sets_right_chevron(self):
+        from pages.portfolio.cards_portfolio.cashflow_controls import toggle_ts_collapse
+
+        assert toggle_ts_collapse(1, True) == (False, "bi bi-chevron-right me-2")
 
 
 class TestManageTsRows:
@@ -861,7 +898,7 @@ class TestManageTsRows:
     the example withdrawal for the time_series strategy (the block IS the
     strategy), a blank row for every other strategy."""
 
-    def _run(self, trigger, active_item, rows=None, strategy="indexation"):
+    def _run(self, trigger, is_open, rows=None, strategy="indexation"):
         import dash
 
         from pages.portfolio.cards_portfolio.cashflow_controls import manage_ts_rows
@@ -872,7 +909,7 @@ class TestManageTsRows:
         amounts = [r["amount"] for r in rows]
         with patch.object(dash, "ctx") as mock_ctx:
             mock_ctx.triggered_id = trigger
-            return manage_ts_rows(0, [], active_item, ids, dates, amounts, strategy)
+            return manage_ts_rows(0, [], is_open, ids, dates, amounts, strategy)
 
     @staticmethod
     def _row_values(row):
@@ -882,22 +919,22 @@ class TestManageTsRows:
         return date_input.value, amount_input.value
 
     def test_initial_load_collapsed_creates_no_rows(self):
-        assert self._run(trigger=None, active_item=None) == []
+        assert self._run(trigger=None, is_open=False) == []
 
     def test_expand_in_non_ts_strategy_creates_one_empty_row(self):
-        result = self._run(trigger="pf-cf-ts-accordion", active_item="custom-cashflows", strategy="indexation")
+        result = self._run(trigger="pf-cf-ts-collapse", is_open=True, strategy="indexation")
 
         assert len(result) == 1
         assert self._row_values(result[0]) == (None, None)
 
     def test_expand_in_time_series_strategy_creates_example_withdrawal_row(self):
-        result = self._run(trigger="pf-cf-ts-accordion", active_item="custom-cashflows", strategy="time_series")
+        result = self._run(trigger="pf-cf-ts-collapse", is_open=True, strategy="time_series")
 
         assert len(result) == 1
         assert self._row_values(result[0]) == ("2020-01", -1000)
 
     def test_initial_load_open_creates_example_row_for_time_series(self):
-        result = self._run(trigger=None, active_item="custom-cashflows", strategy="time_series")
+        result = self._run(trigger=None, is_open=True, strategy="time_series")
 
         assert len(result) == 1
         assert self._row_values(result[0]) == ("2020-01", -1000)
@@ -905,7 +942,7 @@ class TestManageTsRows:
     def test_add_appends_empty_row(self):
         existing = [{"index": 0, "date": "2031-05", "amount": -500}]
 
-        result = self._run(trigger="pf-cf-ts-add", active_item="custom-cashflows", rows=existing)
+        result = self._run(trigger="pf-cf-ts-add", is_open=True, rows=existing)
 
         assert len(result) == 2
         assert self._row_values(result[0]) == ("2031-05", -500)
@@ -916,7 +953,7 @@ class TestManageTsRows:
 
         result = self._run(
             trigger={"type": "pf-cf-ts-remove", "index": 0},
-            active_item="custom-cashflows",
+            is_open=True,
             rows=existing,
             strategy="cwd",
         )
@@ -929,7 +966,7 @@ class TestManageTsRows:
 
         result = self._run(
             trigger={"type": "pf-cf-ts-remove", "index": 0},
-            active_item="custom-cashflows",
+            is_open=True,
             rows=existing,
             strategy="time_series",
         )
@@ -940,7 +977,7 @@ class TestManageTsRows:
     def test_collapse_keeps_existing_rows(self):
         existing = [{"index": 0, "date": "2031-05", "amount": -500}]
 
-        result = self._run(trigger="pf-cf-ts-accordion", active_item=None, rows=existing)
+        result = self._run(trigger="pf-cf-ts-collapse", is_open=False, rows=existing)
 
         assert len(result) == 1
         assert self._row_values(result[0]) == ("2031-05", -500)

@@ -90,19 +90,33 @@ def _build_initial_cwd_rows(cwd_tr):
     return rows or None
 
 
-def _ts_accordion_active_item(cf_strategy, ts_rows) -> str | None:
-    """Open the Custom cash flows accordion for the time_series strategy
+def _ts_collapse_is_open(cf_strategy, ts_rows) -> bool:
+    """Open the Custom cash flows collapse for the time_series strategy
     (the block IS the strategy) or when rows were prefilled from the URL."""
-    if cf_strategy == "time_series" or ts_rows:
-        return "custom-cashflows"
-    return None
+    return cf_strategy == "time_series" or bool(ts_rows)
 
 
-def _ts_accordion_class(cf_strategy) -> str:
-    """Plain-block look for the time_series strategy: the accordion header
-    would just repeat the selected strategy name, so `ts-plain` hides it
-    (assets/forms.css) and the body shows as the former bordered block."""
-    return "mt-3 ts-plain" if cf_strategy == "time_series" else "mt-3"
+def _chevron_class(is_open: bool) -> str:
+    """Bootstrap-icon class for the collapse chevron, matching the
+    Find-max-withdrawal toggle."""
+    return "bi bi-chevron-down me-2" if is_open else "bi bi-chevron-right me-2"
+
+
+def _ts_toggle_style(cf_strategy) -> dict:
+    """Hide the Custom cash flows header for the time_series strategy (the
+    dropdown already names it "Custom Time Series" and the block IS that
+    strategy's only input); show the clickable header otherwise."""
+    if cf_strategy == "time_series":
+        return {"display": "none"}
+    return {"cursor": "pointer", "userSelect": "none"}
+
+
+def _ts_body_class(cf_strategy) -> str:
+    """Plain bordered block for the headerless time_series strategy (unchanged
+    from the former accordion look); a chrome-less Find-style body otherwise."""
+    if cf_strategy == "time_series":
+        return "vstack gap-2 border rounded bg-body-tertiary p-3"
+    return "vstack gap-2 p-2"
 
 
 def cashflow_accordion_item(
@@ -129,6 +143,7 @@ def cashflow_accordion_item(
 ):
     ts_initial_rows = _build_initial_ts_rows(cf_ts)
     cwd_initial_rows = _build_initial_cwd_rows(cwd_tr)
+    ts_is_open = _ts_collapse_is_open(cf_strategy, ts_initial_rows)
     return dbc.AccordionItem(
         [
             # Strategy type selector
@@ -860,49 +875,61 @@ def cashflow_accordion_item(
             ),
             # ---- Custom cash flows (shared across all strategies) ----
             # okama's base CashFlow accepts time_series_dic for every strategy,
-            # so one-off user entries combine with the regular flow. Initially
-            # collapsed; expanded for time_series (the block IS the strategy)
-            # and for URL-prefilled entries.
-            dbc.Accordion(
+            # so one-off user entries combine with the regular flow. Mirrors the
+            # Find-max-withdrawal element above: a clickable chevron header +
+            # dbc.Collapse. Initially collapsed; expanded for time_series (the
+            # block IS that strategy — its header is hidden, the body keeps the
+            # former plain bordered look) and for URL-prefilled entries.
+            html.Div(
                 [
-                    dbc.AccordionItem(
+                    html.Div(
                         [
-                            dbc.Tooltip(tl.pf_cf_time_series, target="pf-info-cf-ts"),
-                            dbc.Row(
-                                [
-                                    dbc.Col(html.Label("Date (YYYY-MM)"), width=5),
-                                    dbc.Col(html.Label("Amount"), width=5),
-                                    dbc.Col(width=2),
-                                ],
-                            ),
-                            html.Div(
-                                id="pf-cf-ts-container",
-                                children=[_ts_row(r["index"], r["date"], r["amount"]) for r in ts_initial_rows],
-                            ),
-                            dbc.Row(
-                                dbc.Col(
-                                    dbc.Button(
-                                        "Add Entry", id="pf-cf-ts-add", n_clicks=0, size="sm", color="secondary"
-                                    ),
-                                ),
-                                class_name="mt-1",
-                            ),
-                            dbc.FormText(
-                                f"Negative amounts = withdrawals, positive = contributions "
-                                f"(max {MAX_TIMESERIES_ENTRIES} entries)"
-                            ),
-                        ],
-                        title=[
+                            html.I(className=_chevron_class(ts_is_open), id="pf-cf-ts-chevron"),
                             "Custom cash flows",
                             html.I(className="bi bi-info-square ms-2", id="pf-info-cf-ts"),
+                            dbc.Tooltip(tl.pf_cf_time_series, target="pf-info-cf-ts"),
                         ],
-                        item_id="custom-cashflows",
+                        id="pf-cf-ts-toggle",
+                        n_clicks=0,
+                        className="fw-bold",
+                        style=_ts_toggle_style(cf_strategy),
+                    ),
+                    dbc.Collapse(
+                        html.Div(
+                            [
+                                dbc.Row(
+                                    [
+                                        dbc.Col(html.Label("Date (YYYY-MM)"), width=5),
+                                        dbc.Col(html.Label("Amount"), width=5),
+                                        dbc.Col(width=2),
+                                    ],
+                                ),
+                                html.Div(
+                                    id="pf-cf-ts-container",
+                                    children=[_ts_row(r["index"], r["date"], r["amount"]) for r in ts_initial_rows],
+                                ),
+                                dbc.Row(
+                                    dbc.Col(
+                                        dbc.Button(
+                                            "Add Entry", id="pf-cf-ts-add", n_clicks=0, size="sm", color="secondary"
+                                        ),
+                                    ),
+                                    class_name="mt-1",
+                                ),
+                                dbc.FormText(
+                                    f"Negative amounts = withdrawals, positive = contributions "
+                                    f"(max {MAX_TIMESERIES_ENTRIES} entries)"
+                                ),
+                            ],
+                            id="pf-cf-ts-body",
+                            className=_ts_body_class(cf_strategy),
+                        ),
+                        id="pf-cf-ts-collapse",
+                        is_open=ts_is_open,
                     ),
                 ],
-                id="pf-cf-ts-accordion",
-                start_collapsed=True,
-                active_item=_ts_accordion_active_item(cf_strategy, ts_initial_rows),
-                class_name=_ts_accordion_class(cf_strategy),
+                id="pf-cf-ts-block",
+                className="mt-3",
             ),
         ],
         title="Cash Flow Strategy",
@@ -940,18 +967,33 @@ def toggle_strategy_panels(strategy):
 
 
 @callback(
-    Output("pf-cf-ts-accordion", "active_item"),
-    Output("pf-cf-ts-accordion", "class_name"),
+    Output("pf-cf-ts-collapse", "is_open", allow_duplicate=True),
+    Output("pf-cf-ts-chevron", "className", allow_duplicate=True),
+    Output("pf-cf-ts-toggle", "style"),
+    Output("pf-cf-ts-body", "className"),
     Input("pf-cf-strategy-type", "value"),
     prevent_initial_call=True,
 )
-def open_ts_accordion_for_time_series(strategy):
-    """Force-open the accordion in plain-block mode when switching to
-    time_series (the block IS that strategy's only input); collapse it and
-    restore the accordion chrome for any other strategy."""
-    if strategy == "time_series":
-        return "custom-cashflows", _ts_accordion_class(strategy)
-    return None, _ts_accordion_class(strategy)
+def set_ts_collapse_for_strategy(strategy):
+    """Force-open the Custom cash flows collapse and hide its header when
+    switching to time_series (the block IS that strategy's only input); collapse
+    it and restore the clickable Find-style header for any other strategy."""
+    is_open = strategy == "time_series"
+    return is_open, _chevron_class(is_open), _ts_toggle_style(strategy), _ts_body_class(strategy)
+
+
+@callback(
+    Output("pf-cf-ts-collapse", "is_open"),
+    Output("pf-cf-ts-chevron", "className"),
+    Input("pf-cf-ts-toggle", "n_clicks"),
+    State("pf-cf-ts-collapse", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_ts_collapse(n_clicks, is_open):
+    """Flip the Custom cash flows collapse and its chevron, mirroring the
+    Find-max-withdrawal toggle."""
+    new_open = not is_open
+    return new_open, _chevron_class(new_open)
 
 
 @callback(
@@ -1028,13 +1070,13 @@ def _ts_row(index, date_val=None, amount_val=None):
     Output("pf-cf-ts-container", "children"),
     Input("pf-cf-ts-add", "n_clicks"),
     Input({"type": "pf-cf-ts-remove", "index": ALL}, "n_clicks"),
-    Input("pf-cf-ts-accordion", "active_item"),
+    Input("pf-cf-ts-collapse", "is_open"),
     State({"type": "pf-cf-ts-date", "index": ALL}, "id"),
     State({"type": "pf-cf-ts-date", "index": ALL}, "value"),
     State({"type": "pf-cf-ts-amount", "index": ALL}, "value"),
     State("pf-cf-strategy-type", "value"),
 )
-def manage_ts_rows(add_clicks, remove_clicks, active_item, ids, dates, amounts, strategy):
+def manage_ts_rows(add_clicks, remove_clicks, is_open, ids, dates, amounts, strategy):
     trigger = dash.ctx.triggered_id
     rows = []
     if ids:
@@ -1051,8 +1093,8 @@ def manage_ts_rows(add_clicks, remove_clicks, active_item, ids, dates, amounts, 
     # the time_series strategy (the block IS the strategy), a blank row for
     # every other strategy — there the regular flow already exists and a
     # prefilled example would silently join the calculation. While the
-    # accordion is collapsed the container stays empty.
-    if not rows and active_item == "custom-cashflows":
+    # collapse is closed the container stays empty.
+    if not rows and is_open:
         if strategy == "time_series":
             rows = [{"index": 0, "date": TS_DEFAULT_DATE, "amount": TS_DEFAULT_AMOUNT}]
         else:

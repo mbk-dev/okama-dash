@@ -40,19 +40,6 @@
     min-height: 38px;
 }
 
-/* Custom cash flows (Portfolio, #pf-cf-ts-accordion): when the time_series
-   strategy is selected the nested accordion header would just repeat the
-   strategy name picked in the dropdown. `ts-plain` (set by the
-   open_ts_accordion_for_time_series callback / at build time) hides the
-   header and styles the body as the former bordered block. */
-#pf-cf-ts-accordion.ts-plain .accordion-header {
-    display: none;
-}
-
-#pf-cf-ts-accordion.ts-plain .accordion-item {
-    background-color: var(--bs-tertiary-bg);
-}
-
 /* "Go to" dropdown (Portfolio): dbc.DropdownMenu's default color renders the
    toggle as solid btn-primary; btn-outline-primary (toggle_class_name) wins
    every --bs-btn-* variable it declares, but never declares the background.

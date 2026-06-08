@@ -158,7 +158,7 @@ Rules for this repo:
 
 ## Test suite
 
-887 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+889 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -199,11 +199,13 @@ tests/
 │   │                                # CWD threshold validation, disable Add button logic,
 │   │                                # percentage input lives in cash-flow frequency row,
 │   │                                # custom cash flows in all strategies: _build_ts_dict parsing,
-│   │                                # _apply_custom_time_series on every strategy, nested accordion
-│   │                                # (collapsed default, closed on switch to non-TS, expanded for TS/URL
-│   │                                # prefill, ts-plain chrome-less mode for the TS strategy; row container
-│   │                                # empty while collapsed, on expand one example withdrawal row for the
-│   │                                # TS strategy / one blank row for every other strategy),
+│   │                                # _apply_custom_time_series on every strategy, Find-style collapse block
+│   │                                # (chevron header + dbc.Collapse, mirrors Find max withdrawal; closed
+│   │                                # default, closed on switch to non-TS, open for TS/URL prefill; TS keeps
+│   │                                # the headerless plain bordered body — toggle hidden, body border/bg
+│   │                                # unchanged; set_ts_collapse_for_strategy + toggle_ts_collapse; row
+│   │                                # container empty while collapsed, on expand one example withdrawal row
+│   │                                # for the TS strategy / one blank row for every other strategy),
 │   │                                # MC limits validation: check_validity_monte_carlo (n≤MC_PORTFOLIO_MAX,
 │   │                                # years 1..MC_PORTFOLIO_YEARS_MAX, n×years≤MC_PORTFOLIO_BUDGET, out-of-range
 │   │                                # string flagged not crashed) + submit gated on mc-years validity,
@@ -214,7 +216,7 @@ tests/
 │   │                                # VDS min/max withdrawal (min=0 kept), custom cash-flow row amounts —
 │   │                                # all dmc.NumberInput(thousandSeparator=" ") with float prefill,
 │   │                                # print_weights_sum returns one plain string (single children Output —
-│   │                                # a (text, flag) tuple leaks True into children, invalid ReactNode) (124 tests)
+│   │                                # a (text, flag) tuple leaks True into children, invalid ReactNode) (126 tests)
 │   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
 │   │                                # portfolio_weights, expand_weights, show/hide callbacks,
 │   │                                # copy-link carries rebal / omits default month,
@@ -262,10 +264,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 300 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 548 | ~9s |
+| `poetry run pytest -m component` | Dash callbacks | 550 | ~9s |
 | `poetry run pytest -m e2e` | Playwright browser | 39 | ~98s |
-| `poetry run pytest -q` | Everything | 887 | ~107s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 848 | ~10s |
+| `poetry run pytest -q` | Everything | 889 | ~107s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 850 | ~10s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -278,7 +280,7 @@ to a file in `tmp/` instead of `PIPE`.
 
 | Page | Unit | Component | E2E |
 |------|------|-----------|-----|
-| **Portfolio** | create_link (cf_ts owned by all strategies + activity rule, inactive-strategy omission; MC params deliberately NOT in links), symbols, build_distribution_parameters, reactive-estimation gates, MC limits validation (n/years/budget), Find result mapping/formatting helpers (#22: sign/units per strategy, display strings) | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, amount inputs as dmc.NumberInput with space thousands separator (#17: type, min, provider wrap, URL prefill coercion; extended to CWD Withdrawal amount with max=0, VDS min/max withdrawal with min=0, and custom cash-flow row amounts), custom cash flows in all strategies (_build_ts_dict, _apply_custom_time_series per strategy, nested accordion collapsed/expanded/force-open), MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats sections tabbed: table + distribution histograms (#18), CashFlow IRR section: percentile table + IRR histogram, NaN-safe (#19), compact tables on mobile, xlsx export n_clicks guard + Excel number formats (describe percent, survival decimal, wealth grouped int), "Go to" dropdown (#23: 3 link items; update_go_to_links builds EF page-level link + Compare/Benchmark pf_* handoff links; one gate disables the whole menu), Find max withdrawal (#22: collapse UI, hidden for TS, validation + gating with hint, solver callback mirroring the Submit dcf state incl. backtest override, per-strategy fill, error paths, result reset) | load, controls, mobile, shareable link (no MC params; reactive auto-estimate fills MC fields), submit→traces, Go to EF link → EF prefill, pf_* handoff to Compare/Benchmark |
+| **Portfolio** | create_link (cf_ts owned by all strategies + activity rule, inactive-strategy omission; MC params deliberately NOT in links), symbols, build_distribution_parameters, reactive-estimation gates, MC limits validation (n/years/budget), Find result mapping/formatting helpers (#22: sign/units per strategy, display strings) | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, amount inputs as dmc.NumberInput with space thousands separator (#17: type, min, provider wrap, URL prefill coercion; extended to CWD Withdrawal amount with max=0, VDS min/max withdrawal with min=0, and custom cash-flow row amounts), custom cash flows in all strategies (_build_ts_dict, _apply_custom_time_series per strategy, Find-style collapse block — chevron header + dbc.Collapse mirroring Find max withdrawal; TS keeps the headerless plain block), MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats sections tabbed: table + distribution histograms (#18), CashFlow IRR section: percentile table + IRR histogram, NaN-safe (#19), compact tables on mobile, xlsx export n_clicks guard + Excel number formats (describe percent, survival decimal, wealth grouped int), "Go to" dropdown (#23: 3 link items; update_go_to_links builds EF page-level link + Compare/Benchmark pf_* handoff links; one gate disables the whole menu), Find max withdrawal (#22: collapse UI, hidden for TS, validation + gating with hint, solver callback mirroring the Submit dcf state incl. backtest override, per-strategy fill, error paths, result reset) | load, controls, mobile, shareable link (no MC params; reactive auto-estimate fills MC fields), submit→traces, Go to EF link → EF prefill, pf_* handoff to Compare/Benchmark |
 | **Efficient Frontier** | adaptive grid step (ef_grid), chart label padding (centered labels), portfolio card builder (stat blocks, allocation bars) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio (both render portfolio cards — Selected with trace-name badge / Optimized with None-stat skipping — Sharpe from the rf-rate input; backtest link carries the EF object's rebalancing period, omits default month, tolerates legacy pickles), update_ef_cards (return_type hardwired to Geometric — Y-axis selector removed, chart always plots CAGR), simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace, customdata JSON-list serialization (plotly>=6 clickData regression), URL portfolio handoff (store parse, cached point, star trace, ticker-match rule, error isolation) | load, mobile, shareable link, submit→chart, info panel (assets names + info, #13 guard) |
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats, pf_* portfolio handoff (#23: store + chip prefill, chip-aware search/copy-link/EF-link/info, cached portfolio joins the AssetList with a pf-aware cache key) | load, shareable link, submit→traces, pf_* handoff (chip → submit → portfolio trace) |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types), pf_* portfolio handoff (#23: store + chip prefill, chip-aware search/copy-link/info, portfolio joins the AssetList after the benchmark with a pf-aware cache key) | load, shareable link, submit→traces, pf_* handoff (chip → submit → portfolio trace) |
