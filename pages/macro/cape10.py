@@ -102,7 +102,7 @@ def get_cape_snapshot_figure(snapshot: pd.Series, selected_symbols: list[str]) -
 
 def layout(tickers=None, first_date=None, last_date=None, plot=None, **kwargs):
     selected = filter_known(make_list_from_string(tickers), CAPE10_SERIES) or CAPE10_DEFAULTS
-    plot_type = plot if plot in _PLOT_VALUES else "history"
+    plot_type = plot if plot in _PLOT_VALUES else "snapshot"
     control_bar = dbc.Card(
         dbc.CardBody(
             [
@@ -200,7 +200,7 @@ def update_cape_link(n_clicks, href, symbols, plot_type):
         tickers_list=symbols or [],
         first_date=None,
         last_date=None,
-        plot=(plot_type, "history"),
+        plot=(plot_type, "snapshot"),
     )
 
 

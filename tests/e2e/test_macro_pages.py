@@ -25,8 +25,15 @@ class TestMacroAutoRender:
         traces.first.wait_for(state="attached", timeout=15_000)
         assert traces.count() == 3
 
-    def test_cape10_autorenders_history_lines(self, page, dash_server_url):
+    def test_cape10_autorenders_snapshot_bar(self, page, dash_server_url):
+        # Current snapshot is the default plot type: a horizontal bar of all 25 countries.
         page.goto(f"{dash_server_url}/macro/cape10", wait_until="domcontentloaded")
+        bars = page.locator("#cape-chart .barlayer .trace")
+        bars.first.wait_for(state="attached", timeout=15_000)
+        assert bars.count() >= 1
+
+    def test_cape10_history_via_url_renders_lines(self, page, dash_server_url):
+        page.goto(f"{dash_server_url}/macro/cape10?plot=history", wait_until="domcontentloaded")
         traces = page.locator("#cape-chart .cartesianlayer .scatterlayer .js-line")
         traces.first.wait_for(state="attached", timeout=15_000)
         assert traces.count() == 3

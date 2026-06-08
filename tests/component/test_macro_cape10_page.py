@@ -112,12 +112,17 @@ class TestLayoutAndLink:
         from pages.macro.macro_data import CAPE10_DEFAULTS
 
         assert _find_by_id(cape_page.layout(), "cape-series").value == CAPE10_DEFAULTS
-        page = cape_page.layout(tickers="USA_CAPE10.RATIO", plot="snapshot")
-        assert _find_by_id(page, "cape-plot-type").value == "snapshot"
+        # Current snapshot is the default plot type.
+        assert _find_by_id(cape_page.layout(), "cape-plot-type").value == "snapshot"
+        page = cape_page.layout(tickers="USA_CAPE10.RATIO", plot="history")
+        assert _find_by_id(page, "cape-plot-type").value == "history"
 
     def test_link_callback(self, cape_page):
-        link = cape_page.update_cape_link(1, "http://x/macro/cape10", ["USA_CAPE10.RATIO"], "snapshot")
-        assert "plot=snapshot" in link
+        # snapshot is the default → omitted from the link; history is emitted.
+        link = cape_page.update_cape_link(1, "http://x/macro/cape10", ["USA_CAPE10.RATIO"], "history")
+        assert "plot=history" in link
+        link_default = cape_page.update_cape_link(1, "http://x/macro/cape10", ["USA_CAPE10.RATIO"], "snapshot")
+        assert "plot=" not in link_default
 
     def test_empty_selection_disables_copy_link(self, cape_page):
         assert cape_page.disable_copy_link_cape([]) is True
