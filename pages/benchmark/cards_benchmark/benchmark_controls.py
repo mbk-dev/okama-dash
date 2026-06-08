@@ -18,6 +18,7 @@ from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
 import common.validators as validators
 from common.date_input import date_input, register_date_validation
+from common.url_portfolio import portfolio_option
 from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
     benchmark_options_tooltip_plot,
     benchmark_options_tooltip_window_size,
@@ -34,9 +35,16 @@ def benchmark_card_controls(
     first_date: Optional[str],
     last_date: Optional[str],
     ccy: Optional[str],
+    pf_def: Optional[dict] = None,
 ):
     tickers_list = make_list_from_string(tickers)
     currency_list = inflation.get_currency_list()
+    select_values = tickers_list if tickers_list else settings.default_symbols_benchmark
+    select_options = get_selected_symbol_options(select_values)
+    if pf_def:
+        # The synthetic option must be in data, or dmc renders no chip.
+        select_options = [portfolio_option(pf_def)] + select_options
+        select_values = [pf_def["symbol"]] + select_values
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -76,10 +84,8 @@ def benchmark_card_controls(
                         html.Label("Tickers to compare with benchmark"),
                         search_provider(
                             dmc.MultiSelect(
-                                data=get_selected_symbol_options(
-                                    tickers_list if tickers_list else settings.default_symbols_benchmark
-                                ),
-                                value=tickers_list if tickers_list else settings.default_symbols_benchmark,
+                                data=select_options,
+                                value=select_values,
                                 placeholder="Select tickers",
                                 id="benchmark-assets-list",
                                 searchable=True,

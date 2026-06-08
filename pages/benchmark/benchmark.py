@@ -1,7 +1,7 @@
 import typing
 
 import dash
-from dash import callback
+from dash import callback, dcc
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 
@@ -22,6 +22,7 @@ from pages.benchmark.cards_benchmark.benchmark_controls import benchmark_card_co
 
 from pages.benchmark.cards_benchmark.benchmark_description import card_benchmark_description
 from pages.benchmark.cards_benchmark.benchmark_info import card_benchmark_info
+from common.url_portfolio import parse_url_portfolio_group
 
 dash.register_page(
     __name__,
@@ -34,12 +35,27 @@ dash.register_page(
 )
 
 
-def layout(benchmark=None, tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
+def layout(
+    benchmark=None,
+    tickers=None,
+    first_date=None,
+    last_date=None,
+    ccy=None,
+    pf_tickers=None,
+    pf_weights=None,
+    pf_rebal=None,
+    pf_symbol=None,
+    **kwargs,
+):
+    # Portfolio handed off from the Portfolio page via URL (issue #23); the
+    # portfolio is a tested asset — the benchmark param keeps its own meaning.
+    pf_def = parse_url_portfolio_group(pf_tickers, pf_weights, pf_rebal, pf_symbol)
     page = dbc.Container(
         [
+            dcc.Store(id="benchmark-url-portfolio", data=pf_def),
             dbc.Row(
                 [
-                    dbc.Col(benchmark_card_controls(benchmark, tickers, first_date, last_date, ccy), lg=7),
+                    dbc.Col(benchmark_card_controls(benchmark, tickers, first_date, last_date, ccy, pf_def), lg=7),
                     dbc.Col(card_benchmark_info, lg=5),
                 ]
             ),
