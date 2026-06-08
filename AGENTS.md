@@ -547,6 +547,24 @@ complements the per-change checklist in "Code change workflow".
 
 ## Worktree — уборка после мерджа в dev
 
+**Сначала спаси проектную память worktree, потом удаляй.** Память сессии привязана
+к namespace из абсолютного `cwd` (`/`→`-`), поэтому у worktree он **другой**, чем у
+главного checkout. Главный checkout: `~/.claude/projects/-home-…-okama-dash/memory`
+— это симлинк на синкаемый `~/claude/memory/okama-dash`. А worktree пишет память в
+**свой** namespace `~/.claude/projects/-home-…-okama-dash-<task>/memory/` — отдельную,
+**не** синкаемую директорию, которой нет в репозитории `~/claude`. При мердже ветки
+worktree в `dev` эту память легко потерять (она не в синкаемом месте, а worktree вот-вот
+удалят). Поэтому **перед `git worktree remove`**:
+
+1. Проверь, писала ли сессия worktree память:
+   `ls ~/.claude/projects/-home-…-okama-dash-<task>/memory/` (namespace = abs-путь
+   worktree с `/`→`-`).
+2. Если да — перенеси новые/обновлённые файлы в синкаемую `~/claude/memory/okama-dash/`
+   (сверяя с уже лежащими там — не затирай более свежие записи вслепую), обнови
+   `MEMORY.md`-указатели, затем закоммить и запушь `~/claude` (правило
+   `claude_repo_auto_commit`).
+3. Только после этого удаляй worktree.
+
 Задача разрабатывается в выделенном git worktree (например, `okama-dash-macro`
 для макро-раздела). Как только ветка задачи **смерджена в `dev`**, её worktree
 **удаляется вместе с локальной директорией** — не оставляй отработавшие worktree
