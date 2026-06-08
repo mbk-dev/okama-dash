@@ -138,7 +138,7 @@ Rules for this repo:
 
 ## Test suite
 
-821 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+823 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -239,10 +239,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 266 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 519 | ~9s |
+| `poetry run pytest -m component` | Dash callbacks | 521 | ~9s |
 | `poetry run pytest -m e2e` | Playwright browser | 36 | ~93s |
-| `poetry run pytest -q` | Everything | 821 | ~120s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 785 | ~10s |
+| `poetry run pytest -q` | Everything | 823 | ~105s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 787 | ~10s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -260,7 +260,7 @@ to a file in `tmp/` instead of `PIPE`.
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
-| **Macro (Inflation / Rates / CAPE10 / Real Estate*)** | catalog integrity + overlay map (ECB=MRO) + rates groups (key/mm) + RATE_TO_INFLATION + RE catalog (25 CAPE, Russia suspended), cached accessors (Asset full-history + AssetList shared keyspace + private-API upgrade guard), describe-merge + grid formatters, link builder, Download-data helper, mocks | per-page REACTIVE callbacks (every control an Input, no Submit) + error annotation, inflation monthly-bar (last published month highlighted per country) + EUR pp-NaN fallback + 3-row stats, rates 3 plot types (Rates/Real rates/Current snapshot, group inferred for snapshot, empty-pairs guard), CAPE10/Rates no stats/dates, snapshot (monthly cache, mobile outside ticks), chart-data store on every page, copy-link guard | reactive render w/o Submit, inflation stats+download via DOM, navbar (RE hidden), prefill, rates group switch, mobile (*Real Estate hidden from navbar, reachable by URL) |
+| **Macro (Inflation / Rates / CAPE10 / Real Estate*)** | catalog integrity + overlay map (ECB=MRO) + rates groups (key/mm) + RATE_TO_INFLATION + RE catalog (25 CAPE, Russia suspended), cached accessors (Asset full-history + AssetList shared keyspace + private-API upgrade guard), describe-merge + grid formatters, link builder, Download-data helper, mocks | per-page REACTIVE callbacks (every control an Input, no Submit) + error annotation, inflation monthly-bar (last published month highlighted per country) + EUR pp-NaN fallback + 3-row stats, rates 3 plot types (Rates/Real rates/Current snapshot, group inferred for snapshot, empty-pairs guard, charts clipped to 2000-01 — no date controls, avoids RU 1990s hyperinflation), CAPE10/Rates no stats/dates, snapshot (monthly cache, mobile outside ticks), chart-data store on every page, copy-link guard | reactive render w/o Submit, inflation stats+download via DOM, navbar (RE hidden), prefill, rates group switch, mobile (*Real Estate hidden from navbar, reachable by URL) |
 | **common/ & tools/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_subtitle, format_points), dump_callbacks (callback wiring map formatter) | change_style_for_hidden_row, grid_export (xlsx via dcc.Download + rowdata_to_xlsx_download; Excel number formats mirror the on-page grid formatters), grid sorting disabled on every AG Grid (all 6 grid-building files) | — |
 
 ### Known gaps
