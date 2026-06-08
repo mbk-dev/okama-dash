@@ -306,9 +306,12 @@ class TestUrlParamGrouping:
         url = create_link(**BASE_PARAMS, symbol="PORTFOLIO1", rebal="year", abs_dev=20, rel_dev=50)
         assert "rebal=year&abs_dev=20&rel_dev=50" in url
 
-    def test_symbol_precedes_rebalancing_group(self):
+    def test_symbol_follows_rebalancing_group(self):
+        # okama order (Portfolio.weights -> rebalancing_strategy -> Portfolio.symbol):
+        # symbol is emitted AFTER the rebalancing group, keeping rebal/abs_dev/rel_dev
+        # contiguous.
         url = create_link(**BASE_PARAMS, symbol="PORTFOLIO1", rebal="year", abs_dev=20)
-        assert url.index("symbol=") < url.index("rebal=")
+        assert url.index("rebal=") < url.index("symbol=")
 
     def test_cashflow_params_grouped(self):
         url = create_link(
@@ -775,5 +778,25 @@ class TestCreateLinkPortfolioGroup:
             pf_rel_dev=10,
         )
         order = ["pf_tickers", "pf_weights", "pf_rebal", "pf_abs_dev", "pf_rel_dev", "pf_symbol"]
+        positions = [url.index(f"{name}=") for name in order]
+        assert positions == sorted(positions), url
+
+    def test_portfolio_params_compact_in_okama_order(self):
+        # The Portfolio/EF link's own portfolio params follow the same okama
+        # order as the pf_* group: weights -> rebalancing (rebal, abs_dev,
+        # rel_dev) -> symbol. Guards the EF backtest link (EF -> Portfolio).
+        url = create_link(
+            href="/portfolio",
+            tickers_list=["A.US", "B.US"],
+            ccy="USD",
+            first_date="2015-01",
+            last_date="2020-12",
+            weights_list=[60, 40],
+            symbol="MyPF",
+            rebal="year",
+            abs_dev=5,
+            rel_dev=10,
+        )
+        order = ["weights", "rebal", "abs_dev", "rel_dev", "symbol"]
         positions = [url.index(f"{name}=") for name in order]
         assert positions == sorted(positions), url

@@ -193,9 +193,11 @@ def create_link(
 
     # Data-driven builder: (name, value, emit_rule)
     # emit_rule: "if_not_none" | ("skip_if_default", default_value) | ("skip_if_zero")
-    # Params are emitted in GROUPS so related settings sit together in the URL:
-    # base (ccy/dates) -> portfolio identity (weights/symbol/benchmark) ->
-    # rebalancing (rebal/abs_dev/rel_dev) -> cash flow (everything else).
+    # Params are emitted in GROUPS so related settings sit together in the URL,
+    # each portfolio group ordered like okama's Portfolio/Rebalance signature:
+    # base (ccy/dates) -> pf_* handoff (pf_tickers/pf_weights/pf_rebal/pf_abs_dev/
+    # pf_rel_dev/pf_symbol) -> portfolio (weights -> rebalancing rebal/abs_dev/
+    # rel_dev -> symbol) -> benchmark -> cash flow (everything else).
     params = [
         ("ccy", ccy, ("skip_if_default", "USD")),
         ("first_date", first_date, ("skip_if_default", "2000-01")),
@@ -209,11 +211,11 @@ def create_link(
         ("pf_rel_dev", pf_rel_dev, "if_not_none"),
         ("pf_symbol", pf_symbol, ("skip_if_default", "PORTFOLIO")),
         ("weights", ",".join(str(w) for w in weights_list) if weights_list else None, "if_not_none"),
-        ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
-        ("benchmark", benchmark, "if_not_none"),
         ("rebal", rebal, ("skip_if_default", "month")),
         ("abs_dev", abs_dev, "if_not_none"),
         ("rel_dev", rel_dev, "if_not_none"),
+        ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
+        ("benchmark", benchmark, "if_not_none"),
         ("initial_amount", initial_amount, ("skip_if_default", settings.INITIAL_INVESTMENT_DEFAULT)),
         ("cashflow", cashflow, "if_not_none"),
         ("discount_rate", discount_rate, "if_not_none"),
