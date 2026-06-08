@@ -70,6 +70,14 @@ class TestChartCard:
         assert "chart-card" in card.class_name
 
 
+class TestChartCardDownload:
+    def test_chart_card_carries_download_block(self):
+        from pages.macro.cards_macro.macro_chart import macro_chart_card
+
+        ids = _collect_ids(macro_chart_card("infl"))
+        assert {"infl-download-data-button", "infl-store-chart-data", "infl-download-xlsx"} <= ids
+
+
 def iter_components(component):
     """Depth-first walk over a Dash component tree."""
     stack = [component]
