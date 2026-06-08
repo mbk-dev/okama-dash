@@ -14,29 +14,19 @@ import plotly.graph_objects as go
 from dash import callback, dcc, html
 from dash.dependencies import Input, Output, State
 
-from common.date_input import register_date_validation
 from common.html_elements.copy_link_div import create_copy_link_div
-from common.html_elements.grid_export import (
-    create_grid_header_with_export,
-    percent_column_formats,
-    rowdata_to_xlsx_download,
-)
 from common.mobile_screens import adopt_small_screens
+from common.object_cache import TTL_EFFICIENT_FRONTIER, get_or_create
 from common.parse_query import make_list_from_string
 from pages.macro import macro_objects
 from pages.macro.cards_macro.eng.rates_description_txt import rates_description_text
 from pages.macro.cards_macro.macro_chart import macro_chart_card
-from pages.macro.cards_macro.macro_controls import (
-    date_columns,
-    dates_ready,
-    make_submit_guard,
-    series_multiselect_column,
-)
+from pages.macro.cards_macro.macro_controls import make_submit_guard, series_multiselect_column
 from pages.macro.cards_macro.macro_description import macro_description_card
-from pages.macro.cards_macro.macro_stats import build_describe_table, build_stats_grid
+from pages.macro.cards_macro.macro_download import register_macro_download
 from pages.macro.macro_data import (
     ALL_RATES_SERIES,
-    MACRO_FIRST_DATE_DEFAULT,
+    RATE_TO_INFLATION,
     RATES_GROUPS,
     filter_known,
     rates_group_catalog,
@@ -57,7 +47,17 @@ dash.register_page(
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
-def get_rates_figure(objects: list) -> go.Figure:
+_PLOT_OPTIONS = [
+    {"label": "Rates", "value": "history"},
+    {"label": "Real rates", "value": "real"},
+    {"label": "Current snapshot", "value": "snapshot"},
+]
+_PLOT_VALUES = {o["value"] for o in _PLOT_OPTIONS}
+_HIGHLIGHT_COLOR = "#636efa"
+_MUTED_COLOR = "#c8d0dd"
+
+
+def get_rates_figure(objects: list) -> tuple[go.Figure, pd.DataFrame]:
     df = pd.concat([obj.values_monthly for obj in objects], axis=1) * 100
     df.columns = [ALL_RATES_SERIES.get(col, col) for col in df.columns]
     ind = df.index.to_timestamp("M")
@@ -66,14 +66,83 @@ def get_rates_figure(objects: list) -> go.Figure:
     fig.update_xaxes(rangeslider_visible=True)
     fig.update_yaxes(title_text="Rate, %", zeroline=True, zerolinecolor="black", zerolinewidth=1)
     fig.update_layout(xaxis_title=None, legend_title="Series")
+    return fig, df
+
+
+def get_real_rates_figure(pairs: dict) -> tuple[go.Figure, pd.DataFrame]:
+    """pairs: {rate_symbol: (rate_obj, inflation_obj)} -> nominal − trailing-12m inflation."""
+    cols = {}
+    for symbol, (rate_obj, infl_obj) in pairs.items():
+        nominal = rate_obj.values_monthly
+        infl = infl_obj.rolling_inflation
+        common = nominal.index.intersection(infl.index)
+        cols[ALL_RATES_SERIES.get(symbol, symbol)] = (nominal.loc[common] - infl.loc[common]) * 100
+    df = pd.DataFrame(cols)
+    ind = df.index.to_timestamp("M")
+    fig = px.line(df, x=ind, y=df.columns, title="Real interest rates (nominal − 12m inflation)", height=600)
+    fig.update_traces(line_shape="hv")
+    fig.update_xaxes(rangeslider_visible=True)
+    fig.update_yaxes(title_text="Real rate, %", zeroline=True, zerolinecolor="black", zerolinewidth=1)
+    fig.update_layout(xaxis_title=None, legend_title="Series")
+    return fig, df
+
+
+def _group_of(symbols: list[str]) -> str:
+    for group, (_, catalog, _) in RATES_GROUPS.items():
+        if any(s in catalog for s in symbols):
+            return group
+    return "key"
+
+
+def get_rates_snapshot(group: str) -> pd.Series:
+    """Latest rate (%) for every series in the group (cached per month)."""
+    month = pd.Timestamp.today().strftime("%Y-%m")
+    catalog = rates_group_catalog(group)
+
+    def build() -> pd.Series:
+        values = {
+            ALL_RATES_SERIES.get(sym, sym): float(
+                macro_objects.get_rate_object(sym, None, None).values_monthly.iloc[-1]
+            )
+            * 100
+            for sym in catalog
+        }
+        return pd.Series(values).sort_values()
+
+    snapshot, _ = get_or_create(
+        obj_type="rates_snapshot",
+        constructor_fn=build,
+        cache_key_params={"symbols": sorted(catalog), "month": month},
+        ttl_seconds=TTL_EFFICIENT_FRONTIER,
+    )
+    return snapshot
+
+
+def get_rates_snapshot_figure(snapshot: pd.Series, selected_labels: set) -> go.Figure:
+    colors = [_HIGHLIGHT_COLOR if name in selected_labels else _MUTED_COLOR for name in snapshot.index]
+    fig = go.Figure(
+        go.Bar(
+            x=snapshot.to_numpy(),
+            y=list(snapshot.index),
+            orientation="h",
+            marker_color=colors,
+            text=[f"{v:.2f}" for v in snapshot.to_numpy()],
+            textposition="outside",
+        )
+    )
+    fig.update_layout(
+        title="Current rates (selected highlighted)", height=600, xaxis_title="Rate, %", margin={"l": 160}
+    )
+    fig.update_xaxes(range=[min(0.0, float(snapshot.min()) * 1.15), float(snapshot.max()) * 1.15])
     return fig
 
 
-def layout(tickers=None, first_date=None, last_date=None, group=None, **kwargs):
+def layout(tickers=None, plot=None, group=None, **kwargs):
     group_value = group if group in RATES_GROUPS else "key"
     catalog = rates_group_catalog(group_value)
     group_defaults = RATES_GROUPS[group_value][2]
     selected = filter_known(make_list_from_string(tickers), catalog) or group_defaults
+    plot_type = plot if plot in _PLOT_VALUES else "history"
     control_bar = dbc.Card(
         dbc.CardBody(
             [
@@ -97,11 +166,19 @@ def layout(tickers=None, first_date=None, last_date=None, group=None, **kwargs):
                             sm=6,
                         ),
                         series_multiselect_column("rates", catalog, selected),
-                        *date_columns("rates", first_date or MACRO_FIRST_DATE_DEFAULT, last_date or today_str),
+                        dbc.Col(
+                            [
+                                html.Label("Plot"),
+                                dcc.Dropdown(
+                                    options=_PLOT_OPTIONS, value=plot_type, clearable=False, id="rates-plot-type"
+                                ),
+                            ],
+                            lg=2,
+                            md=3,
+                            sm=6,
+                        ),
                     ],
                     class_name="g-2",
-                    # Top-aligned: every column starts with a one-line Label, so
-                    # the 38px controls land on one horizontal line.
                     align="start",
                 ),
                 dbc.Row(
@@ -116,22 +193,11 @@ def layout(tickers=None, first_date=None, last_date=None, group=None, **kwargs):
         ),
         class_name="mb-3",
     )
-    stats_card = dbc.Card(
-        dbc.CardBody(
-            [
-                create_grid_header_with_export("Statistics", "rates-statistics-export-btn"),
-                dcc.Download(id="rates-statistics-download"),
-                html.Div(id="rates-describe-table"),
-            ]
-        ),
-        class_name="mb-3",
-    )
     return dbc.Container(
         [
             html.H2("Key rates", className="my-2"),
             control_bar,
             macro_chart_card("rates"),
-            stats_card,
             macro_description_card("Key rates widget", rates_description_text),
         ],
         class_name="mt-2",
@@ -142,26 +208,39 @@ def layout(tickers=None, first_date=None, last_date=None, group=None, **kwargs):
 @callback(
     Output("rates-chart", "figure"),
     Output("rates-chart", "config"),
-    Output("rates-describe-table", "children"),
+    Output("rates-store-chart-data", "data"),
     Input("store", "data"),
-    # Reactive page: every control is an Input — changing any of them
-    # recalculates immediately, and the missing prevent_initial_call renders
-    # the chart on page load. There is no Submit button.
     Input("rates-series", "value"),
-    Input("rates-first-date", "value"),
-    Input("rates-last-date", "value"),
+    Input("rates-plot-type", "value"),
 )
-def update_rates_page(screen, symbols, fd_value, ld_value):
-    if not symbols or not dates_ready(fd_value, ld_value):
+def update_rates_page(screen, symbols, plot_type):
+    if not symbols:
         raise dash.exceptions.PreventUpdate
-    fd_value, ld_value = fd_value or None, ld_value or None
     try:
-        objects = [macro_objects.get_rate_object(s, fd_value, ld_value) for s in symbols]
-        fig = get_rates_figure(objects)
-        stats_df = build_describe_table([obj.describe() for obj in objects])
-        grid = build_stats_grid(stats_df, "rates-describe-table-grid", value_format="percent")
+        if plot_type == "snapshot":
+            group = _group_of(symbols)
+            snapshot = get_rates_snapshot(group)
+            selected = {ALL_RATES_SERIES.get(s, s) for s in symbols}
+            fig = get_rates_snapshot_figure(snapshot, selected)
+            store_df = snapshot.to_frame("Rate, %")
+        elif plot_type == "real":
+            pairs = {
+                s: (
+                    macro_objects.get_rate_object(s, None, None),
+                    macro_objects.get_inflation_object(RATE_TO_INFLATION[s], None, None),
+                )
+                for s in symbols
+                if s in RATE_TO_INFLATION
+            }
+            fig, store_df = get_real_rates_figure(pairs)
+        else:
+            objects = [macro_objects.get_rate_object(s, None, None) for s in symbols]
+            fig, store_df = get_rates_figure(objects)
+        store_json = store_df.to_json(orient="split", default_handler=str)
         fig, config = adopt_small_screens(fig, screen)
-        return fig, config, grid
+        if plot_type == "snapshot":
+            fig.update_yaxes(ticklabelposition="outside")
+        return fig, config, store_json
     except Exception as e:
         alert_fig = go.Figure()
         alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
@@ -203,30 +282,17 @@ def disable_copy_link_rates(selected):
     State("rates-url", "href"),
     State("rates-series", "value"),
     State("rates-group", "value"),
-    State("rates-first-date", "value"),
-    State("rates-last-date", "value"),
+    State("rates-plot-type", "value"),
 )
-def update_rates_link(n_clicks, href, symbols, group, first_date, last_date):
+def update_rates_link(n_clicks, href, symbols, group, plot):
     return build_macro_link(
         href=href,
         tickers_list=symbols or [],
-        first_date=first_date,
-        last_date=last_date,
+        first_date=None,
+        last_date=None,
         group=(group, "key"),
+        plot=(plot, "history"),
     )
 
 
-@callback(
-    Output("rates-statistics-download", "data"),
-    Input("rates-statistics-export-btn", "n_clicks"),
-    State("rates-describe-table-grid", "rowData"),
-    prevent_initial_call=True,
-)
-def export_rates_stats(n_clicks, row_data):
-    return rowdata_to_xlsx_download(
-        n_clicks, row_data, "rates_statistics.xlsx", column_formats=percent_column_formats(row_data)
-    )
-
-
-register_date_validation("rates-first-date")
-register_date_validation("rates-last-date")
+register_macro_download("rates")
