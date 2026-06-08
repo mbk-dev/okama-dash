@@ -14,6 +14,7 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.html_elements.submit_spinner import create_submit_spinner
 from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
+from common.url_portfolio import portfolio_option
 import common.validators as validators
 from common.date_input import date_input, register_date_validation
 from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
@@ -30,9 +31,16 @@ def card_controls(
     first_date: Optional[str],
     last_date: Optional[str],
     ccy: Optional[str],
+    pf_def: Optional[dict] = None,
 ):
     tickers_list = make_list_from_string(tickers)
     currency_list = inflation.get_currency_list()
+    select_values = tickers_list if tickers_list else settings.default_symbols
+    select_options = get_selected_symbol_options(select_values)
+    if pf_def:
+        # The synthetic option must be in data, or dmc renders no chip.
+        select_options = [portfolio_option(pf_def)] + select_options
+        select_values = [pf_def["symbol"]] + select_values
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -42,10 +50,8 @@ def card_controls(
                         html.Label("Tickers to compare"),
                         search_provider(
                             dmc.MultiSelect(
-                                data=get_selected_symbol_options(
-                                    tickers_list if tickers_list else settings.default_symbols
-                                ),
-                                value=tickers_list if tickers_list else settings.default_symbols,
+                                data=select_options,
+                                value=select_values,
                                 placeholder="Select assets",
                                 id="al-symbols-list",
                                 searchable=True,

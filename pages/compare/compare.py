@@ -4,7 +4,7 @@ import dash
 import dash.exceptions
 import dash_ag_grid as dag
 import plotly
-from dash import State, callback
+from dash import State, callback, dcc
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 
@@ -26,6 +26,7 @@ from common.chart_helpers import (
     format_points,
     make_error_alert,
 )
+from common.url_portfolio import parse_url_portfolio_group
 import plotly.graph_objects as go
 
 from common.html_elements.submit_spinner import submit_spinner_running
@@ -46,12 +47,26 @@ dash.register_page(
 )
 
 
-def layout(tickers=None, first_date=None, last_date=None, ccy=None, **kwargs):
+def layout(
+    tickers=None,
+    first_date=None,
+    last_date=None,
+    ccy=None,
+    pf_tickers=None,
+    pf_weights=None,
+    pf_rebal=None,
+    pf_symbol=None,
+    **kwargs,
+):
+    # Portfolio handed off from the Portfolio page via URL (issue #23);
+    # None for ordinary links without a pf_* group.
+    pf_def = parse_url_portfolio_group(pf_tickers, pf_weights, pf_rebal, pf_symbol)
     page = dbc.Container(
         [
+            dcc.Store(id="al-url-portfolio", data=pf_def),
             dbc.Row(
                 [
-                    dbc.Col(card_controls(tickers, first_date, last_date, ccy), lg=7),
+                    dbc.Col(card_controls(tickers, first_date, last_date, ccy, pf_def), lg=7),
                     dbc.Col(card_assets_info, lg=5),
                 ]
             ),
