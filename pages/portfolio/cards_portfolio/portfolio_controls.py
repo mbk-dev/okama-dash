@@ -904,6 +904,8 @@ def update_link_pf(
     Input("pf-last-date", "value"),
     Input("pf-rebalancing-period", "value"),
     Input("pf-ticker", "value"),
+    Input("pf-rebal-abs-deviation", "value"),
+    Input("pf-rebal-rel-deviation", "value"),
 )
 def update_go_to_links(
     tickers_list: Optional[list],
@@ -913,14 +915,18 @@ def update_go_to_links(
     last_date: str,
     rebal: str,
     symbol: Optional[str],
+    abs_dev: Optional[float],
+    rel_dev: Optional[float],
 ) -> tuple[str, str, str]:
     """Build the three "Go to" hrefs carrying the portfolio.
 
     EF keeps the page-level vocabulary (tickers define the frontier, weights +
     symbol are the portfolio section) — same as the EF "Backtest portfolio"
     link, in reverse. Compare/Benchmark take the portfolio as its own pf_*
-    param group + ccy/dates: their page-level tickers keep their own meaning,
-    and no cash-flow params travel (issue #23).
+    param group + ccy/dates, including the rebalancing deviations (abs/rel):
+    their page-level tickers keep their own meaning, and no cash-flow params
+    travel. EF gets the period only — okama's EfficientFrontier ignores the
+    deviations (issue #23).
     """
     tickers = [t for t in tickers_list if t]
     # Drop cleared rows ("" from a blanked dcc number input) so create_link's
@@ -947,6 +953,8 @@ def update_go_to_links(
         "pf_weights": weights,
         "pf_rebal": rebal,
         "pf_symbol": symbol,
+        "pf_abs_dev": abs_dev,
+        "pf_rel_dev": rel_dev,
     }
     return ef_href, create_link(href="/compare", **handoff), create_link(href="/benchmark", **handoff)
 

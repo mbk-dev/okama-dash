@@ -16,6 +16,8 @@ PF_DEF = {
     "weights": [60.0, 40.0],
     "rebal": "year",
     "symbol": "MyPF.PF",
+    "abs_dev": None,
+    "rel_dev": None,
 }
 
 
@@ -160,3 +162,9 @@ class TestBenchmarkMainCallbackWithPortfolio:
         mock_pf.assert_not_called()
         assert mock_al_cls.call_args.args[0] == ["SP500TR.INDX", "GOOG.US"]
         assert captured["cache_key_params"]["pf"] is None
+
+    def test_deviations_flow_to_portfolio_builder(self):
+        pf_def = dict(PF_DEF, abs_dev=5.0, rel_dev=10.0)
+        mock_pf, mock_al_cls, captured = self._run(["MyPF.PF"], pf_def)
+        mock_pf.assert_called_once_with(pf_def, ccy="USD", first_date="2020-01", last_date="2024-12")
+        assert captured["cache_key_params"]["pf"] == "AAPL.US:60,MSFT.US:40;year;MyPF.PF;5;10"

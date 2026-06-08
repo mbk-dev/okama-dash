@@ -50,11 +50,13 @@ def layout(
     pf_weights=None,
     pf_rebal=None,
     pf_symbol=None,
+    pf_abs_dev=None,
+    pf_rel_dev=None,
     **kwargs,
 ):
     # Portfolio handed off from the Portfolio page via URL (issue #23); the
     # portfolio is a tested asset — the benchmark param keeps its own meaning.
-    pf_def = parse_url_portfolio_group(pf_tickers, pf_weights, pf_rebal, pf_symbol)
+    pf_def = parse_url_portfolio_group(pf_tickers, pf_weights, pf_rebal, pf_symbol, pf_abs_dev, pf_rel_dev)
     page = dbc.Container(
         [
             dcc.Store(id="benchmark-url-portfolio", data=pf_def),

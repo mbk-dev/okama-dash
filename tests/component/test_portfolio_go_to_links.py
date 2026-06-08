@@ -3,7 +3,7 @@ import pytest
 
 pytestmark = pytest.mark.component
 
-ARGS = (["AAPL.US", "MSFT.US"], [60, 40], "EUR", "2015-01", "2020-12", "year", "MyPF")
+ARGS = (["AAPL.US", "MSFT.US"], [60, 40], "EUR", "2015-01", "2020-12", "year", "MyPF", None, None)
 
 
 class TestGoToLinks:
@@ -52,7 +52,7 @@ class TestGoToLinks:
     def test_defaults_omitted_in_handoff_links(self):
         today_str = pd.Timestamp.today().strftime("%Y-%m")
         _, compare, _ = self._links(
-            ["AAPL.US", "MSFT.US"], [50, 50], "USD", "2000-01", today_str, "month", "PORTFOLIO"
+            ["AAPL.US", "MSFT.US"], [50, 50], "USD", "2000-01", today_str, "month", "PORTFOLIO", None, None
         )
         assert "pf_rebal=" not in compare
         assert "pf_symbol=" not in compare
@@ -63,7 +63,7 @@ class TestGoToLinks:
 
     def test_empty_rows_skipped(self):
         ef, compare, _ = self._links(
-            ["AAPL.US", "MSFT.US", None], [60, 40, None], "EUR", "2015-01", "2020-12", "year", None
+            ["AAPL.US", "MSFT.US", None], [60, 40, None], "EUR", "2015-01", "2020-12", "year", None, None, None
         )
         assert "tickers=AAPL.US,MSFT.US" in ef
         assert "pf_tickers=AAPL.US,MSFT.US" in compare
@@ -75,11 +75,21 @@ class TestGoToLinks:
         # the single callback drives all three hrefs, so a raise here would also
         # kill the EF link. Empty entries are dropped, strings coerced to numbers.
         ef, compare, benchmark = self._links(
-            ["AAPL.US", "MSFT.US"], ["60", ""], "EUR", "2015-01", "2020-12", "year", "MyPF"
+            ["AAPL.US", "MSFT.US"], ["60", ""], "EUR", "2015-01", "2020-12", "year", "MyPF", None, None
         )
         assert "pf_weights=60" in compare
         assert "weights=60" in ef
         assert benchmark.startswith("/benchmark?")
+
+    def test_deviations_in_handoff_not_in_ef(self):
+        ef, compare, benchmark = self._links(
+            ["AAPL.US", "MSFT.US"], [60, 40], "EUR", "2015-01", "2020-12", "year", "MyPF", 5, 10
+        )
+        assert "pf_abs_dev=5" in compare
+        assert "pf_rel_dev=10" in compare
+        assert "pf_abs_dev=5" in benchmark
+        assert "pf_abs_dev" not in ef
+        assert "pf_rel_dev" not in ef
 
 
 class TestGoToMenuGating:

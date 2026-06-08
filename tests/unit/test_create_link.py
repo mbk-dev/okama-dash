@@ -740,3 +740,18 @@ class TestCreateLinkPortfolioGroup:
         url = create_link(**BASE_PARAMS)
         assert "pf_tickers" not in url
         assert url.startswith("/portfolio?tickers=AAPL.US,MSFT.US")
+
+    def test_pf_deviations_emitted(self):
+        url = create_link(
+            href="/compare",
+            tickers_list=[],
+            ccy="USD",
+            first_date="2015-01",
+            last_date="2020-12",
+            pf_tickers=["AAPL.US", "MSFT.US"],
+            pf_weights=[60, 40],
+            pf_abs_dev=5,
+            pf_rel_dev=10,
+        )
+        assert "pf_abs_dev=5" in url
+        assert "pf_rel_dev=10" in url

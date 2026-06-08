@@ -23,6 +23,8 @@ PF_DEF = {
     "weights": [60.0, 40.0],
     "rebal": "year",
     "symbol": "MyPF.PF",
+    "abs_dev": None,
+    "rel_dev": None,
 }
 
 
@@ -34,7 +36,19 @@ class TestParseUrlPortfolioGroup:
             "weights": [60.0, 40.0],
             "rebal": "month",
             "symbol": "PORTFOLIO.PF",
+            "abs_dev": None,
+            "rel_dev": None,
         }
+
+    def test_deviations_parsed(self):
+        result = parse_url_portfolio_group("AAPL.US,MSFT.US", "60,40", "year", "MyPF", "5", "10")
+        assert result["abs_dev"] == 5.0
+        assert result["rel_dev"] == 10.0
+
+    def test_bad_deviation_ignored(self):
+        result = parse_url_portfolio_group("AAPL.US,MSFT.US", "60,40", None, None, "abc", "")
+        assert result["abs_dev"] is None
+        assert result["rel_dev"] is None
 
     def test_symbol_normalized_spaces_and_suffix(self):
         result = parse_url_portfolio_group("AAPL.US,MSFT.US", "60,40", "year", "My PF")
@@ -96,15 +110,30 @@ class TestPfLinkKwargs:
             "pf_weights": [60.0, 40.0],
             "pf_rebal": "year",
             "pf_symbol": "MyPF.PF",
+            "pf_abs_dev": None,
+            "pf_rel_dev": None,
         }
 
     def test_default_symbol_omitted(self):
         pf_def = dict(PF_DEF, symbol="PORTFOLIO.PF")
         assert pf_link_kwargs(pf_def)["pf_symbol"] is None
 
+    def test_link_kwargs_carry_deviations(self):
+        pf_def = dict(PF_DEF, abs_dev=5.0, rel_dev=10.0)
+        kw = pf_link_kwargs(pf_def)
+        assert kw["pf_abs_dev"] == 5.0
+        assert kw["pf_rel_dev"] == 10.0
+
 
 class TestPfCacheToken:
     def test_token_format(self):
+        assert pf_cache_token(PF_DEF) == "AAPL.US:60,MSFT.US:40;year;MyPF.PF"
+
+    def test_token_includes_deviations_when_present(self):
+        pf_def = dict(PF_DEF, abs_dev=5.0, rel_dev=10.0)
+        assert pf_cache_token(pf_def) == "AAPL.US:60,MSFT.US:40;year;MyPF.PF;5;10"
+
+    def test_token_unchanged_without_deviations(self):
         assert pf_cache_token(PF_DEF) == "AAPL.US:60,MSFT.US:40;year;MyPF.PF"
 
     def test_none_for_absent_def(self):
@@ -160,7 +189,7 @@ class TestGetOrCreateUrlPortfolio:
         ):
             up.get_or_create_url_portfolio(PF_DEF, ccy="EUR", first_date="2015-01", last_date="2020-12")
 
-        mock_rebal.assert_called_once_with(period="year")
+        mock_rebal.assert_called_once_with(period="year", abs_deviation=None, rel_deviation=None)
         mock_pf.assert_called_once_with(
             assets=["AAPL.US", "MSFT.US"],
             weights=[0.6, 0.4],
@@ -171,3 +200,23 @@ class TestGetOrCreateUrlPortfolio:
             rebalancing_strategy=mock_rebal.return_value,
             symbol="MyPF.PF",
         )
+
+    def test_constructor_builds_portfolio_with_deviations(self):
+        from unittest.mock import patch
+
+        import common.url_portfolio as up
+
+        def run_constructor(*, obj_type, constructor_fn, cache_key_params, ttl_seconds):
+            return constructor_fn(), "k.pkl"
+
+        pf_def = dict(PF_DEF, abs_dev=5.0, rel_dev=10.0)
+        with (
+            patch.object(up, "get_or_create", side_effect=run_constructor),
+            # ok.Portfolio is patched so _construct() doesn't build a real one;
+            # the assertion is on the Rebalance the constructor passes to it.
+            patch.object(up.ok, "Portfolio"),
+            patch.object(up.ok, "Rebalance") as mock_rebal,
+        ):
+            up.get_or_create_url_portfolio(pf_def, ccy="EUR", first_date="2015-01", last_date="2020-12")
+
+        mock_rebal.assert_called_once_with(period="year", abs_deviation=0.05, rel_deviation=0.10)

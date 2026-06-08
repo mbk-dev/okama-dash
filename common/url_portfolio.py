@@ -28,7 +28,12 @@ def normalize_portfolio_symbol(symbol: str) -> str:
 
 
 def parse_url_portfolio_group(
-    pf_tickers: str | None, pf_weights: str | None, pf_rebal: str | None = None, pf_symbol: str | None = None
+    pf_tickers: str | None,
+    pf_weights: str | None,
+    pf_rebal: str | None = None,
+    pf_symbol: str | None = None,
+    pf_abs_dev: str | None = None,
+    pf_rel_dev: str | None = None,
 ) -> dict | None:
     """Parse the pf_* URL param group into store data.
 
@@ -48,11 +53,22 @@ def parse_url_portfolio_group(
     # Inverted comparison so a NaN sum (empty CSV field) also fails the check.
     if not abs(sum(weights_list) - 100.0) < 1e-6:
         return None
+
+    def _opt_float(v):
+        if v in (None, ""):
+            return None
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return None
+
     return {
         "tickers": tickers_list,
         "weights": weights_list,
         "rebal": pf_rebal or PF_REBAL_DEFAULT,
         "symbol": normalize_portfolio_symbol(pf_symbol or PF_SYMBOL_DEFAULT),
+        "abs_dev": _opt_float(pf_abs_dev),
+        "rel_dev": _opt_float(pf_rel_dev),
     }
 
 
@@ -90,6 +106,8 @@ def pf_link_kwargs(pf_def: dict) -> dict:
         "pf_weights": pf_def["weights"],
         "pf_rebal": pf_def["rebal"],
         "pf_symbol": None if symbol == normalize_portfolio_symbol(PF_SYMBOL_DEFAULT) else symbol,
+        "pf_abs_dev": pf_def.get("abs_dev"),
+        "pf_rel_dev": pf_def.get("rel_dev"),
     }
 
 
@@ -99,7 +117,17 @@ def pf_cache_token(pf_def: dict | None) -> str | None:
     if not pf_def:
         return None
     pairs = ",".join(f"{t}:{w:g}" for t, w in zip(pf_def["tickers"], pf_def["weights"], strict=True))
-    return _CACHE_KEY_UNSAFE.sub("_", f"{pairs};{pf_def['rebal']};{pf_def['symbol']}")
+    token = f"{pairs};{pf_def['rebal']};{pf_def['symbol']}"
+    abs_dev = pf_def.get("abs_dev")
+    rel_dev = pf_def.get("rel_dev")
+    # Append deviations only when at least one is present, so tokens for
+    # deviation-less portfolios stay byte-identical (existing cache slots).
+    # :g strips the trailing .0 of float store values (same as the weights above).
+    if abs_dev is not None or rel_dev is not None:
+        abs_part = f"{abs_dev:g}" if abs_dev is not None else ""
+        rel_part = f"{rel_dev:g}" if rel_dev is not None else ""
+        token += f";{abs_part};{rel_part}"
+    return _CACHE_KEY_UNSAFE.sub("_", token)
 
 
 def get_or_create_url_portfolio(pf_def: dict, *, ccy: str, first_date: str, last_date: str) -> ok.Portfolio:
@@ -111,6 +139,8 @@ def get_or_create_url_portfolio(pf_def: dict, *, ccy: str, first_date: str, last
     computes inflation itself.
     """
     weights = [w / 100.0 for w in pf_def["weights"]]
+    abs_dev = pf_def.get("abs_dev")
+    rel_dev = pf_def.get("rel_dev")
 
     def _construct() -> ok.Portfolio:
         return ok.Portfolio(
@@ -120,7 +150,12 @@ def get_or_create_url_portfolio(pf_def: dict, *, ccy: str, first_date: str, last
             first_date=first_date,
             last_date=last_date,
             inflation=False,
-            rebalancing_strategy=ok.Rebalance(period=pf_def["rebal"]),
+            # Deviations are raw percentages in the store; okama wants fractions.
+            rebalancing_strategy=ok.Rebalance(
+                period=pf_def["rebal"],
+                abs_deviation=abs_dev / 100.0 if abs_dev else None,
+                rel_deviation=rel_dev / 100.0 if rel_dev else None,
+            ),
             symbol=pf_def["symbol"],
         )
 

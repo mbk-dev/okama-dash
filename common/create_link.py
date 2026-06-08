@@ -163,6 +163,8 @@ def create_link(
     pf_weights=None,
     pf_rebal=None,
     pf_symbol=None,
+    pf_abs_dev=None,
+    pf_rel_dev=None,
     # rebalancing deviation
     abs_dev=None,
     rel_dev=None,
@@ -202,6 +204,8 @@ def create_link(
         ("pf_weights", ",".join(f"{float(w):g}" for w in pf_weights) if pf_weights else None, "if_not_none"),
         ("pf_rebal", pf_rebal, ("skip_if_default", "month")),
         ("pf_symbol", pf_symbol, ("skip_if_default", "PORTFOLIO")),
+        ("pf_abs_dev", pf_abs_dev, "if_not_none"),
+        ("pf_rel_dev", pf_rel_dev, "if_not_none"),
         ("weights", ",".join(str(w) for w in weights_list) if weights_list else None, "if_not_none"),
         ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
         ("benchmark", benchmark, "if_not_none"),
