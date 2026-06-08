@@ -5,11 +5,13 @@ the tickers MultiSelect, joins the AssetList on Submit, and round-trips
 through the page's copy-link.
 """
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 pytestmark = pytest.mark.component
+
+COMPARE_MODULE = "pages.compare.compare"
 
 PF_DEF = {
     "tickers": ["AAPL.US", "MSFT.US"],
@@ -153,3 +155,55 @@ class TestCompareAssetsInfoTokenFilter:
 
         with pytest.raises(dash.exceptions.PreventUpdate):
             assets_info.pf_update_asset_names_info(["MyPF.PF"], "USD", False, PF_DEF)
+
+
+class TestCompareMainCallbackWithPortfolio:
+    @staticmethod
+    def _run_inner(selected_symbols, pf_def):
+        from pages.compare.compare import _update_graf_compare_inner
+        from tests.mocks.okama_mock import make_mock_asset_list
+
+        pf_object = MagicMock()
+        pf_object.symbol = "MyPF.PF"
+        al = make_mock_asset_list(["MyPF.PF", "GOOG.US"])
+        captured = {}
+
+        def fake_get_or_create(*, obj_type, constructor_fn, cache_key_params, ttl_seconds):
+            captured["cache_key_params"] = cache_key_params
+            return constructor_fn(), "test.pkl"
+
+        with (
+            patch("pages.compare.compare.get_or_create", side_effect=fake_get_or_create),
+            patch("pages.compare.compare.get_or_create_url_portfolio", return_value=pf_object) as mock_pf,
+            patch("pages.compare.compare.ok.AssetList", return_value=al) as mock_al_cls,
+        ):
+            _update_graf_compare_inner(
+                screen=None,
+                log_on=False,
+                selected_symbols=selected_symbols,
+                ccy="USD",
+                fd_value="2020-01",
+                ld_value="2024-12",
+                plot_type="wealth",
+                inflation_on=False,
+                rolling_window=2,
+                pf_def=pf_def,
+            )
+        return mock_pf, mock_al_cls, captured
+
+    def test_portfolio_object_joins_assetlist_and_cache_key(self):
+        mock_pf, mock_al_cls, captured = self._run_inner(["MyPF.PF", "GOOG.US"], PF_DEF)
+
+        mock_pf.assert_called_once_with(PF_DEF, ccy="USD", first_date="2020-01", last_date="2024-12")
+        assets = mock_al_cls.call_args.args[0]
+        assert assets[0] is mock_pf.return_value
+        assert assets[1:] == ["GOOG.US"]
+        assert captured["cache_key_params"]["symbols"] == ["GOOG.US"]
+        assert captured["cache_key_params"]["pf"] == "AAPL.US:60,MSFT.US:40;year;MyPF.PF"
+
+    def test_without_chip_nothing_changes(self):
+        mock_pf, mock_al_cls, captured = self._run_inner(["GOOG.US"], PF_DEF)
+
+        mock_pf.assert_not_called()
+        assert mock_al_cls.call_args.args[0] == ["GOOG.US"]
+        assert captured["cache_key_params"]["pf"] is None
