@@ -14,6 +14,7 @@ from common.html_elements.copy_link_div import create_copy_link_div
 from common.html_elements.submit_spinner import create_submit_spinner
 from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
+from common.url_portfolio import pf_link_kwargs, portfolio_option, split_portfolio_from_selection
 import common.validators as validators
 from common.date_input import date_input, register_date_validation
 from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
@@ -30,9 +31,16 @@ def card_controls(
     first_date: Optional[str],
     last_date: Optional[str],
     ccy: Optional[str],
+    pf_def: Optional[dict] = None,
 ):
     tickers_list = make_list_from_string(tickers)
     currency_list = inflation.get_currency_list()
+    select_values = tickers_list if tickers_list else settings.default_symbols
+    select_options = get_selected_symbol_options(select_values)
+    if pf_def:
+        # The synthetic option must be in data, or dmc renders no chip.
+        select_options = [portfolio_option(pf_def)] + select_options
+        select_values = [pf_def["symbol"]] + select_values
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -42,10 +50,8 @@ def card_controls(
                         html.Label("Tickers to compare"),
                         search_provider(
                             dmc.MultiSelect(
-                                data=get_selected_symbol_options(
-                                    tickers_list if tickers_list else settings.default_symbols
-                                ),
-                                value=tickers_list if tickers_list else settings.default_symbols,
+                                data=select_options,
+                                value=select_values,
                                 placeholder="Select assets",
                                 id="al-symbols-list",
                                 searchable=True,
@@ -264,10 +270,19 @@ def update_inflation_switch(plot_options: str, inflation_switch_value):
     State("al-base-currency", "value"),
     State("al-first-date", "value"),
     State("al-last-date", "value"),
+    State("al-url-portfolio", "data"),
     prevent_initial_call=True,
 )
-def update_link_al(n_clicks, href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
-    return create_link(ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list)
+def update_link_al(
+    n_clicks, href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str, pf_def: Optional[dict]
+):
+    tickers, has_pf = split_portfolio_from_selection(tickers_list, pf_def)
+    # While the chip is in the selection the link carries the pf_* group:
+    # a link shared after the handoff must not silently lose the portfolio.
+    pf_kwargs = pf_link_kwargs(pf_def) if has_pf else {}
+    return create_link(
+        ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers, **pf_kwargs
+    )
 
 
 @callback(
@@ -276,19 +291,28 @@ def update_link_al(n_clicks, href: str, tickers_list: Optional[list], ccy: str, 
     State("al-base-currency", "value"),
     State("al-first-date", "value"),
     State("al-last-date", "value"),
+    State("al-url-portfolio", "data"),
     prevent_initial_call=False,
 )
-def update_link_to_ef(tickers_list: Optional[list], ccy: str, first_date: str, last_date: str):
-    return create_link(ccy=ccy, first_date=first_date, href="/", last_date=last_date, tickers_list=tickers_list)
+def update_link_to_ef(
+    tickers_list: Optional[list], ccy: str, first_date: str, last_date: str, pf_def: Optional[dict]
+):
+    tickers, _ = split_portfolio_from_selection(tickers_list, pf_def)
+    return create_link(ccy=ccy, first_date=first_date, href="/", last_date=last_date, tickers_list=tickers)
 
 
 @callback(
     Output("al-symbols-list", "data"),
     Input("al-symbols-list", "searchValue"),
     Input("al-symbols-list", "value"),
+    State("al-url-portfolio", "data"),
 )
-def optimize_search_al(search_value, selected_values):
-    return search_symbol_options(search_value, selected_values)
+def optimize_search_al(search_value, selected_values, pf_def):
+    options = search_symbol_options(search_value, selected_values)
+    if pf_def:
+        # Keep the chip renderable and re-addable after removal.
+        options = [portfolio_option(pf_def)] + options
+    return options
 
 
 @callback(
@@ -329,19 +353,19 @@ def disable_al_link_button(tickers_list) -> bool:
 @callback(
     Output("al-controls-switch-to-ef-link", "disabled"),
     Input("al-symbols-list", "value"),
+    State("al-url-portfolio", "data"),
 )
-def disable_ef_link_button(tickers_list) -> bool:
+def disable_ef_link_button(tickers_list, pf_def) -> bool:
     """
-    Disable "Copy Link" button.
+    Disable the "Open in Efficient Frontier" link.
 
-    Conditions:
+    Conditions (real tickers only — the portfolio chip is not an EF asset):
     - list of tickers is empty
     - number of tickers is more than allowed (in settings)
     - number of tickers is 1
     """
-    first_condition = check_if_list_empty_or_big(tickers_list)
-    second_condition = len(tickers_list) == 1
-    return first_condition or second_condition
+    tickers, _ = split_portfolio_from_selection(tickers_list, pf_def)
+    return check_if_list_empty_or_big(tickers) or len(tickers) == 1
 
 
 @callback(

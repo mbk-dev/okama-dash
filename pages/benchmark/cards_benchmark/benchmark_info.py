@@ -1,12 +1,13 @@
 import dash_ag_grid as dag
 import dash_bootstrap_components as dbc
 from dash import html, callback
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
 import okama as ok
 
 from common.html_elements.info_ag_grid import get_assets_names, get_info
+from common.url_portfolio import split_portfolio_from_selection
 
 card_benchmark_info = dbc.Card(
     dbc.CardBody(
@@ -27,10 +28,15 @@ card_benchmark_info = dbc.Card(
     Input("benchmark-assets-list", "value"),  # assets tickers
     Input("select-benchmark", "value"),  # benchmark ticker
     Input("benchmark-base-currency", "value"),  # currency
+    State("benchmark-url-portfolio", "data"),
     prevent_initial_call=False,
 )
-def pf_update_asset_names_info(assets: list, benchmark: str, ccy: str) -> tuple[dag.AgGrid, dag.AgGrid]:
+def pf_update_asset_names_info(
+    assets: list, benchmark: str, ccy: str, pf_def: dict | None
+) -> tuple[dag.AgGrid, dag.AgGrid]:
     assets_to_compare = [i for i in assets if i is not None]
+    # The portfolio chip is not a DB symbol: the info panel shows DB assets only.
+    assets_to_compare, _ = split_portfolio_from_selection(assets_to_compare, pf_def)
     assets = [benchmark] + assets_to_compare if benchmark else assets_to_compare
     if not assets:
         raise PreventUpdate

@@ -15,6 +15,10 @@ CASES = [
     ("pages.compare.compare", "al-wealth-indexes.figure", "al-submit-spinner"),
     ("pages.benchmark.benchmark", "benchmark-graph.figure", "benchmark-submit-spinner"),
     ("pages.efficient_frontier.frontier", "ef-graf.figure", "ef-submit-spinner"),
+    # Find solver: looked up by pf-cf-amount.value (unique to find_max_withdrawal) —
+    # reset_find_result's duplicate output pf-cf-find-result.children@<hash> registers
+    # earlier and would substring-match a spec without `running`.
+    ("pages.portfolio.portfolio", "pf-cf-amount.value", "pf-cf-find-spinner"),
 ]
 
 

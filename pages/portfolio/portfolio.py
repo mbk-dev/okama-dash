@@ -285,6 +285,7 @@ def layout(
     Output(component_id="pf-describe-table", component_property="children"),
     Output(component_id="pf-monte-carlo-statistics", component_property="children"),
     Output(component_id="pf-monte-carlo-wealth-statistics", component_property="children"),
+    Output(component_id="pf-monte-carlo-cashflow-irr-statistics", component_property="children"),
     Output(component_id="pf-store-chart-data", component_property="data"),
     Output(component_id="pf-error-toast", component_property="is_open"),
     Output(component_id="pf-error-toast", component_property="children"),
@@ -409,16 +410,7 @@ def update_graf_portfolio(
     if trigger == "pf-logarithmic-scale-switch":
         patched_fig = dash.Patch()
         patched_fig["layout"]["yaxis"]["type"] = "log" if log_on else "linear"
-        return (
-            patched_fig,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-        )
+        return (patched_fig,) + (dash.no_update,) * 8
 
     distribution_parameters_monte_carlo = build_distribution_parameters(
         distribution_monte_carlo,
@@ -481,6 +473,7 @@ def update_graf_portfolio(
         return (
             empty_fig,
             {},
+            dag.AgGrid(),
             dag.AgGrid(),
             dag.AgGrid(),
             dag.AgGrid(),
@@ -559,6 +552,26 @@ def export_pf_wealth_statistics_xlsx(n_clicks, row_data):
         row_data,
         "wealth_statistics.xlsx",
         column_formats={"2": "int", "3": "int", "5": "int", "6": "int"},
+    )
+
+
+@callback(
+    Output("pf-cashflow-irr-statistics-download", "data"),
+    Input("pf-cashflow-irr-statistics-export-btn", "n_clicks"),
+    State("pf-cashflow-irr-statistics-grid", "rowData"),
+    prevent_initial_call=True,
+)
+def export_pf_cashflow_irr_statistics_xlsx(n_clicks, row_data):
+    """Trigger xlsx export for Monte Carlo cash flow IRR statistics grid."""
+    from common.html_elements.grid_export import rowdata_to_xlsx_download
+
+    # Grid fields: 1/3 = labels, 2/4 = IRR fractions (desktop); the compact
+    # mobile grid only has 1/2, extra keys are simply unused.
+    return rowdata_to_xlsx_download(
+        n_clicks,
+        row_data,
+        "cashflow_irr_statistics.xlsx",
+        column_formats={"2": "percent", "4": "percent"},
     )
 
 
@@ -660,9 +673,67 @@ def auto_estimate_distribution_parameters(
     return _format_params_output_by_distribution(distribution, params)
 
 
-def _update_graf_portfolio_inner(
-    screen,
-    log_on,
+@callback(
+    Output("pf-cf-find-result", "children"),
+    Output("pf-cf-find-result", "className"),
+    Output("pf-cf-amount", "value"),
+    Output("pf-cf-percentage", "value"),
+    Output("pf-cf-vds-percentage", "value"),
+    Output("pf-cf-cwd-amount", "value"),
+    Input("pf-cf-find-button", "n_clicks"),
+    State("pf-cf-find-goal", "value"),
+    State("pf-cf-find-percentile", "value"),
+    State("pf-cf-find-target-sp", "value"),
+    State({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),
+    State({"type": "pf-dynamic-input", "index": ALL}, "value"),
+    State(component_id="pf-base-currency", component_property="value"),
+    State(component_id="pf-rebalancing-period", component_property="value"),
+    State(component_id="pf-rebal-abs-deviation", component_property="value"),
+    State(component_id="pf-rebal-rel-deviation", component_property="value"),
+    State(component_id="pf-first-date", component_property="value"),
+    State(component_id="pf-last-date", component_property="value"),
+    State(component_id="pf-initial-amount", component_property="value"),
+    State(component_id="pf-discount-rate", component_property="value"),
+    State(component_id="pf-ticker", component_property="value"),
+    State(component_id="pf-cf-strategy-type", component_property="value"),
+    State(component_id="pf-cf-frequency", component_property="value"),
+    State(component_id="pf-cf-amount", component_property="value"),
+    State(component_id="pf-cf-indexation", component_property="value"),
+    State(component_id="pf-cf-percentage", component_property="value"),
+    State(component_id="pf-cf-vds-percentage", component_property="value"),
+    State(component_id="pf-cf-vds-min-withdrawal", component_property="value"),
+    State(component_id="pf-cf-vds-max-withdrawal", component_property="value"),
+    State(component_id="pf-cf-vds-adjust-minmax", component_property="value"),
+    State(component_id="pf-cf-vds-floor", component_property="value"),
+    State(component_id="pf-cf-vds-ceiling", component_property="value"),
+    State(component_id="pf-cf-vds-adjust-fc", component_property="value"),
+    State(component_id="pf-cf-vds-indexation", component_property="value"),
+    State(component_id="pf-cf-cwd-amount", component_property="value"),
+    State(component_id="pf-cf-cwd-indexation", component_property="value"),
+    State({"type": "pf-cf-cwd-threshold", "index": ALL}, "value"),
+    State({"type": "pf-cf-cwd-reduction", "index": ALL}, "value"),
+    State({"type": "pf-cf-ts-date", "index": ALL}, "value"),
+    State({"type": "pf-cf-ts-amount", "index": ALL}, "value"),
+    State(component_id="pf-inflation-switch", component_property="value"),
+    State(component_id="pf-monte-carlo-number", component_property="value"),
+    State(component_id="pf-monte-carlo-years", component_property="value"),
+    State(component_id="pf-monte-carlo-distribution", component_property="value"),
+    State(component_id="pf-monte-carlo-backtest", component_property="value"),
+    State(component_id="pf-mc-norm-mu", component_property="value"),
+    State(component_id="pf-mc-norm-sigma", component_property="value"),
+    State(component_id="pf-mc-lognorm-shape", component_property="value"),
+    State(component_id="pf-mc-lognorm-scale", component_property="value"),
+    State(component_id="pf-mc-t-df", component_property="value"),
+    State(component_id="pf-mc-t-loc", component_property="value"),
+    State(component_id="pf-mc-t-scale", component_property="value"),
+    running=submit_spinner_running("pf-cf-find-spinner"),
+    prevent_initial_call=True,
+)
+def find_max_withdrawal(
+    n_clicks,
+    goal,
+    percentile,
+    target_sp,
     assets,
     weights,
     ccy,
@@ -693,15 +764,160 @@ def _update_graf_portfolio_inner(
     cwd_reductions,
     ts_dates,
     ts_amounts,
-    plot_type,
     inflation_on,
-    rolling_window,
     n_monte_carlo,
     years_monte_carlo,
     distribution_monte_carlo,
     show_backtest,
-    distribution_parameters_monte_carlo=None,
+    mc_norm_mu=None,
+    mc_norm_sigma=None,
+    mc_lognorm_shape=None,
+    mc_lognorm_scale=None,
+    mc_t_df=None,
+    mc_t_loc=None,
+    mc_t_scale=None,
 ):
+    """Search for the largest sustainable withdrawal (issue #22).
+
+    Separate from Submit: each solver evaluation runs a full MC simulation
+    (up to iter_max=20 + 2 boundary evaluations), so the search takes seconds
+    of server compute. Builds the same pf.dcf state the Submit forecast path
+    builds, so Find results match the forecast the user then runs.
+    """
+    no_fill = (dash.no_update,) * 4
+    if cf_strategy == "time_series":
+        # The block is hidden for time_series; defensive guard for stale clicks.
+        return "Not supported for the Custom Time Series strategy.", "ms-2 text-warning", *no_fill
+    distribution_parameters_monte_carlo = build_distribution_parameters(
+        distribution_monte_carlo,
+        mc_norm_mu,
+        mc_norm_sigma,
+        mc_lognorm_shape,
+        mc_lognorm_scale,
+        mc_t_df,
+        mc_t_loc,
+        mc_t_scale,
+    )
+    try:
+        pf_object = _build_cached_portfolio(
+            assets=assets,
+            weights=weights,
+            ccy=ccy,
+            rebalancing_period=rebalancing_period,
+            rebal_abs_deviation=rebal_abs_deviation,
+            rebal_rel_deviation=rebal_rel_deviation,
+            fd_value=fd_value,
+            ld_value=ld_value,
+            initial_amount=initial_amount,
+            discount_rate=discount_rate,
+            symbol=symbol,
+            cf_strategy=cf_strategy,
+            cf_frequency=cf_frequency,
+            cf_amount=cf_amount,
+            cf_indexation=cf_indexation,
+            cf_percentage=cf_percentage,
+            vds_percentage=vds_percentage,
+            vds_min_withdrawal=vds_min_withdrawal,
+            vds_max_withdrawal=vds_max_withdrawal,
+            vds_adjust_minmax=vds_adjust_minmax,
+            vds_floor=vds_floor,
+            vds_ceiling=vds_ceiling,
+            vds_adjust_fc=vds_adjust_fc,
+            vds_indexation=vds_indexation,
+            cwd_amount=cwd_amount,
+            cwd_indexation=cwd_indexation,
+            cwd_thresholds=cwd_thresholds,
+            cwd_reductions=cwd_reductions,
+            ts_dates=ts_dates,
+            ts_amounts=ts_amounts,
+            inflation_on=inflation_on,
+        )
+        initial_investment = pf_object.dcf.cashflow_parameters.initial_investment
+        if show_backtest == "yes":
+            df_backtest = pf_object.dcf.wealth_index(discounting="fv", include_negative_values=False)[
+                [pf_object.symbol]
+            ]
+            _nullify_after_first_zero(df_backtest, pf_object.symbol)
+            last_backtest_value = df_backtest.iat[-1, -1]
+        else:
+            last_backtest_value = initial_investment
+        if not _prepare_dcf_forecast_state(
+            pf_object,
+            last_backtest_value,
+            distribution_monte_carlo,
+            years_monte_carlo,
+            n_monte_carlo,
+            distribution_parameters_monte_carlo,
+        ):
+            return (
+                "Backtest ends with a depleted balance — nothing to withdraw.",
+                "ms-2 text-warning",
+                *no_fill,
+            )
+        solver_kwargs = {"goal": goal, "percentile": int(percentile)}
+        if goal == "survival_period":
+            solver_kwargs["target_survival_period"] = int(target_sp)
+        result = pf_object.dcf.find_the_largest_withdrawals_size(**solver_kwargs)
+    except ValueError as e:
+        return f"Error: {e}", "ms-2 text-danger", *no_fill
+    except Exception:
+        logging.exception("Find max withdrawal failed")
+        return (
+            "Search failed — check the portfolio and Monte Carlo inputs.",
+            "ms-2 text-danger",
+            *no_fill,
+        )
+    if not result.success:
+        return "No solution found in range (0-100% of initial investment).", "ms-2 text-warning", *no_fill
+    value = _map_find_result(cf_strategy, result)
+    fills = dict.fromkeys(("indexation", "percentage", "vds", "cwd"), dash.no_update)
+    fills[cf_strategy] = value
+    return (
+        _format_find_result(cf_strategy, result),
+        "ms-2",
+        fills["indexation"],
+        fills["percentage"],
+        fills["vds"],
+        fills["cwd"],
+    )
+
+
+def _build_cached_portfolio(
+    assets,
+    weights,
+    ccy,
+    rebalancing_period,
+    rebal_abs_deviation,
+    rebal_rel_deviation,
+    fd_value,
+    ld_value,
+    initial_amount,
+    discount_rate,
+    symbol,
+    cf_strategy,
+    cf_frequency,
+    cf_amount,
+    cf_indexation,
+    cf_percentage,
+    vds_percentage,
+    vds_min_withdrawal,
+    vds_max_withdrawal,
+    vds_adjust_minmax,
+    vds_floor,
+    vds_ceiling,
+    vds_adjust_fc,
+    vds_indexation,
+    cwd_amount,
+    cwd_indexation,
+    cwd_thresholds,
+    cwd_reductions,
+    ts_dates,
+    ts_amounts,
+    inflation_on,
+) -> ok.Portfolio:
+    """Normalize form inputs and return the cached ok.Portfolio with its
+    cash-flow strategy assigned. Shared by the Submit and Find callbacks so
+    both build the identical dcf state."""
     assets = [i for i in assets if i is not None]
     weights = [i / 100.0 for i in weights if i is not None]
     symbol = symbol.replace(" ", "_")
@@ -798,6 +1014,85 @@ def _update_graf_portfolio_inner(
         ttl_seconds=TTL_PORTFOLIO,
     )
 
+    return pf_object
+
+
+def _update_graf_portfolio_inner(
+    screen,
+    log_on,
+    assets,
+    weights,
+    ccy,
+    rebalancing_period,
+    rebal_abs_deviation,
+    rebal_rel_deviation,
+    fd_value,
+    ld_value,
+    initial_amount,
+    discount_rate,
+    symbol,
+    cf_strategy,
+    cf_frequency,
+    cf_amount,
+    cf_indexation,
+    cf_percentage,
+    vds_percentage,
+    vds_min_withdrawal,
+    vds_max_withdrawal,
+    vds_adjust_minmax,
+    vds_floor,
+    vds_ceiling,
+    vds_adjust_fc,
+    vds_indexation,
+    cwd_amount,
+    cwd_indexation,
+    cwd_thresholds,
+    cwd_reductions,
+    ts_dates,
+    ts_amounts,
+    plot_type,
+    inflation_on,
+    rolling_window,
+    n_monte_carlo,
+    years_monte_carlo,
+    distribution_monte_carlo,
+    show_backtest,
+    distribution_parameters_monte_carlo=None,
+):
+    pf_object = _build_cached_portfolio(
+        assets,
+        weights,
+        ccy,
+        rebalancing_period,
+        rebal_abs_deviation,
+        rebal_rel_deviation,
+        fd_value,
+        ld_value,
+        initial_amount,
+        discount_rate,
+        symbol,
+        cf_strategy,
+        cf_frequency,
+        cf_amount,
+        cf_indexation,
+        cf_percentage,
+        vds_percentage,
+        vds_min_withdrawal,
+        vds_max_withdrawal,
+        vds_adjust_minmax,
+        vds_floor,
+        vds_ceiling,
+        vds_adjust_fc,
+        vds_indexation,
+        cwd_amount,
+        cwd_indexation,
+        cwd_thresholds,
+        cwd_reductions,
+        ts_dates,
+        ts_amounts,
+        inflation_on,
+    )
+
     fig, df_backtest, df_forecast, df_data = get_pf_figure(
         pf_object,
         plot_type,
@@ -834,22 +1129,34 @@ def _update_graf_portfolio_inner(
     # Monte Carlo statistics
     if n_monte_carlo != 0 and plot_type == "wealth":
         compact_tables = is_small_screen(screen)
-        forecast_survival_statistics_datatable = get_forecast_survival_statistics_table(
+        forecast_survival_statistics_datatable = get_forecast_survival_statistics_section(
             df_forecast,
             df_backtest,
             pf_object,
             compact=compact_tables,
+            screen=screen,
         )
-        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_table(pf_object, compact=compact_tables)
+        forecast_wealth_statistics_datatable = get_forecast_wealth_statistics_section(
+            pf_object,
+            compact=compact_tables,
+            screen=screen,
+        )
+        forecast_cashflow_irr_datatable = get_forecast_cashflow_irr_statistics_section(
+            pf_object,
+            compact=compact_tables,
+            screen=screen,
+        )
     else:
         forecast_survival_statistics_datatable = dag.AgGrid()
         forecast_wealth_statistics_datatable = dag.AgGrid()
+        forecast_cashflow_irr_datatable = dag.AgGrid()
     return (
         fig,
         config,
         statistics_ag_grid,
         forecast_survival_statistics_datatable,
         forecast_wealth_statistics_datatable,
+        forecast_cashflow_irr_datatable,
         json_data,
     )
 
@@ -1058,6 +1365,27 @@ def _build_cashflow_strategy(
     return strategy
 
 
+def _map_find_result(strategy_type: str, result) -> float:
+    """Value (sign and units) for the active strategy's withdrawal input.
+
+    Result.withdrawal_abs is negative; withdrawal_rel is a positive fraction.
+    Amount strategies (indexation, cwd) take the absolute amount; percentage
+    strategies (percentage, vds) take the negated relative size in percent.
+    """
+    if strategy_type in ("percentage", "vds"):
+        return round(-float(result.withdrawal_rel) * 100, 2)
+    return round(float(result.withdrawal_abs), 2)
+
+
+def _format_find_result(strategy_type: str, result) -> str:
+    """Human-readable Find result shown next to the button."""
+    accuracy = f"accuracy ±{abs(float(result.error_rel)) * 100:.1f}%"
+    if strategy_type in ("percentage", "vds"):
+        return f"Withdrawal: {-float(result.withdrawal_rel) * 100:.1f}% · {accuracy}"
+    rel_pct = float(result.withdrawal_rel) * 100
+    return f"Withdrawal: {format_points(float(result.withdrawal_abs))} ({rel_pct:.1f}% of initial) · {accuracy}"
+
+
 def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
     data = pf_object.ror.dropna()
     mu, std = norm.fit(data)
@@ -1120,7 +1448,75 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
     return statistics_html
 
 
-def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object: ok.Portfolio, compact: bool = False):
+def _mc_histogram_bins(series_list: list[pd.Series]) -> go.histogram.XBins | None:
+    """Shared adaptive bins for (overlaid) MC histograms.
+
+    Same rule as the rate-of-return distribution figure: 50 bins for >=120
+    samples, else 10. A constant series (all paths identical) returns None
+    so plotly picks its own bin instead of a zero width."""
+    combined_min = min(s.min() for s in series_list)
+    combined_max = max(s.max() for s in series_list)
+    if combined_max == combined_min:
+        return None
+    samples = max(s.shape[0] for s in series_list)
+    bins_number = 50 if samples >= 120 else 10
+    return go.histogram.XBins(size=(combined_max - combined_min) / bins_number)
+
+
+def _get_survival_distribution_figure(fsp: pd.Series) -> go.Figure:
+    """Histogram of MC survival periods (backtest offset already applied)."""
+    fig = go.Figure(
+        go.Histogram(
+            x=fsp,
+            histnorm="probability",
+            xbins=_mc_histogram_bins([fsp]),
+            marker=go.histogram.Marker(color="lightgreen"),
+            name="Survival period",
+            showlegend=False,
+        )
+    )
+    fig.update_layout(title={"text": "Survival period distribution", "x": 0.5, "xanchor": "center"})
+    fig.update_xaxes(title_text="Years")
+    fig.update_yaxes(title_text="Probability")
+    return fig
+
+
+def _get_wealth_distribution_figure(wealth_fv: pd.Series, wealth_pv: pd.Series) -> go.Figure:
+    """Overlaid FV/PV histograms of MC terminal wealth (shared bins)."""
+    bins = _mc_histogram_bins([wealth_fv, wealth_pv])
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(x=wealth_fv, histnorm="probability", xbins=bins, name="FV", opacity=0.6))
+    fig.add_trace(go.Histogram(x=wealth_pv, histnorm="probability", xbins=bins, name="PV", opacity=0.6))
+    fig.update_layout(
+        barmode="overlay",
+        title={"text": "Terminal wealth distribution", "x": 0.5, "xanchor": "center"},
+        legend_title="Legend",
+    )
+    fig.update_yaxes(title_text="Probability")
+    return fig
+
+
+def _mc_section_tabs(table_content, graph: dcc.Graph) -> dbc.Tabs:
+    """Table/Distribution tabs of an MC statistics section (issue #18).
+
+    table_content is the grid itself or a wrapper around it (e.g. the
+    CashFlow IRR grid with its effective-sample note)."""
+    return dbc.Tabs(
+        [
+            dbc.Tab(table_content, label="Table", tab_id="table", class_name="pt-2"),
+            dbc.Tab(graph, label="Distribution", tab_id="distribution", class_name="pt-2"),
+        ],
+        active_tab="table",
+    )
+
+
+def get_forecast_survival_statistics_section(
+    df_forecast,
+    df_backtsest,
+    pf_object: ok.Portfolio,
+    compact: bool = False,
+    screen: dict | None = None,
+):
     if not df_forecast.empty:
         backtest_survival_period = 0 if df_backtsest.empty else pf_object.dcf.survival_period_hist()
         fsp = pf_object.dcf.monte_carlo_survival_period(threshold=0)
@@ -1154,13 +1550,20 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
             style={"height": None},
         )
 
-        from common.html_elements.grid_export import create_xlsx_export_button
+        from common.html_elements.grid_export import create_grid_header_with_export
 
-        # The matching dcc.Download lives statically in pf_statistics_table.py
+        # The chart shows the same offset series the table is computed from.
+        fig = _get_survival_distribution_figure(fsp)
+        fig, config = adopt_small_screens(fig, screen)
+        graph = dcc.Graph(figure=fig, config=config, id="pf-survival-distribution-graph")
+
+        # The matching dcc.Download lives statically in pf_statistics_table.py.
+        # The section title lives here (not in portfolio_info.py) so the compact
+        # export button can share the header row, top-right (issue #16).
         return html.Div(
             [
-                create_xlsx_export_button("pf-survival-statistics-export-btn"),
-                grid,
+                create_grid_header_with_export("Survival period statistics", "pf-survival-statistics-export-btn"),
+                _mc_section_tabs(grid, graph),
             ],
             className="vstack gap-2",
         )
@@ -1172,7 +1575,7 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
         {"field": "1"},
         {"field": "2", "valueFormatter": guarded_decimal_formatter},
     ]
-    return dag.AgGrid(
+    grid = dag.AgGrid(
         rowData=table_list,
         columnDefs=column_defs,
         defaultColDef={"resizable": False, "sortable": False},
@@ -1180,13 +1583,19 @@ def get_forecast_survival_statistics_table(df_forecast, df_backtsest, pf_object:
         dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
         style={"height": None},
     )
+    return html.Div(
+        [html.H5(children="Survival period statistics"), grid],
+        className="vstack gap-2",
+    )
 
 
-def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
-    wealth_fv = pf_object.dcf.monte_carlo_wealth(discounting="fv")
+def get_forecast_wealth_statistics_section(pf_object, compact: bool = False, screen: dict | None = None):
+    # A depleted portfolio balance is 0, never negative: okama replaces
+    # negatives with 0 (same flag the main MC chart uses).
+    wealth_fv = pf_object.dcf.monte_carlo_wealth(discounting="fv", include_negative_values=False)
     if not wealth_fv.empty:
         wealth = wealth_fv.iloc[-1, :]
-        wealth_pv = pf_object.dcf.monte_carlo_wealth(discounting="pv").iloc[-1, :]
+        wealth_pv = pf_object.dcf.monte_carlo_wealth(discounting="pv", include_negative_values=False).iloc[-1, :]
 
         rate = f"{pf_object.dcf.discount_rate * 100:.2f}%"
         percentiles = [
@@ -1241,13 +1650,20 @@ def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
             style={"height": None},
         )
 
-        from common.html_elements.grid_export import create_xlsx_export_button
+        from common.html_elements.grid_export import create_grid_header_with_export
 
-        # The matching dcc.Download lives statically in pf_statistics_table.py
+        # The chart shows the same terminal-wealth series the table is computed from.
+        fig = _get_wealth_distribution_figure(wealth, wealth_pv)
+        fig, config = adopt_small_screens(fig, screen)
+        graph = dcc.Graph(figure=fig, config=config, id="pf-wealth-distribution-graph")
+
+        # The matching dcc.Download lives statically in pf_statistics_table.py.
+        # The section title lives here (not in portfolio_info.py) so the compact
+        # export button can share the header row, top-right (issue #16).
         return html.Div(
             [
-                create_xlsx_export_button("pf-wealth-statistics-export-btn"),
-                grid,
+                create_grid_header_with_export("Wealth statistics", "pf-wealth-statistics-export-btn"),
+                _mc_section_tabs(grid, graph),
             ],
             className="vstack gap-2",
         )
@@ -1258,13 +1674,113 @@ def get_forecast_wealth_statistics_table(pf_object, compact: bool = False):
         {"field": "1"},
         {"field": "2", "valueFormatter": guarded_decimal_formatter},
     ]
-    return dag.AgGrid(
+    grid = dag.AgGrid(
         rowData=table_list,
         columnDefs=column_defs,
         defaultColDef={"resizable": False, "sortable": False},
         columnSize="responsiveSizeToFit",
         dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
         style={"height": None},
+    )
+    return html.Div(
+        [html.H5(children="Wealth statistics"), grid],
+        className="vstack gap-2",
+    )
+
+
+def _get_cashflow_irr_distribution_figure(irr_series: pd.Series) -> go.Figure:
+    """Histogram of per-path money-weighted IRRs (NaN paths already dropped)."""
+    fig = go.Figure(
+        go.Histogram(
+            x=irr_series,
+            histnorm="probability",
+            xbins=_mc_histogram_bins([irr_series]),
+            marker=go.histogram.Marker(color="lightgreen"),
+            name="CashFlow IRR",
+            showlegend=False,
+        )
+    )
+    fig.update_layout(title={"text": "CashFlow IRR distribution", "x": 0.5, "xanchor": "center"})
+    fig.update_xaxes(tickformat=".1%")
+    fig.update_yaxes(title_text="Probability")
+    return fig
+
+
+def get_forecast_cashflow_irr_statistics_section(pf_object, compact: bool = False, screen: dict | None = None):
+    """CashFlow IRR MC section (issue #19): percentile table + distribution.
+
+    monte_carlo_irr() returns NaN for paths whose cash flow has no sign change
+    (e.g. contributions only); statistics use the non-NaN subset and the table
+    surfaces the effective sample size instead of silently shrinking.
+    """
+    irr_series = pf_object.dcf.monte_carlo_irr()
+    valid = irr_series.dropna()
+    if valid.empty:
+        return html.Div(
+            [
+                html.H5(children="CashFlow IRR"),
+                html.Small("IRR is undefined for every simulated path (cash flow has no sign change)."),
+            ],
+            className="vstack gap-2",
+        )
+
+    historical_irr = pf_object.dcf.irr()
+    percentiles = [(f"{q}{suffix} percentile", valid.quantile(q / 100)) for q, suffix in PERCENTILES]
+    moments = [
+        ("Min", valid.min()),
+        ("Max", valid.max()),
+        ("Mean", valid.mean()),
+        ("Std", valid.std()),
+        # NaN is not valid JSON; the guarded formatter renders None as a dash.
+        ("Historical IRR", None if pd.isna(historical_irr) else historical_irr),
+    ]
+    guarded_percent_formatter = {"function": "formatPercentGuarded(params.value)"}
+    if compact:
+        # Mobile: one pair per row — the two-pane layout doesn't fit narrow screens.
+        table_list = [{"1": label, "2": value} for label, value in percentiles + moments]
+        column_defs = [
+            {"field": "1", "minWidth": 130},
+            {"field": "2", "valueFormatter": guarded_percent_formatter},
+        ]
+    else:
+        rows = zip_longest(percentiles, moments, fillvalue=("-", None))
+        table_list = [{"1": p[0], "2": p[1], "3": m[0], "4": m[1]} for p, m in rows]
+        column_defs = [
+            {"field": "1"},
+            {"field": "2", "valueFormatter": guarded_percent_formatter},
+            {"field": "3"},
+            {"field": "4", "valueFormatter": guarded_percent_formatter},
+        ]
+    grid = dag.AgGrid(
+        id="pf-cashflow-irr-statistics-grid",
+        rowData=table_list,
+        columnDefs=column_defs,
+        defaultColDef={"resizable": False, "sortable": False},
+        columnSize="responsiveSizeToFit",
+        dashGridOptions={"domLayout": "autoHeight", "headerHeight": 0},
+        style={"height": None},
+    )
+    table_content = html.Div(
+        [
+            grid,
+            html.Small(f"IRR is defined for {len(valid)} of {len(irr_series)} simulated paths."),
+        ],
+        className="vstack gap-1",
+    )
+
+    fig = _get_cashflow_irr_distribution_figure(valid)
+    fig, config = adopt_small_screens(fig, screen)
+    graph = dcc.Graph(figure=fig, config=config, id="pf-cashflow-irr-distribution-graph")
+
+    from common.html_elements.grid_export import create_grid_header_with_export
+
+    # The matching dcc.Download lives statically in pf_statistics_table.py.
+    return html.Div(
+        [
+            create_grid_header_with_export("CashFlow IRR", "pf-cashflow-irr-statistics-export-btn"),
+            _mc_section_tabs(table_content, graph),
+        ],
+        className="vstack gap-2",
     )
 
 
@@ -1340,6 +1856,28 @@ def _get_distribution_figure(pf_object: ok.Portfolio) -> go.Figure:
     return fig
 
 
+def _prepare_dcf_forecast_state(
+    pf_object, last_backtest_value, distribution_mc, years_mc, n_mc, distribution_parameters_mc=None
+) -> bool:
+    """Set pf.dcf to the exact state the Submit forecast path uses: override
+    initial_investment with the backtest end value and set MC parameters.
+
+    Shared by the wealth forecast and the Find-max-withdrawal solver so the
+    two can never drift apart. Returns False when the backtest ended at zero
+    balance (no forecast possible).
+    """
+    if last_backtest_value <= 0:
+        return False
+    pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
+    pf_object.dcf.set_mc_parameters(
+        distribution=distribution_mc,
+        distribution_parameters=distribution_parameters_mc,
+        period=years_mc,
+        mc_number=n_mc,
+    )
+    return True
+
+
 def _get_wealth_data(
     pf_object,
     has_cashflow,
@@ -1376,14 +1914,9 @@ def _get_wealth_data(
         else settings.INITIAL_INVESTMENT_DEFAULT
     )
     last_backtest_value = df_backtest.iat[-1, -1] if show_backtest_bool else initial_investment
-    if last_backtest_value > 0:
-        pf_object.dcf.cashflow_parameters.initial_investment = last_backtest_value
-        pf_object.dcf.set_mc_parameters(
-            distribution=distribution_mc,
-            distribution_parameters=distribution_parameters_mc,
-            period=years_mc,
-            mc_number=n_monte_carlo,
-        )
+    if _prepare_dcf_forecast_state(
+        pf_object, last_backtest_value, distribution_mc, years_mc, n_monte_carlo, distribution_parameters_mc
+    ):
         df_forecast = pf_object.dcf.monte_carlo_wealth(discounting="fv", include_negative_values=False)
         for scenario in df_forecast.columns:
             _nullify_after_first_zero(df_forecast, scenario)

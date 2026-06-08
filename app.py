@@ -8,8 +8,12 @@ if os.environ.get("TESTING") == "1":
     from tests.mocks.okama_mock import (
         get_mock_namespaces,
         mock_symbols_in_namespace,
+        PicklableAsset,
         PicklableAssetList,
         PicklablePortfolio,
+        PicklableInflation,
+        PicklableRate,
+        PicklableIndicator,
         _CashflowParameters,
         _RebalanceStrategy,
     )
@@ -26,6 +30,10 @@ if os.environ.get("TESTING") == "1":
     _ok.VanguardDynamicSpending = lambda *a, **kw: _CashflowParameters()
     _ok.CutWithdrawalsIfDrawdown = lambda *a, **kw: _CashflowParameters()
     _ok.TimeSeriesStrategy = lambda pf, *a, **kw: _CashflowParameters()
+    _ok.Asset = PicklableAsset
+    _ok.Inflation = PicklableInflation
+    _ok.Rate = PicklableRate
+    _ok.Indicator = PicklableIndicator
 
 import dash
 from dash import html, dcc

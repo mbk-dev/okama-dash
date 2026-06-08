@@ -1,10 +1,13 @@
 import dash
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash import html, dcc, callback, ALL, MATCH
 from dash.dependencies import Input, Output, State
 
 from common import settings as settings
 from common.date_input import register_date_validation
+from common.mantine import search_provider
+from common.html_elements.submit_spinner import create_submit_spinner
 import pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt as tl
 
 STRATEGY_OPTIONS = [
@@ -13,6 +16,12 @@ STRATEGY_OPTIONS = [
     {"label": "Custom Time Series", "value": "time_series"},
     {"label": "Vanguard Dynamic Spending (VDS)", "value": "vds"},
     {"label": "Cut Withdrawals if Drawdown (CWD)", "value": "cwd"},
+]
+
+FIND_GOAL_OPTIONS = [
+    {"label": "Keep purchasing power (PV)", "value": "maintain_balance_pv"},
+    {"label": "Keep nominal balance (FV)", "value": "maintain_balance_fv"},
+    {"label": "Survive N years", "value": "survival_period"},
 ]
 
 FREQUENCY_OPTIONS = [
@@ -33,10 +42,25 @@ STRATEGY_DESCRIPTIONS = {
 
 MAX_TIMESERIES_ENTRIES = 50
 
-# Example entry shown when the Custom cash flows block opens empty: one
-# past-dated withdrawal the user can edit (mirrors the CWD default thresholds).
+# Example entry shown when the Custom cash flows block opens empty in the
+# time_series strategy (the block IS the strategy): one past-dated withdrawal
+# the user can edit. Other strategies open the block with a blank row.
 TS_DEFAULT_DATE = "2020-01"
 TS_DEFAULT_AMOUNT = -1000
+
+
+def _prefill_amount(value, fallback):
+    """Coerce a URL-prefill string to a number for dmc.NumberInput.
+
+    Query params arrive as strings; NumberInput needs a real number to apply
+    the thousands separator. Unset (falsy) or unparseable input falls back."""
+    if not value:
+        return fallback
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return int(number) if number.is_integer() else number
 
 
 def _build_initial_ts_rows(cf_ts):
@@ -158,11 +182,15 @@ def cashflow_accordion_item(
                                     ),
                                 ]
                             ),
-                            dbc.Input(
-                                id="pf-initial-amount",
-                                value=initial_amount if initial_amount else settings.INITIAL_INVESTMENT_DEFAULT,
-                                type="number",
-                                min=1,
+                            # NumberInput instead of dbc.Input: an HTML
+                            # input[type=number] cannot group digits (#17).
+                            search_provider(
+                                dmc.NumberInput(
+                                    id="pf-initial-amount",
+                                    value=_prefill_amount(initial_amount, settings.INITIAL_INVESTMENT_DEFAULT),
+                                    min=1,
+                                    thousandSeparator=" ",
+                                )
                             ),
                             dbc.FormText("Positive number"),
                             dbc.Tooltip(
@@ -305,10 +333,12 @@ def cashflow_accordion_item(
                                             ),
                                         ]
                                     ),
-                                    dbc.Input(
-                                        id="pf-cf-amount",
-                                        value=cf_amount if cf_amount else (cashflow if cashflow else 0),
-                                        type="number",
+                                    search_provider(
+                                        dmc.NumberInput(
+                                            id="pf-cf-amount",
+                                            value=_prefill_amount(cf_amount, _prefill_amount(cashflow, 0)),
+                                            thousandSeparator=" ",
+                                        )
                                     ),
                                     dbc.FormText("Negative = withdrawal"),
                                     dbc.Tooltip(
@@ -401,12 +431,14 @@ def cashflow_accordion_item(
                                         className="text-nowrap",
                                     ),
                                     dbc.Tooltip(tl.pf_cf_vds_min_max, target="pf-info-vds-min"),
-                                    dbc.Input(
-                                        id="pf-cf-vds-min-withdrawal",
-                                        type="number",
-                                        min=0,
-                                        value=vds_min,
-                                        placeholder="40000",
+                                    search_provider(
+                                        dmc.NumberInput(
+                                            id="pf-cf-vds-min-withdrawal",
+                                            min=0,
+                                            value=_prefill_amount(vds_min, None),
+                                            thousandSeparator=" ",
+                                            placeholder="40 000",
+                                        )
                                     ),
                                 ],
                                 lg=6,
@@ -423,12 +455,14 @@ def cashflow_accordion_item(
                                         className="text-nowrap",
                                     ),
                                     dbc.Tooltip(tl.pf_cf_vds_min_max, target="pf-info-vds-max"),
-                                    dbc.Input(
-                                        id="pf-cf-vds-max-withdrawal",
-                                        type="number",
-                                        min=0,
-                                        value=vds_max,
-                                        placeholder="100000",
+                                    search_provider(
+                                        dmc.NumberInput(
+                                            id="pf-cf-vds-max-withdrawal",
+                                            min=0,
+                                            value=_prefill_amount(vds_max, None),
+                                            thousandSeparator=" ",
+                                            placeholder="100 000",
+                                        )
                                     ),
                                 ],
                                 lg=6,
@@ -587,12 +621,16 @@ def cashflow_accordion_item(
                                             ),
                                         ]
                                     ),
-                                    dbc.Input(
-                                        id="pf-cf-cwd-amount",
-                                        type="number",
-                                        max=0,
-                                        value=cwd_amount if cwd_amount else 0,
-                                        placeholder="-60000",
+                                    # NumberInput instead of dbc.Input: an HTML
+                                    # input[type=number] cannot group digits (#17).
+                                    search_provider(
+                                        dmc.NumberInput(
+                                            id="pf-cf-cwd-amount",
+                                            max=0,
+                                            value=_prefill_amount(cwd_amount, 0),
+                                            thousandSeparator=" ",
+                                            placeholder="-60 000",
+                                        )
                                     ),
                                     dbc.FormText("Must be negative or zero"),
                                     dbc.Tooltip(
@@ -680,6 +718,146 @@ def cashflow_accordion_item(
                 id="pf-cf-cwd-panel",
                 style={"display": "none"},
             ),
+            # ---- Find max withdrawal (issue #22) ----
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.I(className="bi bi-chevron-right me-2", id="pf-cf-find-chevron"),
+                            "Find max withdrawal",
+                            html.I(className="bi bi-info-square ms-2", id="pf-cf-find-info-label"),
+                            dbc.Tooltip(tl.pf_cf_find_block, target="pf-cf-find-info-label"),
+                        ],
+                        id="pf-cf-find-toggle",
+                        n_clicks=0,
+                        className="fw-bold",
+                        style={"cursor": "pointer", "userSelect": "none"},
+                    ),
+                    dbc.Collapse(
+                        html.Div(
+                            [
+                                dbc.Row(
+                                    dbc.Col(
+                                        [
+                                            html.Label(
+                                                [
+                                                    "Goal",
+                                                    html.I(
+                                                        className="bi bi-info-square ms-2",
+                                                        id="pf-info-find-goal",
+                                                    ),
+                                                ]
+                                            ),
+                                            dbc.Tooltip(tl.pf_cf_find_goal, target="pf-info-find-goal"),
+                                            dcc.Dropdown(
+                                                options=FIND_GOAL_OPTIONS,
+                                                value="maintain_balance_pv",
+                                                multi=False,
+                                                clearable=False,
+                                                searchable=False,
+                                                id="pf-cf-find-goal",
+                                            ),
+                                        ],
+                                        lg=12,
+                                        sm=12,
+                                    ),
+                                ),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [
+                                                html.Label(
+                                                    [
+                                                        "Percentile",
+                                                        html.I(
+                                                            className="bi bi-info-square ms-2",
+                                                            id="pf-info-find-percentile",
+                                                        ),
+                                                    ],
+                                                    className="text-nowrap",
+                                                ),
+                                                dbc.Tooltip(
+                                                    tl.pf_cf_find_percentile,
+                                                    target="pf-info-find-percentile",
+                                                ),
+                                                dbc.Input(
+                                                    id="pf-cf-find-percentile",
+                                                    type="number",
+                                                    min=0,
+                                                    max=100,
+                                                    step=1,
+                                                    value=20,
+                                                ),
+                                                dbc.FormText("0 - 100"),
+                                            ],
+                                            lg=6,
+                                            md=6,
+                                            sm=6,
+                                        ),
+                                        dbc.Col(
+                                            [
+                                                html.Label(
+                                                    [
+                                                        "Target survival period",
+                                                        html.I(
+                                                            className="bi bi-info-square ms-2",
+                                                            id="pf-info-find-target-sp",
+                                                        ),
+                                                    ],
+                                                    className="text-nowrap",
+                                                ),
+                                                dbc.Tooltip(
+                                                    tl.pf_cf_find_target_sp,
+                                                    target="pf-info-find-target-sp",
+                                                ),
+                                                dbc.Input(
+                                                    id="pf-cf-find-target-sp",
+                                                    type="number",
+                                                    min=1,
+                                                    step=1,
+                                                    value=25,
+                                                ),
+                                                dbc.FormText("Years, below the forecast period"),
+                                            ],
+                                            lg=6,
+                                            md=6,
+                                            sm=6,
+                                            id="pf-cf-find-target-sp-col",
+                                            style={"display": "none"},
+                                        ),
+                                    ],
+                                ),
+                                dbc.Row(
+                                    dbc.Col(
+                                        [
+                                            html.Div(
+                                                [
+                                                    dbc.Button(
+                                                        "Find",
+                                                        id="pf-cf-find-button",
+                                                        n_clicks=0,
+                                                        size="sm",
+                                                        color="secondary",
+                                                    ),
+                                                    html.Small(id="pf-cf-find-result", className="ms-2"),
+                                                ],
+                                                className="d-flex align-items-center",
+                                            ),
+                                            create_submit_spinner("pf-cf-find-spinner"),
+                                            dbc.FormText(id="pf-cf-find-hint"),
+                                        ],
+                                    ),
+                                ),
+                            ],
+                            className="vstack gap-2 p-2",
+                        ),
+                        id="pf-cf-find-collapse",
+                        is_open=False,
+                    ),
+                ],
+                id="pf-cf-find-block",
+                className="mt-3",
+            ),
             # ---- Custom cash flows (shared across all strategies) ----
             # okama's base CashFlow accepts time_series_dic for every strategy,
             # so one-off user entries combine with the regular flow. Initially
@@ -741,17 +919,20 @@ def cashflow_accordion_item(
     Output("pf-cf-percentage-col", "style"),
     Output("pf-cf-vds-panel", "style"),
     Output("pf-cf-cwd-panel", "style"),
+    Output("pf-cf-find-block", "style"),
     Input("pf-cf-strategy-type", "value"),
 )
 def toggle_strategy_panels(strategy):
     show = None
     hide = {"display": "none"}
+    # (indexation, percentage, vds, cwd, find_block) — the Find block is hidden
+    # only for time_series (the okama solver doesn't accept TimeSeriesStrategy).
     panels = {
-        "indexation": (show, hide, hide, hide),
-        "percentage": (hide, show, hide, hide),
-        "time_series": (hide, hide, hide, hide),
-        "vds": (hide, hide, show, hide),
-        "cwd": (hide, hide, hide, show),
+        "indexation": (show, hide, hide, hide, show),
+        "percentage": (hide, show, hide, hide, show),
+        "time_series": (hide, hide, hide, hide, hide),
+        "vds": (hide, hide, show, hide, show),
+        "cwd": (hide, hide, hide, show, show),
     }
     styles = panels.get(strategy, panels["indexation"])
     description = STRATEGY_DESCRIPTIONS.get(strategy, "")
@@ -817,11 +998,13 @@ def _ts_row(index, date_val=None, amount_val=None):
                 width=5,
             ),
             dbc.Col(
-                dbc.Input(
-                    id={"type": "pf-cf-ts-amount", "index": index},
-                    type="number",
-                    placeholder="-1000",
-                    value=amount_val,
+                search_provider(
+                    dmc.NumberInput(
+                        id={"type": "pf-cf-ts-amount", "index": index},
+                        placeholder="-1 000",
+                        value=amount_val,
+                        thousandSeparator=" ",
+                    )
                 ),
                 width=5,
             ),
@@ -849,8 +1032,9 @@ def _ts_row(index, date_val=None, amount_val=None):
     State({"type": "pf-cf-ts-date", "index": ALL}, "id"),
     State({"type": "pf-cf-ts-date", "index": ALL}, "value"),
     State({"type": "pf-cf-ts-amount", "index": ALL}, "value"),
+    State("pf-cf-strategy-type", "value"),
 )
-def manage_ts_rows(add_clicks, remove_clicks, active_item, ids, dates, amounts):
+def manage_ts_rows(add_clicks, remove_clicks, active_item, ids, dates, amounts, strategy):
     trigger = dash.ctx.triggered_id
     rows = []
     if ids:
@@ -863,11 +1047,16 @@ def manage_ts_rows(add_clicks, remove_clicks, active_item, ids, dates, amounts):
         next_idx = max((r["index"] for r in rows), default=-1) + 1
         rows.append({"index": next_idx, "date": None, "amount": None})
 
-    # An empty visible block starts with one example withdrawal row; while the
-    # accordion is collapsed the container stays empty, so the example never
-    # leaks into a calculation the user hasn't seen.
+    # An empty visible block starts with one row: the example withdrawal for
+    # the time_series strategy (the block IS the strategy), a blank row for
+    # every other strategy — there the regular flow already exists and a
+    # prefilled example would silently join the calculation. While the
+    # accordion is collapsed the container stays empty.
     if not rows and active_item == "custom-cashflows":
-        rows = [{"index": 0, "date": TS_DEFAULT_DATE, "amount": TS_DEFAULT_AMOUNT}]
+        if strategy == "time_series":
+            rows = [{"index": 0, "date": TS_DEFAULT_DATE, "amount": TS_DEFAULT_AMOUNT}]
+        else:
+            rows = [{"index": 0, "date": None, "amount": None}]
 
     return [_ts_row(r["index"], r["date"], r["amount"]) for r in rows]
 
@@ -990,3 +1179,87 @@ def should_disable_cwd_add(thresholds: list, reductions: list) -> bool:
 )
 def disable_cwd_add_button(thresholds, reductions):
     return should_disable_cwd_add(thresholds, reductions)
+
+
+@callback(
+    Output("pf-cf-find-collapse", "is_open"),
+    Output("pf-cf-find-chevron", "className"),
+    Input("pf-cf-find-toggle", "n_clicks"),
+    State("pf-cf-find-collapse", "is_open"),
+    prevent_initial_call=True,
+)
+def toggle_find_collapse(n_clicks, is_open):
+    """Flip the Find-max-withdrawal collapse and its chevron icon."""
+    new_open = not is_open
+    chevron = "bi bi-chevron-down me-2" if new_open else "bi bi-chevron-right me-2"
+    return new_open, chevron
+
+
+@callback(
+    Output("pf-cf-find-target-sp-col", "style"),
+    Input("pf-cf-find-goal", "value"),
+)
+def toggle_find_target_sp(goal):
+    """Target survival period applies to the survival_period goal only."""
+    return None if goal == "survival_period" else {"display": "none"}
+
+
+@callback(
+    Output("pf-cf-find-percentile", "invalid"),
+    Output("pf-cf-find-target-sp", "invalid"),
+    Input("pf-cf-find-percentile", "value"),
+    Input("pf-cf-find-target-sp", "value"),
+    Input("pf-monte-carlo-years", "value"),
+)
+def validate_find_inputs(percentile, target_sp, mc_years):
+    """Validate the Find solver inputs.
+
+    Out-of-range typed values arrive from dcc as strings (same behavior as the
+    MC number/years inputs) — flag them invalid instead of crashing the solver
+    callback.
+    """
+    percentile_ok = isinstance(percentile, int) and 0 <= percentile <= 100
+    target_ok = isinstance(target_sp, int) and target_sp >= 1 and isinstance(mc_years, int) and target_sp < mc_years
+    return not percentile_ok, not target_ok
+
+
+@callback(
+    Output("pf-cf-find-button", "disabled"),
+    Output("pf-cf-find-hint", "children"),
+    Input("pf-monte-carlo-number", "valid"),
+    Input("pf-monte-carlo-years", "valid"),
+    Input("pf-monte-carlo-number", "value"),
+    Input("pf-initial-amount", "value"),
+    Input("pf-cf-find-percentile", "invalid"),
+    Input("pf-cf-find-target-sp", "invalid"),
+    Input("pf-cf-find-goal", "value"),
+)
+def disable_find_button(
+    mc_number_valid, mc_years_valid, mc_number, initial_amount, percentile_invalid, target_sp_invalid, goal
+) -> tuple[bool, str]:
+    """Gate the Find button on the same validity the solver needs.
+
+    The hint explains the first failing condition; empty when enabled.
+    """
+    mc_on = isinstance(mc_number, int) and mc_number > 0
+    if not mc_number_valid or not mc_years_valid or not mc_on:
+        return True, "Requires Monte Carlo simulations > 0 and a valid forecast period."
+    if initial_amount in (None, ""):
+        return True, "Set the Initial amount."
+    if percentile_invalid:
+        return True, "Percentile must be an integer between 0 and 100."
+    if goal == "survival_period" and target_sp_invalid:
+        return True, "Target survival period must be an integer below the Monte Carlo forecast period."
+    return False, ""
+
+
+@callback(
+    Output("pf-cf-find-result", "children", allow_duplicate=True),
+    Output("pf-cf-find-result", "className", allow_duplicate=True),
+    Input("pf-cf-strategy-type", "value"),
+    prevent_initial_call=True,
+)
+def reset_find_result(_strategy) -> tuple[str, str]:
+    """A found value targets one strategy's input — clear the stale result
+    text when the user switches to a different strategy."""
+    return "", "ms-2"

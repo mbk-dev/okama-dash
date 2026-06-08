@@ -18,6 +18,7 @@ from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
 import common.validators as validators
 from common.date_input import date_input, register_date_validation
+from common.url_portfolio import pf_link_kwargs, portfolio_option, split_portfolio_from_selection
 from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
     benchmark_options_tooltip_plot,
     benchmark_options_tooltip_window_size,
@@ -34,9 +35,16 @@ def benchmark_card_controls(
     first_date: Optional[str],
     last_date: Optional[str],
     ccy: Optional[str],
+    pf_def: Optional[dict] = None,
 ):
     tickers_list = make_list_from_string(tickers)
     currency_list = inflation.get_currency_list()
+    select_values = tickers_list if tickers_list else settings.default_symbols_benchmark
+    select_options = get_selected_symbol_options(select_values)
+    if pf_def:
+        # The synthetic option must be in data, or dmc renders no chip.
+        select_options = [portfolio_option(pf_def)] + select_options
+        select_values = [pf_def["symbol"]] + select_values
     card = dbc.Card(
         dbc.CardBody(
             [
@@ -76,10 +84,8 @@ def benchmark_card_controls(
                         html.Label("Tickers to compare with benchmark"),
                         search_provider(
                             dmc.MultiSelect(
-                                data=get_selected_symbol_options(
-                                    tickers_list if tickers_list else settings.default_symbols_benchmark
-                                ),
-                                value=tickers_list if tickers_list else settings.default_symbols_benchmark,
+                                data=select_options,
+                                value=select_values,
                                 placeholder="Select tickers",
                                 id="benchmark-assets-list",
                                 searchable=True,
@@ -277,12 +283,30 @@ def disable_rolling_expanding_switch(plot_options: str, radio_switch_value):
     State("benchmark-base-currency", "value"),
     State("benchmark-first-date", "value"),
     State("benchmark-last-date", "value"),
+    State("benchmark-url-portfolio", "data"),
 )
 def update_link_benchmark(
-    n_clicks, href: str, benchmark: str, tickers_list: list, ccy: str, first_date: str, last_date: str
+    n_clicks,
+    href: str,
+    benchmark: str,
+    tickers_list: list,
+    ccy: str,
+    first_date: str,
+    last_date: str,
+    pf_def: Optional[dict],
 ):
+    tickers, has_pf = split_portfolio_from_selection(tickers_list, pf_def)
+    # While the chip is in the selection the link carries the pf_* group:
+    # a link shared after the handoff must not silently lose the portfolio.
+    pf_kwargs = pf_link_kwargs(pf_def) if has_pf else {}
     return create_link(
-        ccy=ccy, first_date=first_date, href=href, last_date=last_date, tickers_list=tickers_list, benchmark=benchmark
+        ccy=ccy,
+        first_date=first_date,
+        href=href,
+        last_date=last_date,
+        tickers_list=tickers,
+        benchmark=benchmark,
+        **pf_kwargs,
     )
 
 
@@ -301,9 +325,14 @@ def optimize_search_benchmark(search_value, selected_value):
     Output("benchmark-assets-list", "data"),
     Input("benchmark-assets-list", "searchValue"),
     Input("benchmark-assets-list", "value"),
+    State("benchmark-url-portfolio", "data"),
 )
-def optimize_search_assets_benchmark(search_value, selected_values):
-    return search_symbol_options(search_value, selected_values)
+def optimize_search_assets_benchmark(search_value, selected_values, pf_def):
+    options = search_symbol_options(search_value, selected_values)
+    if pf_def:
+        # Keep the chip renderable and re-addable after removal.
+        options = [portfolio_option(pf_def)] + options
+    return options
 
 
 @callback(

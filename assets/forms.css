@@ -28,6 +28,18 @@
     min-height: 38px;
 }
 
+/* Rule 1: dmc.MultiSelect -> 38px base height (still grows as tags wrap,
+   min-height only lifts the single-line case to match its row neighbours). */
+.mantine-MultiSelect-input {
+    min-height: 38px;
+}
+
+/* Rule 1: dmc.NumberInput (Initial amount / Cash flow amount, #17) -> 38px
+   so it lines up with the dbc.Input neighbours (Discount/Indexation rate). */
+.mantine-NumberInput-input {
+    min-height: 38px;
+}
+
 /* Custom cash flows (Portfolio, #pf-cf-ts-accordion): when the time_series
    strategy is selected the nested accordion header would just repeat the
    strategy name picked in the dropdown. `ts-plain` (set by the
@@ -39,4 +51,14 @@
 
 #pf-cf-ts-accordion.ts-plain .accordion-item {
     background-color: var(--bs-tertiary-bg);
+}
+
+/* "Go to" dropdown (Portfolio): dbc.DropdownMenu's default color renders the
+   toggle as solid btn-primary; btn-outline-primary (toggle_class_name) wins
+   every --bs-btn-* variable it declares, but never declares the background.
+   Neutralize bg (incl. disabled) so the toggle looks like the outline button
+   it replaced — hover/active fills still come from btn-outline-primary. */
+#pf-goto-menu .dropdown-toggle {
+    --bs-btn-bg: transparent;
+    --bs-btn-disabled-bg: transparent;
 }

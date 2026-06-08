@@ -94,24 +94,37 @@ def _pf_with_mc_stats():
     wealth_fv = pd.DataFrame({0: [100.0, 200.0], 1: [150.0, 250.0]})
     wealth_pv = wealth_fv / 2
     pf.dcf.monte_carlo_wealth = MagicMock(
-        side_effect=lambda discounting="fv": wealth_fv if discounting == "fv" else wealth_pv
+        side_effect=lambda discounting="fv", include_negative_values=True: (
+            wealth_fv if discounting == "fv" else wealth_pv
+        )
     )
     return pf
 
 
 def test_survival_statistics_grids_sorting_disabled():
-    from pages.portfolio.portfolio import get_forecast_survival_statistics_table
+    from pages.portfolio.portfolio import get_forecast_survival_statistics_section
 
     pf = _pf_with_mc_stats()
-    desktop = get_forecast_survival_statistics_table(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf)
-    compact = get_forecast_survival_statistics_table(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True)
+    desktop = get_forecast_survival_statistics_section(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf)
+    compact = get_forecast_survival_statistics_section(pd.DataFrame({"x": [1]}), pd.DataFrame(), pf, compact=True)
     _assert_sorting_disabled(_find_grids(desktop) + _find_grids(compact), expected_count=2)
 
 
 def test_wealth_statistics_grids_sorting_disabled():
-    from pages.portfolio.portfolio import get_forecast_wealth_statistics_table
+    from pages.portfolio.portfolio import get_forecast_wealth_statistics_section
 
     pf = _pf_with_mc_stats()
-    desktop = get_forecast_wealth_statistics_table(pf)
-    compact = get_forecast_wealth_statistics_table(pf, compact=True)
+    desktop = get_forecast_wealth_statistics_section(pf)
+    compact = get_forecast_wealth_statistics_section(pf, compact=True)
+    _assert_sorting_disabled(_find_grids(desktop) + _find_grids(compact), expected_count=2)
+
+
+def test_cashflow_irr_statistics_grids_sorting_disabled():
+    from pages.portfolio.portfolio import get_forecast_cashflow_irr_statistics_section
+
+    pf = _pf_with_mc_stats()
+    pf.dcf.monte_carlo_irr.return_value = pd.Series([0.04, 0.05, 0.06])
+    pf.dcf.irr.return_value = 0.045
+    desktop = get_forecast_cashflow_irr_statistics_section(pf)
+    compact = get_forecast_cashflow_irr_statistics_section(pf, compact=True)
     _assert_sorting_disabled(_find_grids(desktop) + _find_grids(compact), expected_count=2)

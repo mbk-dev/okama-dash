@@ -600,6 +600,11 @@ def _walk_components(node):
 
 
 def _find_by_id(node, target_id):
+    """Depth-first search of a Dash component tree by id (string or dict).
+
+    Walks the ``children`` prop only — ids embedded in other props
+    (e.g. an icon inside an AccordionItem ``title``) are not searched.
+    """
     for n in _walk_components(node):
         if getattr(n, "id", None) == target_id:
             return n
@@ -640,6 +645,16 @@ class TestCashflowPercentageInFrequencyRow:
 
         assert "Withdrawal/Contribution" in _label_texts(col)
         assert "Withdrawal/Contribution percentage" not in _label_texts(col)
+
+
+class TestPrintWeightsSum:
+    def test_returns_plain_string_for_single_children_output(self):
+        """The callback has ONE children Output — a tuple return leaks `True` into
+        children (["Total: 100.0", true]); True is an invalid ReactNode and fires
+        a propTypes warning ("Invalid prop `children` supplied") in the dev console."""
+        from pages.portfolio.cards_portfolio.portfolio_controls import print_weights_sum
+
+        assert print_weights_sum(["60", "40"]) == "Total: 100.0"
 
 
 class TestWeightRangeValidation:
@@ -751,26 +766,6 @@ class TestMonteCarloLimitsValidation:
         assert submit_disabled is True
 
 
-def _find_by_id(component, target_id):
-    """Depth-first search of a Dash component tree for an exact string id.
-
-    Walks the ``children`` prop only — ids embedded in other props
-    (e.g. an icon inside an AccordionItem ``title``) are not searched.
-    """
-    if getattr(component, "id", None) == target_id:
-        return component
-    children = getattr(component, "children", None)
-    if children is None:
-        return None
-    if not isinstance(children, (list, tuple)):
-        children = [children]
-    for child in children:
-        found = _find_by_id(child, target_id)
-        if found is not None:
-            return found
-    return None
-
-
 class TestTsAccordionActiveItem:
     def test_collapsed_by_default(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import _ts_accordion_active_item
@@ -831,19 +826,19 @@ class TestToggleStrategyPanels:
         from pages.portfolio.cards_portfolio.cashflow_controls import toggle_strategy_panels
 
         result = toggle_strategy_panels("indexation")
-        assert len(result) == 5  # description + 4 panel styles (TS panel is gone)
+        assert len(result) == 6  # description + 4 panel styles + find block
 
     def test_time_series_hides_all_strategy_panels(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import toggle_strategy_panels
 
-        _description, indexation, percentage, vds, cwd = toggle_strategy_panels("time_series")
+        _description, indexation, percentage, vds, cwd, _find = toggle_strategy_panels("time_series")
         hide = {"display": "none"}
         assert (indexation, percentage, vds, cwd) == (hide, hide, hide, hide)
 
     def test_indexation_shows_only_indexation_panel(self):
         from pages.portfolio.cards_portfolio.cashflow_controls import toggle_strategy_panels
 
-        _description, indexation, percentage, vds, cwd = toggle_strategy_panels("indexation")
+        _description, indexation, percentage, vds, cwd, _find = toggle_strategy_panels("indexation")
         hide = {"display": "none"}
         assert indexation is None
         assert (percentage, vds, cwd) == (hide, hide, hide)
@@ -862,9 +857,11 @@ class TestOpenTsAccordionOnStrategyChange:
 
 
 class TestManageTsRows:
-    """Row container behavior: empty while collapsed, one example row on expand."""
+    """Row container behavior: empty while collapsed; on expand one row —
+    the example withdrawal for the time_series strategy (the block IS the
+    strategy), a blank row for every other strategy."""
 
-    def _run(self, trigger, active_item, rows=None):
+    def _run(self, trigger, active_item, rows=None, strategy="indexation"):
         import dash
 
         from pages.portfolio.cards_portfolio.cashflow_controls import manage_ts_rows
@@ -875,25 +872,32 @@ class TestManageTsRows:
         amounts = [r["amount"] for r in rows]
         with patch.object(dash, "ctx") as mock_ctx:
             mock_ctx.triggered_id = trigger
-            return manage_ts_rows(0, [], active_item, ids, dates, amounts)
+            return manage_ts_rows(0, [], active_item, ids, dates, amounts, strategy)
 
     @staticmethod
     def _row_values(row):
         date_input = row.children[0].children[0]
-        amount_input = row.children[1].children
+        # amount is a dmc.NumberInput wrapped in a MantineProvider
+        amount_input = row.children[1].children.children
         return date_input.value, amount_input.value
 
     def test_initial_load_collapsed_creates_no_rows(self):
         assert self._run(trigger=None, active_item=None) == []
 
-    def test_expand_with_no_rows_creates_prefilled_withdrawal_row(self):
-        result = self._run(trigger="pf-cf-ts-accordion", active_item="custom-cashflows")
+    def test_expand_in_non_ts_strategy_creates_one_empty_row(self):
+        result = self._run(trigger="pf-cf-ts-accordion", active_item="custom-cashflows", strategy="indexation")
+
+        assert len(result) == 1
+        assert self._row_values(result[0]) == (None, None)
+
+    def test_expand_in_time_series_strategy_creates_example_withdrawal_row(self):
+        result = self._run(trigger="pf-cf-ts-accordion", active_item="custom-cashflows", strategy="time_series")
 
         assert len(result) == 1
         assert self._row_values(result[0]) == ("2020-01", -1000)
 
-    def test_initial_load_open_creates_prefilled_row(self):
-        result = self._run(trigger=None, active_item="custom-cashflows")
+    def test_initial_load_open_creates_example_row_for_time_series(self):
+        result = self._run(trigger=None, active_item="custom-cashflows", strategy="time_series")
 
         assert len(result) == 1
         assert self._row_values(result[0]) == ("2020-01", -1000)
@@ -907,13 +911,27 @@ class TestManageTsRows:
         assert self._row_values(result[0]) == ("2031-05", -500)
         assert self._row_values(result[1]) == (None, None)
 
-    def test_remove_last_row_while_open_recreates_prefilled_row(self):
+    def test_remove_last_row_in_non_ts_strategy_recreates_empty_row(self):
         existing = [{"index": 0, "date": "2031-05", "amount": -500}]
 
         result = self._run(
             trigger={"type": "pf-cf-ts-remove", "index": 0},
             active_item="custom-cashflows",
             rows=existing,
+            strategy="cwd",
+        )
+
+        assert len(result) == 1
+        assert self._row_values(result[0]) == (None, None)
+
+    def test_remove_last_row_in_time_series_strategy_recreates_example_row(self):
+        existing = [{"index": 0, "date": "2031-05", "amount": -500}]
+
+        result = self._run(
+            trigger={"type": "pf-cf-ts-remove", "index": 0},
+            active_item="custom-cashflows",
+            rows=existing,
+            strategy="time_series",
         )
 
         assert len(result) == 1
@@ -926,3 +944,139 @@ class TestManageTsRows:
 
         assert len(result) == 1
         assert self._row_values(result[0]) == ("2031-05", -500)
+
+
+class TestCashflowAmountNumberInputs:
+    """Issue #17: Initial amount / Cash flow amount group digits with a space.
+
+    An HTML input[type=number] cannot display thousands separators, so both
+    fields are dmc.NumberInput(thousandSeparator=" "). URL prefill arrives as
+    a string and must be coerced to a number, or Mantine renders the raw
+    string without grouping.
+    """
+
+    def _build(self, **kwargs):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        return cashflow_accordion_item(**kwargs)
+
+    def test_initial_amount_is_number_input_with_space_separator(self):
+        node = _find_by_id(self._build(), "pf-initial-amount")
+        assert type(node).__name__ == "NumberInput"
+        assert node.thousandSeparator == " "
+
+    def test_cf_amount_is_number_input_with_space_separator(self):
+        node = _find_by_id(self._build(), "pf-cf-amount")
+        assert type(node).__name__ == "NumberInput"
+        assert node.thousandSeparator == " "
+
+    def test_initial_amount_keeps_min_one(self):
+        assert _find_by_id(self._build(), "pf-initial-amount").min == 1
+
+    def test_amount_inputs_render_inside_mantine_provider(self):
+        # dmc components fail to render without a MantineProvider ancestor.
+        item = self._build()
+        for target in ("pf-initial-amount", "pf-cf-amount"):
+            assert any(
+                type(node).__name__ == "MantineProvider" and _find_by_id(node, target) is not None
+                for node in _walk_components(item)
+            ), f"{target} must be wrapped in a MantineProvider"
+
+    def test_url_prefill_strings_become_numbers(self):
+        item = self._build(initial_amount="5000", cf_amount="-2000")
+
+        initial_value = _find_by_id(item, "pf-initial-amount").value
+        cf_value = _find_by_id(item, "pf-cf-amount").value
+        assert initial_value == 5000 and not isinstance(initial_value, str)
+        assert cf_value == -2000 and not isinstance(cf_value, str)
+
+    def test_unparseable_prefill_falls_back_to_defaults(self):
+        from common import settings
+
+        item = self._build(initial_amount="abc", cf_amount="abc")
+
+        assert _find_by_id(item, "pf-initial-amount").value == settings.INITIAL_INVESTMENT_DEFAULT
+        assert _find_by_id(item, "pf-cf-amount").value == 0
+
+    def test_legacy_cashflow_param_prefills_cf_amount(self):
+        value = _find_by_id(self._build(cashflow="-500"), "pf-cf-amount").value
+        assert value == -500 and not isinstance(value, str)
+
+    def test_defaults_without_prefill(self):
+        from common import settings
+
+        item = self._build()
+
+        assert _find_by_id(item, "pf-initial-amount").value == settings.INITIAL_INVESTMENT_DEFAULT
+        assert _find_by_id(item, "pf-cf-amount").value == 0
+
+
+class TestBigAmountNumberInputs:
+    """CWD/VDS amounts and custom cash-flow rows group digits with a space.
+
+    Same rationale as issue #17 (Initial/Cash flow amount): these money fields
+    routinely hold values above 10 000 (placeholders -60000, 40000, 100000),
+    and an HTML input[type=number] cannot display thousands separators — so
+    they are dmc.NumberInput(thousandSeparator=" ").
+    """
+
+    PANEL_AMOUNT_IDS = ("pf-cf-cwd-amount", "pf-cf-vds-min-withdrawal", "pf-cf-vds-max-withdrawal")
+    TS_AMOUNT_ID = {"type": "pf-cf-ts-amount", "index": 0}
+
+    def _build(self, **kwargs):
+        from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
+
+        return cashflow_accordion_item(**kwargs)
+
+    @pytest.mark.parametrize("target", PANEL_AMOUNT_IDS)
+    def test_field_is_number_input_with_space_separator(self, target):
+        node = _find_by_id(self._build(), target)
+        assert type(node).__name__ == "NumberInput"
+        assert node.thousandSeparator == " "
+
+    def test_cwd_amount_keeps_max_zero(self):
+        assert _find_by_id(self._build(), "pf-cf-cwd-amount").max == 0
+
+    @pytest.mark.parametrize("target", ("pf-cf-vds-min-withdrawal", "pf-cf-vds-max-withdrawal"))
+    def test_vds_bounds_keep_min_zero(self, target):
+        assert _find_by_id(self._build(), target).min == 0
+
+    @pytest.mark.parametrize("target", PANEL_AMOUNT_IDS)
+    def test_fields_render_inside_mantine_provider(self, target):
+        # dmc components fail to render without a MantineProvider ancestor.
+        item = self._build()
+        assert any(
+            type(node).__name__ == "MantineProvider" and _find_by_id(node, target) is not None
+            for node in _walk_components(item)
+        ), f"{target} must be wrapped in a MantineProvider"
+
+    def test_prefill_values_populate_inputs(self):
+        # portfolio.py coerces URL params to float before the layout builder.
+        item = self._build(cwd_amount=-60000.0, vds_min=40000.0, vds_max=100000.0)
+
+        assert _find_by_id(item, "pf-cf-cwd-amount").value == -60000
+        assert _find_by_id(item, "pf-cf-vds-min-withdrawal").value == 40000
+        assert _find_by_id(item, "pf-cf-vds-max-withdrawal").value == 100000
+
+    def test_defaults_without_prefill(self):
+        item = self._build()
+
+        assert _find_by_id(item, "pf-cf-cwd-amount").value == 0
+        assert getattr(_find_by_id(item, "pf-cf-vds-min-withdrawal"), "value", None) is None
+        assert getattr(_find_by_id(item, "pf-cf-vds-max-withdrawal"), "value", None) is None
+
+    def test_ts_amount_row_is_number_input_with_space_separator(self):
+        item = self._build(cf_ts=[("2030-01", "-50000")])
+
+        node = _find_by_id(item, self.TS_AMOUNT_ID)
+        assert type(node).__name__ == "NumberInput"
+        assert node.thousandSeparator == " "
+        assert node.value == -50000.0
+
+    def test_ts_amount_row_renders_inside_mantine_provider(self):
+        item = self._build(cf_ts=[("2030-01", "-50000")])
+
+        assert any(
+            type(node).__name__ == "MantineProvider" and _find_by_id(node, self.TS_AMOUNT_ID) is not None
+            for node in _walk_components(item)
+        ), "pf-cf-ts-amount must be wrapped in a MantineProvider"

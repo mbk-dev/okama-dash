@@ -243,3 +243,26 @@ pf_cf_cwd_amount = dcc.Markdown(
     rate. The frequency of withdrawals is determined by the frequency parameter.
     """
 )
+
+pf_cf_find_block = (
+    "Search for the largest withdrawal that still satisfies the selected goal "
+    "under the configured Monte Carlo forecast. Uses the current cash flow "
+    "strategy, initial amount and Monte Carlo parameters."
+)
+
+pf_cf_find_goal = (
+    "Keep purchasing power (PV) — maintain the inflation-adjusted value of the investments "
+    "for the whole forecast period. Keep nominal balance (FV) — maintain the nominal value. "
+    "Survive N years — keep a positive balance for the target number of years."
+)
+
+pf_cf_find_percentile = (
+    "Percentile of the Monte Carlo distribution where the goal must hold (0-100). "
+    "Lower percentiles are pessimistic scenarios: 20 means the goal is met in at least "
+    "80% of simulated scenarios. 50 is the median."
+)
+
+pf_cf_find_target_sp = (
+    "The smallest acceptable survival period in years. Used with the Survive N years goal "
+    "only. Must be below the Monte Carlo forecast period."
+)

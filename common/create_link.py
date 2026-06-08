@@ -114,7 +114,7 @@ def _quote_value(val) -> str:
 
 # Param values that stay raw in the URL: comma/colon are legal in query strings
 # (the tickers CSV proves it end-to-end) and keep pair values human-readable.
-_UNQUOTED_PARAMS = {"weights", "vds_adj_mm", "vds_adj_fc", "cwd_tr", "cf_ts"}
+_UNQUOTED_PARAMS = {"weights", "vds_adj_mm", "vds_adj_fc", "cwd_tr", "cf_ts", "pf_tickers", "pf_weights"}
 
 
 def _format_query_param(name, value, rule) -> str | None:
@@ -122,6 +122,8 @@ def _format_query_param(name, value, rule) -> str | None:
 
     Rules: "if_not_none" | "skip_if_zero" (0 means "unset" for cash-flow amounts)
     | ("skip_if_default", default) — equality covers numerics (1000.0 == 1000).
+    Every rule treats "" as unset: a cleared dmc.NumberInput reports "" where
+    dbc.Input reported None.
     """
     if rule == "if_not_none":
         if value is None or value == "":
@@ -134,7 +136,7 @@ def _format_query_param(name, value, rule) -> str | None:
         return f"{name}={value}"
     # ("skip_if_default", default)
     default = rule[1]
-    if value is None or value == default:
+    if value is None or value == "" or value == default:
         return None
     return f"{name}={_quote_value(value) if isinstance(value, str) else value}"
 
@@ -155,6 +157,16 @@ def create_link(
     symbol=None,
     # benchmark
     benchmark=None,
+    # portfolio handoff group (issue #23): a bare rebalanced portfolio carried
+    # to Compare/Benchmark as its own self-contained params. Ordered like okama's
+    # Portfolio/Rebalance signatures (assets, weights, rebalancing(period,
+    # abs_deviation, rel_deviation), symbol) — keep this group compact.
+    pf_tickers=None,
+    pf_weights=None,
+    pf_rebal=None,
+    pf_abs_dev=None,
+    pf_rel_dev=None,
+    pf_symbol=None,
     # rebalancing deviation
     abs_dev=None,
     rel_dev=None,
@@ -181,19 +193,29 @@ def create_link(
 
     # Data-driven builder: (name, value, emit_rule)
     # emit_rule: "if_not_none" | ("skip_if_default", default_value) | ("skip_if_zero")
-    # Params are emitted in GROUPS so related settings sit together in the URL:
-    # base (ccy/dates) -> portfolio identity (weights/symbol/benchmark) ->
-    # rebalancing (rebal/abs_dev/rel_dev) -> cash flow (everything else).
+    # Params are emitted in GROUPS so related settings sit together in the URL,
+    # each portfolio group ordered like okama's Portfolio/Rebalance signature:
+    # base (ccy/dates) -> pf_* handoff (pf_tickers/pf_weights/pf_rebal/pf_abs_dev/
+    # pf_rel_dev/pf_symbol) -> portfolio (weights -> rebalancing rebal/abs_dev/
+    # rel_dev -> symbol) -> benchmark -> cash flow (everything else).
     params = [
         ("ccy", ccy, ("skip_if_default", "USD")),
         ("first_date", first_date, ("skip_if_default", "2000-01")),
         ("last_date", last_date, ("skip_if_default", today_str)),
+        ("pf_tickers", ",".join(_quote_value(s) for s in pf_tickers) if pf_tickers else None, "if_not_none"),
+        # float(w) tolerates string weights from raw form values; :g strips the
+        # trailing .0 of float store weights. Callers drop "" before this point.
+        ("pf_weights", ",".join(f"{float(w):g}" for w in pf_weights) if pf_weights else None, "if_not_none"),
+        ("pf_rebal", pf_rebal, ("skip_if_default", "month")),
+        ("pf_abs_dev", pf_abs_dev, "if_not_none"),
+        ("pf_rel_dev", pf_rel_dev, "if_not_none"),
+        ("pf_symbol", pf_symbol, ("skip_if_default", "PORTFOLIO")),
         ("weights", ",".join(str(w) for w in weights_list) if weights_list else None, "if_not_none"),
-        ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
-        ("benchmark", benchmark, "if_not_none"),
         ("rebal", rebal, ("skip_if_default", "month")),
         ("abs_dev", abs_dev, "if_not_none"),
         ("rel_dev", rel_dev, "if_not_none"),
+        ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
+        ("benchmark", benchmark, "if_not_none"),
         ("initial_amount", initial_amount, ("skip_if_default", settings.INITIAL_INVESTMENT_DEFAULT)),
         ("cashflow", cashflow, "if_not_none"),
         ("discount_rate", discount_rate, "if_not_none"),
@@ -215,16 +237,19 @@ def create_link(
         ("cf_ts", cf_ts, "if_not_none"),
     ]
 
-    tickers_str = "tickers=" + ",".join(_quote_value(s) for s in tickers_list)
+    # tickers= is omitted for an empty list: handoff links to Compare/Benchmark
+    # carry only the pf_* group, and "?tickers=&pf_tickers=..." would be noise.
     reset_href = href.split("?")[0]
-    parts = [f"{reset_href}?{tickers_str}"]
+    query_parts = []
+    if tickers_list:
+        query_parts.append("tickers=" + ",".join(_quote_value(s) for s in tickers_list))
 
     for name, value, rule in params:
         formatted = _format_query_param(name, value, rule)
         if formatted is not None:
-            parts.append(formatted)
+            query_parts.append(formatted)
 
-    return "&".join(parts)
+    return f"{reset_href}?{'&'.join(query_parts)}"
 
 
 def compute_cashflow_hash(**params) -> str | None:

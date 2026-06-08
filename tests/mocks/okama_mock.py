@@ -101,6 +101,12 @@ class _DCF:
     def monte_carlo_survival_period(self, threshold: float = 0) -> pd.Series:
         return pd.Series([25.0, 30.0, 20.0])
 
+    def monte_carlo_irr(self) -> pd.Series:
+        return pd.Series([0.04, 0.05, 0.06])
+
+    def irr(self) -> float:
+        return 0.045
+
 
 class PicklablePortfolio:
     def __init__(self):
@@ -175,6 +181,9 @@ class PicklableAssetList:
     def __init__(self, symbols: list[str] | None = None, **kwargs):
         if symbols is None:
             symbols = ["AAPL.US", "MSFT.US"]
+        # Real AssetList accepts Portfolio objects as assets (issue #23 handoff);
+        # normalize to symbol strings the same way okama labels columns.
+        symbols = [getattr(s, "symbol", s) for s in symbols]
         self.symbols = symbols
         self.symbol = symbols[0] if len(symbols) == 1 else "AssetList"
         self._pl_txt = "annually"
@@ -200,6 +209,12 @@ class PicklableAssetList:
 
         wealth_data = np.cumprod(1 + rng.normal(0.005, 0.03, (n, n_assets)), axis=0) * 1000
         self.wealth_indexes = pd.DataFrame(wealth_data, index=dates, columns=symbols)
+
+        # Real AssetList appends the list-currency inflation column when
+        # inflation=True (verified live: columns = symbols + f"{ccy}.INFL").
+        if kwargs.get("inflation"):
+            infl_col = f"{self.currency}.INFL"
+            self.wealth_indexes[infl_col] = np.cumprod(1 + rng.normal(0.003, 0.002, n)) * 1000
 
         ror_data = rng.normal(0.005, 0.03, (n, n_assets))
         self.assets_ror = pd.DataFrame(ror_data, index=dates, columns=symbols)
@@ -286,6 +301,121 @@ class PicklableAssetList:
 
     def index_beta(self, rolling_window: int | None = None) -> pd.DataFrame:
         return self._beta_data
+
+    def _adjust_price_to_currency_monthly(self, price: pd.Series, asset_currency: str) -> pd.Series:
+        """Mirror of okama's private converter used by the RE page (guarded by
+        tests/unit/test_macro_objects.py upgrade guard). RUB->USD divides by a
+        fixed mock rate; same-currency passes through."""
+        if self.currency == asset_currency:
+            return price
+        return price / 80.0
+
+
+# ---------------------------------------------------------------------------
+# Picklable mocks for okama macro classes (Inflation, Rate, Indicator, Asset).
+# Real okama exposes every data member as a property; plain attributes give
+# the same read surface and survive pickling. Only describe() is a method.
+# first_date/last_date constructor params are accepted for API compatibility
+# but ignored — mocks always serve the fixed 2020-01..2024-12 range, same as
+# PicklablePortfolio/PicklableAssetList above.
+# ---------------------------------------------------------------------------
+
+
+def _monthly_period_series(symbol: str, base: float, scale: float) -> pd.Series:
+    dates = pd.period_range("2020-01", "2024-12", freq="M")
+    rng = np.random.default_rng(42)
+    return pd.Series(rng.normal(base, scale, len(dates)), index=dates, name=symbol)
+
+
+class PicklableInflation:
+    """Mock for ok.Inflation: monthly fractions (~0.4%/month)."""
+
+    def __init__(self, symbol: str = "RUB.INFL", first_date: str | None = None, last_date: str | None = None):
+        self.symbol = symbol
+        self.values_monthly = _monthly_period_series(symbol, base=0.004, scale=0.003)
+        dates = self.values_monthly.index
+        self.first_date = dates[0].to_timestamp()
+        self.last_date = dates[-1].to_timestamp()
+        self.cumulative_inflation = pd.Series(
+            np.cumprod(1 + self.values_monthly.to_numpy()) - 1.0, index=dates, name=symbol
+        )
+        # Property on the real class: 12-month rolling compound inflation.
+        # Mirrors okama's rolling-window product so the series starts at the
+        # 12th month (2020-12), not one month later.
+        self.rolling_inflation = ((self.values_monthly + 1.0).rolling(12).apply(np.prod, raw=True) - 1.0).dropna()
+        annual_idx = pd.period_range("2020", "2024", freq="Y")
+        rng = np.random.default_rng(7)
+        self.annual_inflation_ts = pd.Series(rng.normal(0.05, 0.02, len(annual_idx)), index=annual_idx, name=symbol)
+        self.purchasing_power_1000 = 785.0
+
+    def describe(self, years: tuple = (1, 5, 10)) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "property": [
+                    "compound inflation",
+                    "1000 purchasing power",
+                    "annual inflation",
+                    "max 12m inflation",
+                    "1000 purchasing power",
+                ],
+                "period": ["YTD", "YTD", "1 years", "2022-04", "1 years"],
+                self.symbol: [0.031, 969.7, 0.056, 0.178, 947.0],
+            }
+        )
+
+
+class PicklableRate:
+    """Mock for ok.Rate: monthly rate fractions (~10%/year)."""
+
+    def __init__(self, symbol: str = "RUS_CBR.RATE", first_date: str | None = None, last_date: str | None = None):
+        self.symbol = symbol
+        self.values_monthly = _monthly_period_series(symbol, base=0.10, scale=0.02)
+        self.first_date = self.values_monthly.index[0].to_timestamp()
+        self.last_date = self.values_monthly.index[-1].to_timestamp()
+
+    def describe(self, years: tuple = (1, 5, 10)) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "property": ["arithmetic mean", "median value", "max value", "min value"],
+                "period": ["YTD", "YTD", "2024-10", "2021-07"],
+                self.symbol: [0.15, 0.1475, 0.21, 0.065],
+            }
+        )
+
+
+class PicklableIndicator:
+    """Mock for ok.Indicator: raw decimal values (CAPE10-like, ~25)."""
+
+    def __init__(self, symbol: str = "USA_CAPE10.RATIO", first_date: str | None = None, last_date: str | None = None):
+        self.symbol = symbol
+        self.values_monthly = _monthly_period_series(symbol, base=25.0, scale=4.0)
+        self.first_date = self.values_monthly.index[0].to_timestamp()
+        self.last_date = self.values_monthly.index[-1].to_timestamp()
+
+    def describe(self, years: tuple = (1, 5, 10)) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "property": ["arithmetic mean", "median value", "max value", "min value"],
+                "period": ["YTD", "YTD", "2000-03", "1982-07"],
+                self.symbol: [38.67, 39.21, 47.13, 8.06],
+            }
+        )
+
+
+class PicklableAsset:
+    """Mock for ok.Asset (RE namespace): per-m² prices in native RUB."""
+
+    def __init__(self, symbol: str = "MOW_PR.RE", *args, **kwargs):
+        self.symbol = symbol
+        self.currency = "RUB"
+        dates = pd.period_range("2020-01", "2024-12", freq="M")
+        rng = np.random.default_rng(42)
+        # A drifting price level around 250k RUB/m².
+        self.close_monthly = pd.Series(
+            250_000 * np.cumprod(1 + rng.normal(0.005, 0.01, len(dates))), index=dates, name=symbol
+        )
+        self.first_date = dates[0].to_timestamp()
+        self.last_date = dates[-1].to_timestamp()
 
 
 # ---------------------------------------------------------------------------
@@ -444,6 +574,8 @@ def make_mock_portfolio() -> MagicMock:
     dcf.wealth_index_fv_with_assets = mock.wealth_index_with_assets.copy()
     dcf.monte_carlo_wealth = pd.DataFrame()
     dcf.survival_period_hist.return_value = 25.0
+    dcf.monte_carlo_irr.return_value = pd.Series([0.04, 0.05, 0.06])
+    dcf.irr.return_value = 0.045
     mock.dcf = dcf
 
     return mock

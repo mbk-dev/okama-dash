@@ -9,6 +9,17 @@ navbar = dbc.NavbarSimple(
         dbc.NavItem(dbc.NavLink("Portfolio", href="/portfolio")),
         dbc.DropdownMenu(
             children=[
+                dbc.DropdownMenuItem("Inflation", href="/macro/inflation"),
+                dbc.DropdownMenuItem("Rates", href="/macro/rates"),
+                dbc.DropdownMenuItem("CAPE10", href="/macro/cape10"),
+                # Real Estate temporarily hidden (live review 2026-06-08) — accumulate other-country data first.
+            ],
+            nav=True,
+            in_navbar=True,
+            label="Macro",
+        ),
+        dbc.DropdownMenu(
+            children=[
                 # dbc.DropdownMenuItem("More pages", header=True),
                 # dbc.DropdownMenuItem(
                 #     f"{page['name']}, href={page['relative_path']}"
