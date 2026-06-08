@@ -755,3 +755,25 @@ class TestCreateLinkPortfolioGroup:
         )
         assert "pf_abs_dev=5" in url
         assert "pf_rel_dev=10" in url
+
+    def test_pf_group_compact_in_okama_order(self):
+        # Portfolio params travel as one compact block, ordered like okama's
+        # Portfolio/Rebalance signatures: assets -> weights -> rebalancing
+        # (period, abs_deviation, rel_deviation) -> symbol (#23). Guards against
+        # a param being appended out of order (which splits the rebalancing trio).
+        url = create_link(
+            href="/compare",
+            tickers_list=[],
+            ccy="USD",
+            first_date="2015-01",
+            last_date="2020-12",
+            pf_tickers=["A.US", "B.US"],
+            pf_weights=[60, 40],
+            pf_rebal="year",
+            pf_symbol="MyPF",
+            pf_abs_dev=5,
+            pf_rel_dev=10,
+        )
+        order = ["pf_tickers", "pf_weights", "pf_rebal", "pf_abs_dev", "pf_rel_dev", "pf_symbol"]
+        positions = [url.index(f"{name}=") for name in order]
+        assert positions == sorted(positions), url

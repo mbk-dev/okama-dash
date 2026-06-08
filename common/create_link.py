@@ -158,13 +158,15 @@ def create_link(
     # benchmark
     benchmark=None,
     # portfolio handoff group (issue #23): a bare rebalanced portfolio carried
-    # to Compare/Benchmark as its own self-contained params
+    # to Compare/Benchmark as its own self-contained params. Ordered like okama's
+    # Portfolio/Rebalance signatures (assets, weights, rebalancing(period,
+    # abs_deviation, rel_deviation), symbol) — keep this group compact.
     pf_tickers=None,
     pf_weights=None,
     pf_rebal=None,
-    pf_symbol=None,
     pf_abs_dev=None,
     pf_rel_dev=None,
+    pf_symbol=None,
     # rebalancing deviation
     abs_dev=None,
     rel_dev=None,
@@ -203,9 +205,9 @@ def create_link(
         # trailing .0 of float store weights. Callers drop "" before this point.
         ("pf_weights", ",".join(f"{float(w):g}" for w in pf_weights) if pf_weights else None, "if_not_none"),
         ("pf_rebal", pf_rebal, ("skip_if_default", "month")),
-        ("pf_symbol", pf_symbol, ("skip_if_default", "PORTFOLIO")),
         ("pf_abs_dev", pf_abs_dev, "if_not_none"),
         ("pf_rel_dev", pf_rel_dev, "if_not_none"),
+        ("pf_symbol", pf_symbol, ("skip_if_default", "PORTFOLIO")),
         ("weights", ",".join(str(w) for w in weights_list) if weights_list else None, "if_not_none"),
         ("symbol", symbol, ("skip_if_default", "PORTFOLIO")),
         ("benchmark", benchmark, "if_not_none"),
