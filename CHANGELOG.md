@@ -5,6 +5,53 @@ in this file. The format is based on [Keep a Changelog](https://keepachangelog.c
 the version lives in `pyproject.toml`. This changelog starts at 4.0.0 — earlier
 releases predate it.
 
+## [4.5.0] — 2026-06-08
+
+The Macro section arrives (inflation, central-bank rates, CAPE10, Russian real
+estate), the Portfolio hands off to Compare/Benchmark/EF, and a Find max
+withdrawal solver answers "how much can I safely withdraw?". 112 commits on top
+of 4.0.0; the test suite grew to 889.
+
+### Added
+
+**Macro — a new chart-first section at `/macro/*`**
+
+- Inflation: annual / rolling / cumulative / monthly-bar views across
+  currencies, an optional key-rate overlay, purchasing-power cards, and
+  headline stats (max 12-month, compound, annual) over the full period.
+- Rates: central-bank key rates as stepped lines, real rates (nominal −
+  trailing-12-month inflation) and a current-rate snapshot bar.
+- CAPE10: 25-country current snapshot (default) and historical lines.
+- Real Estate: Russian residential price per m² in RUB/USD and
+  wealth-vs-inflation (reachable by URL).
+- Every macro page recalculates reactively (no Submit) and carries a
+  **Download data** link under each chart; a Macro dropdown joins the navbar.
+
+**Portfolio**
+
+- "Go to" dropdown hands the current portfolio to Efficient Frontier, Compare
+  and Benchmark, carrying it in the URL; Compare and Benchmark prefill it as a
+  chip alongside their own assets, with the rebalancing deviations (#23).
+- Find max withdrawal: a solver that finds the maximum sustainable withdrawal
+  toward a goal — keep purchasing power (PV), keep nominal balance (FV), or
+  survive N years — at a chosen percentile (#22).
+- Thousands separators on the remaining amount inputs (CWD/VDS/custom
+  cash-flow rows) (#17).
+
+### Changed
+
+- Custom cash flows now use the same clickable chevron + collapse as Find max
+  withdrawal (the Custom Time Series strategy keeps its plain bordered block).
+- Rate charts clip to 2000 to avoid the Russian 1990s hyperinflation distorting
+  the axis.
+
+### Fixed
+
+- Real rates with no inflation-mapped series show a clear message instead of an
+  empty chart; the monthly inflation bar highlights each country's last
+  published month; EUR purchasing-power no longer shows NaN.
+- "Go to" links tolerate empty/string weights without blanking the EF link.
+
 ## [4.0.0] — 2026-06-06
 
 Major release: 182 commits on top of 3.0.0. The stack moved to pandas 3.0,
@@ -94,4 +141,5 @@ guarded by a 565-test pyramid (unit / component / Playwright e2e).
 - Withdrawal rate is computed from the actual cash-flow frequency;
   discount rate entered by the user is applied to DCF and the cache key.
 
+[4.5.0]: https://github.com/mbk-dev/okama-dash/compare/v4.0.0...v4.5.0
 [4.0.0]: https://github.com/mbk-dev/okama-dash/compare/e9e5731...v4.0.0
