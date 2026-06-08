@@ -895,6 +895,8 @@ def update_link_pf(
 
 @callback(
     Output("pf-goto-ef", "href"),
+    Output("pf-goto-compare", "href"),
+    Output("pf-goto-benchmark", "href"),
     Input({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
     Input({"type": "pf-dynamic-input", "index": ALL}, "value"),  # weights
     Input("pf-base-currency", "value"),
@@ -903,7 +905,7 @@ def update_link_pf(
     Input("pf-rebalancing-period", "value"),
     Input("pf-ticker", "value"),
 )
-def update_go_to_ef_link(
+def update_go_to_links(
     tickers_list: Optional[list],
     weights_list: Optional[list],
     ccy: str,
@@ -911,16 +913,18 @@ def update_go_to_ef_link(
     last_date: str,
     rebal: str,
     symbol: Optional[str],
-) -> str:
-    """Build the EF-page link carrying the portfolio.
+) -> tuple[str, str, str]:
+    """Build the three "Go to" hrefs carrying the portfolio.
 
-    Standard frontier params (tickers/ccy/dates/rebal) define the frontier;
-    the portfolio section is just weights + symbol. Same vocabulary as the
-    EF "Backtest portfolio" link, in reverse.
+    EF keeps the page-level vocabulary (tickers define the frontier, weights +
+    symbol are the portfolio section) — same as the EF "Backtest portfolio"
+    link, in reverse. Compare/Benchmark take the portfolio as its own pf_*
+    param group + ccy/dates: their page-level tickers keep their own meaning,
+    and no cash-flow params travel (issue #23).
     """
     tickers = [t for t in tickers_list if t]
     weights = [w for w in weights_list if w is not None]
-    return create_link(
+    ef_href = create_link(
         href="/",
         tickers_list=tickers,
         ccy=ccy,
@@ -930,6 +934,17 @@ def update_go_to_ef_link(
         weights_list=weights,
         symbol=symbol,
     )
+    handoff = {
+        "tickers_list": [],
+        "ccy": ccy,
+        "first_date": first_date,
+        "last_date": last_date,
+        "pf_tickers": tickers,
+        "pf_weights": weights,
+        "pf_rebal": rebal,
+        "pf_symbol": symbol,
+    }
+    return ef_href, create_link(href="/compare", **handoff), create_link(href="/benchmark", **handoff)
 
 
 @callback(
