@@ -1,4 +1,4 @@
-"""Tests for /macro/cape10: history lines, snapshot bar of all 26 countries, callbacks."""
+"""Tests for /macro/cape10: history lines, snapshot bar of all 25 countries, callbacks."""
 
 from unittest.mock import patch
 
