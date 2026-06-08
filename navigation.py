@@ -12,7 +12,7 @@ navbar = dbc.NavbarSimple(
                 dbc.DropdownMenuItem("Inflation", href="/macro/inflation"),
                 dbc.DropdownMenuItem("Rates", href="/macro/rates"),
                 dbc.DropdownMenuItem("CAPE10", href="/macro/cape10"),
-                dbc.DropdownMenuItem("Real Estate", href="/macro/real-estate"),
+                # Real Estate temporarily hidden (live review 2026-06-08) — accumulate other-country data first.
             ],
             nav=True,
             in_navbar=True,

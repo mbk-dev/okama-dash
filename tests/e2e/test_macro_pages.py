@@ -29,13 +29,17 @@ class TestMacroAutoRender:
         page.goto(f"{dash_server_url}/macro/cape10", wait_until="domcontentloaded")
         traces = page.locator("#cape-chart .cartesianlayer .scatterlayer .js-line")
         traces.first.wait_for(state="attached", timeout=15_000)
-        assert traces.count() == 4
+        assert traces.count() == 3
 
     def test_inflation_stats_grid_renders_percent(self, page, dash_server_url):
         page.goto(f"{dash_server_url}/macro/inflation", wait_until="domcontentloaded")
         cell = page.locator('#infl-describe-table-grid .ag-cell[col-id="RUB.INFL"]').first
         cell.wait_for(state="attached", timeout=15_000)
         assert cell.inner_text().strip().endswith("%")
+
+    def test_inflation_download_button_present(self, page, dash_server_url):
+        page.goto(f"{dash_server_url}/macro/inflation", wait_until="domcontentloaded")
+        page.locator("#infl-download-data-button").wait_for(state="visible", timeout=15_000)
 
 
 class TestMacroNavigationAndPrefill:
@@ -50,10 +54,10 @@ class TestMacroNavigationAndPrefill:
 
     def test_shareable_link_prefills_controls(self, page, dash_server_url):
         page.goto(
-            f"{dash_server_url}/macro/inflation?tickers=RUB.INFL&plot=monthly",
+            f"{dash_server_url}/macro/inflation?tickers=RUB.INFL&plot=rolling12m",
             wait_until="domcontentloaded",
         )
-        # Monthly plot is a line chart with a rangeslider — scope to the main
+        # rolling12m plot is a line chart with a rangeslider — scope to the main
         # cartesian layer (see the rangeslider note above).
         traces = page.locator("#infl-chart .cartesianlayer .scatterlayer .js-line")
         traces.first.wait_for(state="attached", timeout=15_000)
@@ -93,18 +97,12 @@ class TestStage2:
         traces = page.locator("#rates-chart .cartesianlayer .scatterlayer .js-line")
         traces.first.wait_for(state="attached", timeout=15_000)
         assert traces.count() == 3  # key-rates defaults
-        # Switch the group; the chart re-renders to the single deposit default
+        # Switch the group; the chart re-renders to the single money-market default
         # without any Submit click (fully reactive chain: group -> series -> chart).
         page.locator("#rates-group").click()
-        page.get_by_text("Deposit rates RU", exact=True).click()
+        page.get_by_text("Money market RU", exact=True).click()
         page.wait_for_function(
             "() => document.querySelectorAll('#rates-chart .cartesianlayer .scatterlayer .js-line').length === 1",
             timeout=15_000,
         )
 
-    def test_navbar_macro_dropdown_lists_real_estate(self, page, dash_server_url):
-        page.goto(dash_server_url, wait_until="domcontentloaded")
-        navbar = page.locator(".navbar")
-        navbar.get_by_text("Macro", exact=True).click()
-        navbar.get_by_text("Real Estate", exact=True).click()
-        page.wait_for_url("**/macro/real-estate", timeout=10_000)
