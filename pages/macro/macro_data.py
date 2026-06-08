@@ -47,6 +47,7 @@ RATES_DEFAULTS = ["RUS_CBR.RATE", "US_EFFR.RATE", "EU_MRO.RATE"]
 
 # /macro/rates stage-2 groups. Display labels follow the DB names trimmed for
 # the legend (full names verified in the live RATE namespace dump).
+# Temporarily not exposed in the UI (live review 2026-06-08); kept for an easy return.
 DEPOSIT_RATES_SERIES = {
     "RUS_RUB.RATE": "Max deposit rates (RUB)",
     "RUS_RUB_TOP10.RATE": "Max deposit rates TOP-10 (RUB)",
@@ -74,7 +75,6 @@ MONEY_MARKET_DEFAULTS = ["RUONIA.RATE"]
 # Group registry for the /macro/rates group selector: value -> (label, catalog, defaults).
 RATES_GROUPS = {
     "key": ("Key rates", KEY_RATES_SERIES, RATES_DEFAULTS),
-    "deposit": ("Deposit rates RU", DEPOSIT_RATES_SERIES, DEPOSIT_RATES_DEFAULTS),
     "mm": ("Money market RU", MONEY_MARKET_SERIES, MONEY_MARKET_DEFAULTS),
 }
 
@@ -89,6 +89,24 @@ def rates_group_catalog(group: str | None) -> dict[str, str]:
     return RATES_GROUPS.get(group, RATES_GROUPS["key"])[1]
 
 
+# Real-rate mapping: each grouped rate -> its currency's inflation series.
+# real_rate = nominal_rate - trailing-12m inflation of this currency.
+_RATE_CURRENCY = {
+    "RUS_CBR.RATE": "RUB",
+    "US_EFFR.RATE": "USD",
+    "EU_MRO.RATE": "EUR",
+    "EU_DFR.RATE": "EUR",
+    "EU_MLR.RATE": "EUR",
+    "UK_BR.RATE": "GBP",
+    "ISR_IR.RATE": "ILS",
+    "CHN_LPR1.RATE": "CNY",
+    "CHN_LPR5.RATE": "CNY",
+}
+RATE_TO_INFLATION = {rate: f"{ccy}.INFL" for rate, ccy in _RATE_CURRENCY.items()}
+# Money market series are all RUB.
+RATE_TO_INFLATION.update(dict.fromkeys(MONEY_MARKET_SERIES, "RUB.INFL"))
+
+
 # /macro/real-estate — RE namespace; real estate is an ASSET (ok.Asset/AssetList,
 # not the macro classes): prices per m² in native RUB, currency-convertible.
 RE_SERIES = {
@@ -100,10 +118,10 @@ RE_SERIES = {
 RE_DEFAULTS = ["MOW_PR.RE", "MOW_SEC.RE"]
 
 # /macro/cape10 — RATIO namespace, handled by ok.Indicator (all 26 DB countries)
+# RUS_CAPE10.RATIO temporarily removed (calc suspended at 2023-02, trailing zeros).
 CAPE10_SERIES = {
     "USA_CAPE10.RATIO": "USA",
     "EUR_CAPE10.RATIO": "Europe",
-    "RUS_CAPE10.RATIO": "Russia",
     "CHN_CAPE10.RATIO": "China",
     "AUS_CAPE10.RATIO": "Australia",
     "BRA_CAPE10.RATIO": "Brazil",
@@ -128,7 +146,7 @@ CAPE10_SERIES = {
     "TWN_CAPE10.RATIO": "Taiwan",
     "ZAF_CAPE10.RATIO": "South Africa",
 }
-CAPE10_DEFAULTS = ["USA_CAPE10.RATIO", "EUR_CAPE10.RATIO", "RUS_CAPE10.RATIO", "CHN_CAPE10.RATIO"]
+CAPE10_DEFAULTS = ["USA_CAPE10.RATIO", "EUR_CAPE10.RATIO", "CHN_CAPE10.RATIO"]
 
 # Default chart start for every macro page: covers RU history while skipping the
 # hyperinflation 90s (a cumulative RUB chart from 1991 grows x168 928 and is unreadable).

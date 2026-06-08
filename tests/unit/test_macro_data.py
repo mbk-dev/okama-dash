@@ -38,8 +38,12 @@ class TestCatalogIntegrity:
         assert len(KEY_RATES_SERIES) == 9
         assert all(s.endswith(".RATE") for s in KEY_RATES_SERIES)
 
-    def test_cape10_has_26_ratio_countries(self):
-        assert len(CAPE10_SERIES) == 26
+    def test_cape10_excludes_suspended_russia(self):
+        # RUS_CAPE10.RATIO froze at 2023-02 with trailing zeros — temporarily
+        # removed until okama resumes the calculation.
+        assert len(CAPE10_SERIES) == 25
+        assert "RUS_CAPE10.RATIO" not in CAPE10_SERIES
+        assert "RUS_CAPE10.RATIO" not in CAPE10_DEFAULTS
         assert all(s.endswith("_CAPE10.RATIO") for s in CAPE10_SERIES)
 
     def test_overlay_mapping_covers_every_inflation_currency(self):
@@ -69,16 +73,17 @@ class TestFilterKnown:
 
 
 class TestRateGroups:
-    def test_deposit_group_has_4_rate_series(self):
-        assert len(DEPOSIT_RATES_SERIES) == 4
-        assert all(s.endswith(".RATE") for s in DEPOSIT_RATES_SERIES)
+    def test_deposit_group_temporarily_unexposed(self):
+        # Deposit rates removed from the UI per live review; the catalog stays
+        # defined for an easy return but is not in the group registry.
+        assert "deposit" not in RATES_GROUPS
+        assert set(RATES_GROUPS) == {"key", "mm"}
 
     def test_money_market_group_has_9_rate_series(self):
         assert len(MONEY_MARKET_SERIES) == 9
         assert all(s.endswith(".RATE") for s in MONEY_MARKET_SERIES)
 
     def test_groups_registry_wires_label_catalog_defaults(self):
-        assert set(RATES_GROUPS) == {"key", "deposit", "mm"}
         for label, catalog, defaults in RATES_GROUPS.values():
             assert isinstance(label, str) and label
             assert defaults and set(defaults) <= set(catalog)
@@ -94,9 +99,10 @@ class TestRateGroups:
         assert not keys & set(MONEY_MARKET_SERIES)
 
     def test_rates_group_catalog_resolves_and_falls_back(self):
-        assert rates_group_catalog("deposit") is DEPOSIT_RATES_SERIES
+        assert rates_group_catalog("mm") is MONEY_MARKET_SERIES
         assert rates_group_catalog("unknown") is KEY_RATES_SERIES  # safe default
         assert rates_group_catalog(None) is KEY_RATES_SERIES
+        assert rates_group_catalog("deposit") is KEY_RATES_SERIES  # removed, falls back
 
 
 class TestRealEstateCatalog:
@@ -107,3 +113,24 @@ class TestRealEstateCatalog:
     def test_re_defaults_are_moscow_pair(self):
         assert RE_DEFAULTS == ["MOW_PR.RE", "MOW_SEC.RE"]
         assert set(RE_DEFAULTS) <= set(RE_SERIES)
+
+
+class TestRateToInflation:
+    def test_every_grouped_rate_maps_to_an_inflation_series(self):
+        from pages.macro.macro_data import RATE_TO_INFLATION
+
+        grouped = set(KEY_RATES_SERIES) | set(MONEY_MARKET_SERIES)
+        assert grouped <= set(RATE_TO_INFLATION)
+        assert all(v.endswith(".INFL") for v in RATE_TO_INFLATION.values())
+
+    def test_money_market_rates_map_to_rub_inflation(self):
+        from pages.macro.macro_data import MONEY_MARKET_SERIES, RATE_TO_INFLATION
+
+        assert all(RATE_TO_INFLATION[s] == "RUB.INFL" for s in MONEY_MARKET_SERIES)
+
+    def test_currency_mapping_spot_checks(self):
+        from pages.macro.macro_data import RATE_TO_INFLATION
+
+        assert RATE_TO_INFLATION["US_EFFR.RATE"] == "USD.INFL"
+        assert RATE_TO_INFLATION["EU_MRO.RATE"] == "EUR.INFL"
+        assert RATE_TO_INFLATION["CHN_LPR1.RATE"] == "CNY.INFL"
