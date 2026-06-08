@@ -8,24 +8,17 @@ import plotly.graph_objects as go
 from dash import callback, dcc, html
 from dash.dependencies import Input, Output, State
 
-from common.date_input import register_date_validation
 from common.html_elements.copy_link_div import create_copy_link_div
-from common.html_elements.grid_export import create_grid_header_with_export, rowdata_to_xlsx_download
 from common.mobile_screens import adopt_small_screens
 from common.object_cache import TTL_EFFICIENT_FRONTIER, get_or_create
 from common.parse_query import make_list_from_string
 from pages.macro import macro_objects
 from pages.macro.cards_macro.eng.cape10_description_txt import cape10_description_text
 from pages.macro.cards_macro.macro_chart import macro_chart_card
-from pages.macro.cards_macro.macro_controls import (
-    date_columns,
-    dates_ready,
-    make_submit_guard,
-    series_multiselect_column,
-)
+from pages.macro.cards_macro.macro_controls import make_submit_guard, series_multiselect_column
 from pages.macro.cards_macro.macro_description import macro_description_card
-from pages.macro.cards_macro.macro_stats import build_describe_table, build_stats_grid
-from pages.macro.macro_data import CAPE10_DEFAULTS, CAPE10_SERIES, MACRO_FIRST_DATE_DEFAULT, filter_known
+from pages.macro.cards_macro.macro_download import register_macro_download
+from pages.macro.macro_data import CAPE10_DEFAULTS, CAPE10_SERIES, filter_known
 from pages.macro.macro_link import build_macro_link
 
 dash.register_page(
@@ -52,7 +45,7 @@ _MUTED_COLOR = "#c8d0dd"
 today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
-def get_cape_history_figure(objects: list) -> go.Figure:
+def get_cape_history_figure(objects: list) -> tuple[go.Figure, pd.DataFrame]:
     df = pd.concat([obj.values_monthly for obj in objects], axis=1)
     df.columns = [CAPE10_SERIES.get(col, col) for col in df.columns]
     ind = df.index.to_timestamp("M")
@@ -60,7 +53,7 @@ def get_cape_history_figure(objects: list) -> go.Figure:
     fig.update_xaxes(rangeslider_visible=True)
     fig.update_yaxes(title_text="CAPE10", zeroline=False)
     fig.update_layout(xaxis_title=None, legend_title="Country")
-    return fig
+    return fig, df
 
 
 def get_cape_snapshot() -> pd.Series:
@@ -127,11 +120,8 @@ def layout(tickers=None, first_date=None, last_date=None, plot=None, **kwargs):
                             md=3,
                             sm=6,
                         ),
-                        *date_columns("cape", first_date or MACRO_FIRST_DATE_DEFAULT, last_date or today_str),
                     ],
                     class_name="g-2",
-                    # Top-aligned: every column starts with a one-line Label, so
-                    # the 38px controls land on one horizontal line.
                     align="start",
                 ),
                 dbc.Row(
@@ -146,22 +136,11 @@ def layout(tickers=None, first_date=None, last_date=None, plot=None, **kwargs):
         ),
         class_name="mb-3",
     )
-    stats_card = dbc.Card(
-        dbc.CardBody(
-            [
-                create_grid_header_with_export("Statistics", "cape-statistics-export-btn"),
-                dcc.Download(id="cape-statistics-download"),
-                html.Div(id="cape-describe-table"),
-            ]
-        ),
-        class_name="mb-3",
-    )
     return dbc.Container(
         [
             html.H2("CAPE10", className="my-2"),
             control_bar,
             macro_chart_card("cape"),
-            stats_card,
             macro_description_card("CAPE10 widget", cape10_description_text),
         ],
         class_name="mt-2",
@@ -172,35 +151,27 @@ def layout(tickers=None, first_date=None, last_date=None, plot=None, **kwargs):
 @callback(
     Output("cape-chart", "figure"),
     Output("cape-chart", "config"),
-    Output("cape-describe-table", "children"),
+    Output("cape-store-chart-data", "data"),
     Input("store", "data"),
-    # Reactive page: every control is an Input — changing any of them
-    # recalculates immediately, and the missing prevent_initial_call renders
-    # the chart on page load. There is no Submit button.
     Input("cape-series", "value"),
     Input("cape-plot-type", "value"),
-    Input("cape-first-date", "value"),
-    Input("cape-last-date", "value"),
 )
-def update_cape_page(screen, symbols, plot_type, fd_value, ld_value):
-    if not symbols or not dates_ready(fd_value, ld_value):
+def update_cape_page(screen, symbols, plot_type):
+    if not symbols:
         raise dash.exceptions.PreventUpdate
-    fd_value, ld_value = fd_value or None, ld_value or None
     try:
-        objects = [macro_objects.get_indicator_object(s, fd_value, ld_value) for s in symbols]
+        objects = [macro_objects.get_indicator_object(s, None, None) for s in symbols]
         if plot_type == "snapshot":
-            fig = get_cape_snapshot_figure(get_cape_snapshot(), symbols)
+            snapshot = get_cape_snapshot()
+            fig = get_cape_snapshot_figure(snapshot, symbols)
+            store_df = snapshot.to_frame("CAPE10")
         else:
-            fig = get_cape_history_figure(objects)
-        stats_df = build_describe_table([obj.describe() for obj in objects])
-        grid = build_stats_grid(stats_df, "cape-describe-table-grid", value_format="decimal")
+            fig, store_df = get_cape_history_figure(objects)
+        store_json = store_df.to_json(orient="split", default_handler=str)
         fig, config = adopt_small_screens(fig, screen)
         if plot_type == "snapshot":
-            # Snapshot bar tick labels are country names: keep them outside the
-            # plot (mobile mode moves y ticks inside, which would overlay the
-            # bars — same exception as the Compare correlation matrix).
             fig.update_yaxes(ticklabelposition="outside")
-        return fig, config, grid
+        return fig, config, store_json
     except Exception as e:
         alert_fig = go.Figure()
         alert_fig.add_annotation(text=str(e), showarrow=False, font={"color": "red", "size": 14})
@@ -222,32 +193,15 @@ def disable_copy_link_cape(selected):
     State("cape-url", "href"),
     State("cape-series", "value"),
     State("cape-plot-type", "value"),
-    State("cape-first-date", "value"),
-    State("cape-last-date", "value"),
 )
-def update_cape_link(n_clicks, href, symbols, plot_type, first_date, last_date):
+def update_cape_link(n_clicks, href, symbols, plot_type):
     return build_macro_link(
         href=href,
         tickers_list=symbols or [],
-        first_date=first_date,
-        last_date=last_date,
+        first_date=None,
+        last_date=None,
         plot=(plot_type, "history"),
     )
 
 
-@callback(
-    Output("cape-statistics-download", "data"),
-    Input("cape-statistics-export-btn", "n_clicks"),
-    State("cape-describe-table-grid", "rowData"),
-    prevent_initial_call=True,
-)
-def export_cape_stats(n_clicks, row_data):
-    # CAPE values are raw decimals: mirror the on-grid decimal formatter.
-    column_formats = (
-        {col: "decimal" for col in row_data[0] if col not in ("property", "period")} if row_data else None
-    )
-    return rowdata_to_xlsx_download(n_clicks, row_data, "cape10_statistics.xlsx", column_formats=column_formats)
-
-
-register_date_validation("cape-first-date")
-register_date_validation("cape-last-date")
+register_macro_download("cape")
