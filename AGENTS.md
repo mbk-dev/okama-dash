@@ -139,7 +139,7 @@ Rules for this repo:
 
 ## Test suite
 
-819 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+820 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -202,7 +202,7 @@ tests/
 │   │                                # layout guard: no Y-axis (mean type) selector — EF always plots CAGR (28 tests)
 │   ├── test_ef_click_find.py        # display_click_data (incl. backtest link carries the EF object's rebalancing period; clicked point renders a Selected portfolio card with trace-name badge + Sharpe from rf-rate; re-submit resets the section — stale clickData must not meet a changed ticker set; length-mismatch guard renders the unavailable note), find_portfolio (renders an Optimized portfolio card, None stats skipped) (25 tests)
 │   ├── test_ef_url_portfolio.py     # URL portfolio handoff: _parse_url_portfolio (weights+symbol → store), get_portfolio_point (cached ok.Portfolio → percent risk/CAGR), prepare_ef star trace (label, JSON-list customdata), update_ef_cards wiring (payload on ticker match, None on mismatch, failure isolation) (17 tests)
-│   ├── test_portfolio_go_to_links.py  # "Go to" dropdown (#23): menu markup (3 link items EF/Compare/Benchmark, new-tab props), update_go_to_links (EF page-level vocabulary unchanged; Compare/Benchmark carry the pf_* group + ccy/dates only — no page tickers, no cash-flow, no benchmark; defaults omitted) + menu gating (Copy-Link conditions OR <2 unique tickers) (9 tests)
+│   ├── test_portfolio_go_to_links.py  # "Go to" dropdown (#23): menu markup (3 link items EF/Compare/Benchmark, new-tab props), update_go_to_links (EF page-level vocabulary unchanged; Compare/Benchmark carry the pf_* group + ccy/dates only — no page tickers, no cash-flow, no benchmark; defaults omitted; string/empty weights tolerated without crashing) + menu gating (Copy-Link conditions OR <2 unique tickers) (10 tests)
 │   ├── test_compare_url_portfolio.py  # Compare pf_* handoff (#23): layout store + chip prefill (coexists with page tickers, broken group → no chip), chip-aware search injection, copy-link round-trip (pf_* with chip, plain without), EF-link/info token exclusion, main callback joins the cached portfolio into the AssetList with a pf-aware cache key (13 tests)
 │   ├── test_benchmark_url_portfolio.py  # Benchmark pf_* handoff (#23): layout store + chip prefill (benchmark default kept, broken group → no chip), chip-aware search/copy-link/info, main callback puts the portfolio AFTER the benchmark ([benchmark, pf, …tickers]) with a pf-aware cache key (9 tests)
 │   ├── test_find_withdrawal_callbacks.py  # Find max withdrawal (#22): collapse toggle + chevron, Target-SP visibility per goal, block hidden for the TS strategy (toggle_strategy_panels 6th output), percentile/target-SP validation (dcc string values), button gating + first-failing-condition hint (positional Inputs-order contract test), find_max_withdrawal solver callback (per-strategy fill + no_update on the rest, solver kwargs incl. conditional target_survival_period, set_mc_parameters mirrors Submit, backtest initial_investment override + wealth_index-not-called guard, depleted-backtest message, success=False warning, ValueError passthrough, generic-error path), result reset on strategy switch (41 tests)
@@ -240,10 +240,10 @@ tests/
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 273 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 512 | ~8s |
+| `poetry run pytest -m component` | Dash callbacks | 513 | ~8s |
 | `poetry run pytest -m e2e` | Playwright browser | 34 | ~98s |
-| `poetry run pytest -q` | Everything | 819 | ~107s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 785 | ~10s |
+| `poetry run pytest -q` | Everything | 820 | ~107s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 786 | ~10s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
