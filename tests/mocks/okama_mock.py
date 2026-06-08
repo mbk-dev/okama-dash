@@ -181,6 +181,9 @@ class PicklableAssetList:
     def __init__(self, symbols: list[str] | None = None, **kwargs):
         if symbols is None:
             symbols = ["AAPL.US", "MSFT.US"]
+        # Real AssetList accepts Portfolio objects as assets (issue #23 handoff);
+        # normalize to symbol strings the same way okama labels columns.
+        symbols = [getattr(s, "symbol", s) for s in symbols]
         self.symbols = symbols
         self.symbol = symbols[0] if len(symbols) == 1 else "AssetList"
         self._pl_txt = "annually"

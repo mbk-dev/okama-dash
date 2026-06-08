@@ -99,3 +99,41 @@ class TestShareableLinks:
         texts = pills.all_text_contents()
         assert "AAPL.US" in texts
         assert "MSFT.US" in texts
+
+    def test_compare_handoff_renders_portfolio_chip_and_traces(self, page, dash_server_url):
+        """pf_* group -> chip in the form; Submit -> the portfolio joins the chart.
+
+        Mock artifact: under TESTING ok.Portfolio drops its kwargs (app.py),
+        so the portfolio trace is named by the mock default (TestPF.PF), not
+        by pf_symbol; the chip still shows the URL-derived symbol.
+        """
+        page.goto(
+            f"{dash_server_url}/compare?tickers=GOOG.US&pf_tickers=AAPL.US,MSFT.US&pf_weights=60,40&pf_rebal=year",
+            wait_until="domcontentloaded",
+        )
+        pills = page.locator(PILL_LABEL)
+        pills.first.wait_for(state="visible", timeout=10_000)
+        texts = pills.all_text_contents()
+        assert "PORTFOLIO.PF" in texts
+        assert "GOOG.US" in texts
+
+        page.locator("#al-submit-button").click()
+        page.locator("#al-graf-row").wait_for(state="visible", timeout=15_000)
+        traces = page.locator("#al-wealth-indexes .scatterlayer .js-line")
+        traces.first.wait_for(state="attached", timeout=10_000)
+        assert traces.count() >= 2
+
+    def test_benchmark_handoff_portfolio_vs_default_benchmark(self, page, dash_server_url):
+        page.goto(
+            f"{dash_server_url}/benchmark?pf_tickers=AAPL.US,MSFT.US&pf_weights=60,40",
+            wait_until="domcontentloaded",
+        )
+        pills = page.locator(PILL_LABEL)
+        pills.first.wait_for(state="visible", timeout=10_000)
+        assert "PORTFOLIO.PF" in pills.all_text_contents()
+
+        page.locator("#benchmark-submit-button").click()
+        page.locator("#benchmark-graf-row").wait_for(state="visible", timeout=15_000)
+        traces = page.locator("#benchmark-graph .scatterlayer .js-line")
+        traces.first.wait_for(state="attached", timeout=10_000)
+        assert traces.count() >= 1
