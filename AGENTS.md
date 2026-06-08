@@ -138,7 +138,7 @@ Rules for this repo:
 
 ## Test suite
 
-807 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+821 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -165,7 +165,7 @@ tests/
 │   ├── test_ef_portfolio_card.py    # EF portfolio card builder: stat blocks, title/badge, allocation rows with percent + stacked bar (plotly palette colors, zero-weight segments skipped), None-weights note (9 tests)
 │   ├── test_find_withdrawal_helpers.py  # Find result helpers (#22): _map_find_result sign/units per strategy (abs amount for indexation/cwd, -rel% for percentage/vds), _format_find_result display strings (space thousands separator, accuracy from error_rel) (7 tests)
 │   ├── test_dump_callbacks.py       # tools/dump_callbacks formatter: file:line via inspect.unwrap of the dash wrapper, single/multi Output, dict (pattern-matching) ids, clientside entries (no Python "callback" key), state omitted when empty, sorted by location (6 tests)
-│   ├── test_macro_data.py           # curated macro catalog integrity: namespaces, 26 CAPE countries, overlay mapping covers all 6 INFL currencies (ECB=MRO), defaults ⊆ catalogs, filter_known URL guard; stage-2: rates groups registry (key/deposit/mm, no overlaps, fallback resolver), RE catalog (17 tests)
+│   ├── test_macro_data.py           # curated macro catalog integrity: namespaces, overlay mapping covers all 6 INFL currencies (ECB=MRO), defaults ⊆ catalogs, filter_known URL guard; rates groups registry (key/mm — deposit hidden), RE catalog; 25 CAPE countries (Russia suspended); RATE_TO_INFLATION real-rate map (rate→currency INFL, mm→RUB) (20 tests)
 │   ├── test_macro_mocks.py          # PicklableInflation/Rate/Indicator/Asset API surface (all data members are attributes, only describe() a method), rolling_inflation starts at the 12th month (window alignment regression), pickle round-trips; AssetList inflation column only when inflation=True (compare/benchmark regression guard) + private price-converter mirror (11 tests)
 │   ├── test_macro_objects.py        # cached accessors wire get_or_create: obj_type per class, date bounds into ctor, TTL_ASSET_LIST; stage-2: Asset (full-history, no dates) + AssetList (5-param key shared with benchmark/compare pickles) + okama private-API upgrade guard (_adjust_price_to_currency_monthly) (6 tests)
 │   ├── test_macro_stats.py          # describe-table outer merge on (property, period) incl. mismatched full-period rows; stats grid percent/decimal formatter wiring, sortable=False, suppressFieldDotNotation (6 tests)
@@ -216,13 +216,14 @@ tests/
 │   ├── test_submit_spinner.py        # all 4 main data callbacks + the Find solver toggle their spinner via the `running` spec (chart's dcc.Loading is below the fold on mobile); Find case keyed on a solver-unique output — duplicate outputs register earlier and would substring-match (5 tests)
 │   ├── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
 │   │                                        # get_y_title (6 plot types), rolling-window disabled for annual_return + cumulative_return (compare + portfolio) (21 tests)
-│   ├── test_macro_cards.py          # shared card factories: page-prefixed ids, multiselect defaults, copy-link guard, dates_ready keystroke guard, chart-card class (6 tests)
+│   ├── test_macro_cards.py          # shared card factories: page-prefixed ids, multiselect defaults, copy-link guard, dates_ready keystroke guard, chart-card class + Download-data block ids (7 tests)
+│   ├── test_macro_download.py       # per-chart Download-data helper: download_from_store guards (no clicks / no data → PreventUpdate), returns xlsx dict (benchmark pattern, shared by all macro pages) (3 tests)
 │   ├── test_macro_inflation_figures.py  # inflation figure builders: annual grouped bars / rolling / cumulative / monthly ×100, key-rate overlay (step-dot traces via catalog mapping), purchasing-power cards (7 tests)
-│   ├── test_macro_inflation_page.py  # /macro/inflation page: REACTIVE main callback (every control an Input, no Submit; figure+PP cards+grid, PP rows dropped), overlay gating by plot type, half-typed-date guard, URL prefill, link/export/copy-link-guard callbacks (15 tests)
-│   ├── test_macro_rates_page.py     # /macro/rates: step-lines (hv) with catalog labels, ×100, reactive Inputs wiring + date guard, prefill, link, export guard, copy-link guard; stage-2 groups: switch swaps options+defaults, group NOT a main-callback Input (stale-series double-fire), group-scoped URL prefill, link carries non-default group (18 tests)
-│   ├── test_macro_cape10_page.py    # /macro/cape10: history lines (raw decimals), 26-country snapshot (sorted, cached per month, highlight colors, x-range headroom for outside labels, mobile keeps country ticks outside), decimal formatter, reactive Inputs wiring + date guard, PreventUpdate guard (16 tests)
+│   ├── test_macro_inflation_page.py  # /macro/inflation page: REACTIVE main callback (every control an Input, no Submit; figure+PP cards+chart-store+grid), overlay gating, stats trimmed to 3 properties (max 12m/compound/annual), EUR purchasing-power NaN fallback, half-typed-date guard, URL prefill, link/export/copy-link/download callbacks (17 tests)
+│   ├── test_macro_rates_page.py     # /macro/rates: 3 plot types — Rates (step-lines hv ×100), Real rates (nominal − 12m rolling inflation via RATE_TO_INFLATION; empty-pairs guard), Current snapshot (nominal bar, group inferred from selection); no dates/stats; group switch swaps options+defaults (group NOT a main-callback Input); prefill, link carries group+plot, copy-link/download (20 tests)
+│   ├── test_macro_cape10_page.py    # /macro/cape10: history lines (raw decimals), 25-country snapshot (Russia suspended; sorted, cached per month, highlight colors, x-range headroom, mobile ticks outside), no stats table/dates, chart-store + download, reactive Inputs (series/plot only), PreventUpdate guard (14 tests)
 │   ├── test_macro_real_estate_figures.py  # RE figure builders: trim_future (future-date insurance after the 2026-06-07 source incident), price-per-m² labels + ccy y-title, wealth-vs-inflation lines (5 tests)
-│   └── test_macro_real_estate_page.py  # /macro/real-estate: reactive main callback (price RUB/USD via okama private converter, wealth+inflation line, date masks), ccy case-normalized prefill, link plot/ccy params, export/copy-link guards (12 tests)
+│   └── test_macro_real_estate_page.py  # /macro/real-estate (hidden from navbar, reachable by URL): reactive main callback (price RUB/USD via okama private converter, wealth+inflation line, date masks, chart-store), ccy case-normalized prefill, link plot/ccy params, export/copy-link/download guards (13 tests)
 └── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
     ├── conftest.py                  # Gunicorn server (TESTING=1, 2 workers) + Playwright
     ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
@@ -230,18 +231,18 @@ tests/
     │                                # EF info panel renders assets names + info for URL tickers (#13 guard) (9 tests)
     ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages; Portfolio fresh link (no MC URL params) → reactive estimation auto-fills the MC distribution fields (dead-callback regression guard); Portfolio Go to EF link → EF prefill (6 tests)
     ├── test_submit_interaction.py   # Submit → chart with real traces for all 4 pages; Portfolio stats grid: dotted column renders values, percent-formatted (6 tests)
-    └── test_macro_pages.py          # macro pages render reactively without Submit (bars/step-lines/history counts scoped to .cartesianlayer — rangeslider duplicates traces), stats grid percent via real DOM (formatPercentGuarded blind-spot coverage), navbar dropdown navigation, URL prefill, mobile viewport; stage-2: RE price/wealth autorender, reactive rates group switch 3→1 traces, Real Estate nav item (11 tests)
+    └── test_macro_pages.py          # macro pages render reactively without Submit (counts scoped to .cartesianlayer — rangeslider duplicates traces), inflation stats-grid percent + download-button via real DOM, navbar dropdown navigation (RE hidden), URL prefill, mobile; RE price/wealth autorender by direct URL, reactive rates group switch (key→mm) 3→1 traces (11 tests)
 ```
 
 ### Run commands
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 263 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 508 | ~9s |
+| `poetry run pytest -m unit` | Pure logic | 266 | ~2s |
+| `poetry run pytest -m component` | Dash callbacks | 519 | ~9s |
 | `poetry run pytest -m e2e` | Playwright browser | 36 | ~93s |
-| `poetry run pytest -q` | Everything | 807 | ~99s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 771 | ~10s |
+| `poetry run pytest -q` | Everything | 821 | ~120s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 785 | ~10s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
@@ -259,7 +260,7 @@ to a file in `tmp/` instead of `PIPE`.
 | **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats | load, shareable link, submit→traces |
 | **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types) | load, shareable link, submit→traces |
 | **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
-| **Macro (Inflation / Rates / CAPE10 / Real Estate)** | catalog integrity + overlay mapping (ECB=MRO) + rates groups registry + RE catalog, cached accessors wiring (incl. Asset full-history + AssetList shared keyspace + okama private-API upgrade guard), describe-merge + grid formatters, link builder, mocks API surface | per-page REACTIVE main callbacks (every control an Input, no Submit; half-typed-date guard) + error annotation, overlay gating, snapshot (26 countries, monthly cache, highlight + mobile outside ticks), rates group switch (options+defaults swap, group NOT a main-callback Input), RE price RUB/USD via private converter + trim_future + wealth-vs-inflation, URL prefill via filter_known, Copy-link guard, xlsx export n_clicks guard | auto-render w/o Submit (4 pages), stats grid percent via DOM, navbar dropdown, prefill, reactive group switch, mobile |
+| **Macro (Inflation / Rates / CAPE10 / Real Estate*)** | catalog integrity + overlay map (ECB=MRO) + rates groups (key/mm) + RATE_TO_INFLATION + RE catalog (25 CAPE, Russia suspended), cached accessors (Asset full-history + AssetList shared keyspace + private-API upgrade guard), describe-merge + grid formatters, link builder, Download-data helper, mocks | per-page REACTIVE callbacks (every control an Input, no Submit) + error annotation, inflation monthly-bar (last published month highlighted per country) + EUR pp-NaN fallback + 3-row stats, rates 3 plot types (Rates/Real rates/Current snapshot, group inferred for snapshot, empty-pairs guard), CAPE10/Rates no stats/dates, snapshot (monthly cache, mobile outside ticks), chart-data store on every page, copy-link guard | reactive render w/o Submit, inflation stats+download via DOM, navbar (RE hidden), prefill, rates group switch, mobile (*Real Estate hidden from navbar, reachable by URL) |
 | **common/ & tools/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_subtitle, format_points), dump_callbacks (callback wiring map formatter) | change_style_for_hidden_row, grid_export (xlsx via dcc.Download + rowdata_to_xlsx_download; Excel number formats mirror the on-page grid formatters), grid sorting disabled on every AG Grid (all 6 grid-building files) | — |
 
 ### Known gaps
@@ -470,7 +471,7 @@ so prefer fixing the shared stylesheet/convention over per-component patches.
   `defaultColDef={"resizable": False, "sortable": False}` (AG Grid columns are sortable
   by default). New grids must follow suit; `tests/component/test_grid_sorting.py` asserts
   the wiring on all existing grid builders.
-- **Macro pages are chart-first and fully reactive.** All four `/macro/*` pages use a one-row control bar above the chart (no controls/info card pair, no Submit button) and recalculate on every control change: all controls are Inputs of the main callback, which also omits `prevent_initial_call` so the chart renders on page load. `dates_ready` guards against half-typed YYYY-MM dates reaching okama; an empty series selection keeps the last chart (PreventUpdate) and disables Copy link. The control row is top-aligned (`align="start"`) so all 38px controls share one line while the dates' FormText hangs below. Secondary selectors that repopulate another control (the rates group dropdown) update that control's options+value and are deliberately NOT main-callback Inputs (stale-value double-fire).
+- **Macro pages are chart-first and fully reactive.** All four `/macro/*` pages use a one-row control bar above the chart (no controls/info card pair, no Submit button) and recalculate on every control change: all controls are Inputs of the main callback, which also omits `prevent_initial_call` so the chart renders on page load. `dates_ready` guards against half-typed YYYY-MM dates reaching okama; an empty series selection keeps the last chart (PreventUpdate) and disables Copy link. The control row is top-aligned (`align="start"`) so all 38px controls share one line while the dates' FormText hangs below. Secondary selectors that repopulate another control (the rates group dropdown) update that control's options+value and are deliberately NOT main-callback Inputs (stale-value double-fire). Every macro chart carries a **Download data** link below it (shared `macro_chart_card` block + `register_macro_download(prefix)`): the main callback emits the plotted dataframe as JSON into `{prefix}-store-chart-data`, the button converts it to xlsx via `common/xlsx.py::json_to_download_xlsx_object` — so each figure builder returns `(figure, dataframe)`.
 - These are visual/markup changes — verify by eye on the live local site (see below), no
   unit test per the TDD-skip rule for non-logic changes.
 
