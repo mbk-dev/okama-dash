@@ -28,7 +28,7 @@ from pages.macro.cards_macro.macro_controls import (
 )
 from pages.macro.cards_macro.macro_description import macro_description_card
 from pages.macro.cards_macro.macro_download import register_macro_download
-from pages.macro.cards_macro.macro_stats import build_describe_table, build_stats_grid
+from pages.macro.cards_macro.macro_stats import build_stats_grid
 from pages.macro.macro_data import (
     INFLATION_DEFAULTS,
     INFLATION_SERIES,
@@ -146,14 +146,23 @@ def get_purchasing_power_cards(objects: list) -> dbc.Row:
 _HEADLINE_STATS = ["max 12m inflation", "compound inflation", "annual inflation"]
 
 
-def _full_period_stats(stats_df: pd.DataFrame) -> pd.DataFrame:
-    """Keep the 3 headline metrics, each for the full first-date..last-date period.
+def _full_period_stats(describes: list[pd.DataFrame]) -> pd.DataFrame:
+    """Combine the 3 headline metrics, each over the full first-date..last-date period.
 
-    okama describe() lists every metric for YTD / 1 / 5 / 10 years / full period
-    in that order, so the last row of each metric is its full-period figure.
+    okama describe() lists every metric for YTD / 1 / 5 / 10 years / full period in
+    that order, so the LAST row of each metric is its full-period figure. We take that
+    row per symbol and join on `property` only — the `period` column is dropped because
+    all three values already span the same selected range (and per-symbol full-period
+    labels can differ slightly, e.g. "16 years" vs "16 years, 1 month"). Result columns:
+    `property` + one column per symbol, rows ordered as _HEADLINE_STATS.
     """
-    headline = stats_df[stats_df["property"].isin(_HEADLINE_STATS)]
-    return headline.drop_duplicates(subset="property", keep="last")
+    columns = {}
+    for df in describes:
+        symbol = df.columns[-1]
+        headline = df[df["property"].isin(_HEADLINE_STATS)].drop_duplicates(subset="property", keep="last")
+        columns[symbol] = headline.set_index("property")[symbol]
+    out = pd.DataFrame(columns).reindex(_HEADLINE_STATS)
+    return out.reset_index(names="property")
 
 
 dash.register_page(
@@ -290,7 +299,7 @@ def update_inflation_page(screen, symbols, plot_type, overlay, fd_value, ld_valu
         if overlay and plot_type in _OVERLAY_PLOTS:
             add_key_rate_overlay(fig, symbols, fd_value, ld_value)
         pp_cards = get_purchasing_power_cards(objects)
-        stats_df = _full_period_stats(build_describe_table([obj.describe() for obj in objects]))
+        stats_df = _full_period_stats([obj.describe() for obj in objects])
         grid = build_stats_grid(stats_df, "infl-describe-table-grid", value_format="percent")
         store_json = df.to_json(orient="split", default_handler=str)
         fig, config = adopt_small_screens(fig, screen)

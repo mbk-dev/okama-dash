@@ -66,17 +66,21 @@ class TestMainCallback:
         assert "1000 purchasing power" not in properties
         assert "compound inflation" in properties
 
-    def test_stats_grid_limited_to_three_properties(self, infl_page, patched_objects):
+    def test_stats_grid_no_period_column_three_rows(self, infl_page, patched_objects):
         *_, store, grid = infl_page.update_inflation_page(None, ["RUB.INFL"], "annual", [], None, None)
         properties = {row["property"] for row in grid.rowData}
         assert properties == {"max 12m inflation", "compound inflation", "annual inflation"}
+        # All values are over the full first..last period, so the period column is dropped.
+        assert all("period" not in row for row in grid.rowData)
+        assert not any(d["field"] == "period" for d in grid.columnDefs)
 
-    def test_full_period_stats_keeps_last_row_per_metric(self, infl_page):
-        # okama describe() lists each metric for YTD/1/5/10y/full in order;
-        # keep only the 3 headline metrics, each for the FULL period (last row).
+    def test_full_period_stats_combines_on_property_without_period(self, infl_page):
+        # okama describe() lists each metric for YTD/1/5/10y/full in order; take each
+        # symbol's FULL-period value (last row per metric) and combine on property —
+        # period is dropped because every value spans the selected first..last range.
         import pandas as pd
 
-        df = pd.DataFrame(
+        rub = pd.DataFrame(
             {
                 "property": [
                     "compound inflation", "1000 purchasing power", "annual inflation",
@@ -86,10 +90,24 @@ class TestMainCallback:
                 "RUB.INFL": [0.05, 947.0, 0.05, 2.11, 0.072, 0.178],
             }
         )
-        out = infl_page._full_period_stats(df)
-        assert set(out["property"]) == {"compound inflation", "annual inflation", "max 12m inflation"}
-        assert out.loc[out["property"] == "compound inflation", "period"].iloc[0] == "16 years"
-        assert out.loc[out["property"] == "annual inflation", "period"].iloc[0] == "16 years"
+        usd = pd.DataFrame(
+            {
+                "property": [
+                    "compound inflation", "annual inflation",
+                    "compound inflation", "annual inflation", "max 12m inflation",
+                ],
+                # USD's full period reports a slightly different label than RUB's.
+                "period": ["1 years", "1 years", "16 years, 1 month", "16 years, 1 month", "2021-03"],
+                "USD.INFL": [0.03, 0.03, 0.60, 0.04, 0.09],
+            }
+        )
+        out = infl_page._full_period_stats([rub, usd])
+        assert "period" not in out.columns
+        assert list(out["property"]) == ["max 12m inflation", "compound inflation", "annual inflation"]
+        assert set(out.columns) == {"property", "RUB.INFL", "USD.INFL"}
+        # full-period (last) values, aligned on property despite mismatched period labels
+        assert out.loc[out["property"] == "compound inflation", "RUB.INFL"].iloc[0] == 2.11
+        assert out.loc[out["property"] == "compound inflation", "USD.INFL"].iloc[0] == 0.60
 
     def test_main_callback_emits_chart_store_json(self, infl_page, patched_objects):
         fig, config, pp, store, grid = infl_page.update_inflation_page(None, ["RUB.INFL"], "annual", [], None, None)
