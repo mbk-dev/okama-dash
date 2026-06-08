@@ -923,7 +923,11 @@ def update_go_to_links(
     and no cash-flow params travel (issue #23).
     """
     tickers = [t for t in tickers_list if t]
-    weights = [w for w in weights_list if w is not None]
+    # Drop cleared rows ("" from a blanked dcc number input) so create_link's
+    # "{w:g}" pf_weights formatting can't raise on an empty string — this single
+    # callback drives all three hrefs, so one raise would blank the EF link too.
+    # Types are preserved (int/str), so the EF link's str(w) format is unchanged.
+    weights = [w for w in weights_list if w not in (None, "")]
     ef_href = create_link(
         href="/",
         tickers_list=tickers,

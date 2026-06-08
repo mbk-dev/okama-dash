@@ -69,6 +69,18 @@ class TestGoToLinks:
         assert "pf_tickers=AAPL.US,MSFT.US" in compare
         assert "pf_weights=60,40" in compare
 
+    def test_string_and_empty_weights_do_not_crash(self):
+        # dcc number inputs deliver weights as strings, and a cleared field as ""
+        # mid-edit; every other weight consumer in this module tolerates that, and
+        # the single callback drives all three hrefs, so a raise here would also
+        # kill the EF link. Empty entries are dropped, strings coerced to numbers.
+        ef, compare, benchmark = self._links(
+            ["AAPL.US", "MSFT.US"], ["60", ""], "EUR", "2015-01", "2020-12", "year", "MyPF"
+        )
+        assert "pf_weights=60" in compare
+        assert "weights=60" in ef
+        assert benchmark.startswith("/benchmark?")
+
 
 class TestGoToMenuGating:
     def test_enabled_on_valid_two_asset_portfolio(self):

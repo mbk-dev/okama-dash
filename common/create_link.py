@@ -197,7 +197,9 @@ def create_link(
         ("first_date", first_date, ("skip_if_default", "2000-01")),
         ("last_date", last_date, ("skip_if_default", today_str)),
         ("pf_tickers", ",".join(_quote_value(s) for s in pf_tickers) if pf_tickers else None, "if_not_none"),
-        ("pf_weights", ",".join(f"{w:g}" for w in pf_weights) if pf_weights else None, "if_not_none"),
+        # float(w) tolerates string weights from raw form values; :g strips the
+        # trailing .0 of float store weights. Callers drop "" before this point.
+        ("pf_weights", ",".join(f"{float(w):g}" for w in pf_weights) if pf_weights else None, "if_not_none"),
         ("pf_rebal", pf_rebal, ("skip_if_default", "month")),
         ("pf_symbol", pf_symbol, ("skip_if_default", "PORTFOLIO")),
         ("weights", ",".join(str(w) for w in weights_list) if weights_list else None, "if_not_none"),
