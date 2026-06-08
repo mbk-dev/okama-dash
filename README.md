@@ -18,8 +18,9 @@ A live instance is running at **[okama.io](https://okama.io)**.
 | **Efficient Frontier** | `/` | Portfolio optimization: efficient frontier chart, assets transition map, simulated portfolios |
 | **Compare assets** | `/compare` | Compare assets' historical performance: wealth indexes, rate of return, risk, CVAR, drawdowns, correlation |
 | **Compare with benchmark** | `/benchmark` | Compare assets with a benchmark: tracking difference, tracking error, correlation, beta |
-| **Investment Portfolio** | `/portfolio` | Portfolio analysis: rebalancing, cash flow strategies, Monte Carlo forecasts |
+| **Investment Portfolio** | `/portfolio` | Portfolio analysis: rebalancing, cash flow strategies, Monte Carlo forecasts, find max withdrawal |
 | **Database** | `/database` | Search the financial database: stocks, ETF, mutual funds, indexes, currencies, commodities, rates |
+| **Macro indicators** | `/macro/*` | Macroeconomic charts: inflation, central-bank rates, CAPE10 valuation |
 
 ![Wealth indexes chart in the Compare widget](https://raw.githubusercontent.com/mbk-dev/okama-dash/images/images/wealth_indexes.png)
 
