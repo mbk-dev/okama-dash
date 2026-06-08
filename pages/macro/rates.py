@@ -71,6 +71,11 @@ def get_rates_figure(objects: list) -> tuple[go.Figure, pd.DataFrame]:
 
 def get_real_rates_figure(pairs: dict) -> tuple[go.Figure, pd.DataFrame]:
     """pairs: {rate_symbol: (rate_obj, inflation_obj)} -> nominal − trailing-12m inflation."""
+    if not pairs:
+        # Unreachable in the normal flow (every grouped rate is in
+        # RATE_TO_INFLATION), but a clear message beats an opaque empty-frame
+        # RangeIndex.to_timestamp crash if an unmapped symbol ever slips through.
+        raise ValueError("Real rates unavailable: the selected series have no inflation data")
     cols = {}
     for symbol, (rate_obj, infl_obj) in pairs.items():
         nominal = rate_obj.values_monthly

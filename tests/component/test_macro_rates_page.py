@@ -54,6 +54,12 @@ class TestRealRateFigure:
         assert fig.data[0].name == "Bank of Russia key rate"
         assert "Real" in fig.layout.title.text
 
+    def test_empty_pairs_raises_clear_error(self, rates_page):
+        # No selected rate has an inflation mapping -> a clear message, not an
+        # opaque RangeIndex.to_timestamp crash (caught by the page as an annotation).
+        with pytest.raises(ValueError, match="inflation"):
+            rates_page.get_real_rates_figure({})
+
 
 class TestMainCallback:
     def test_history_returns_figure_and_store(self, rates_page, patched_rates):
