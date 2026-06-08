@@ -143,6 +143,19 @@ def get_purchasing_power_cards(objects: list) -> dbc.Row:
     return dbc.Row(cards, class_name="g-2 mb-2")
 
 
+_HEADLINE_STATS = ["max 12m inflation", "compound inflation", "annual inflation"]
+
+
+def _full_period_stats(stats_df: pd.DataFrame) -> pd.DataFrame:
+    """Keep the 3 headline metrics, each for the full first-date..last-date period.
+
+    okama describe() lists every metric for YTD / 1 / 5 / 10 years / full period
+    in that order, so the last row of each metric is its full-period figure.
+    """
+    headline = stats_df[stats_df["property"].isin(_HEADLINE_STATS)]
+    return headline.drop_duplicates(subset="property", keep="last")
+
+
 dash.register_page(
     __name__,
     path="/macro/inflation",
@@ -277,8 +290,7 @@ def update_inflation_page(screen, symbols, plot_type, overlay, fd_value, ld_valu
         if overlay and plot_type in _OVERLAY_PLOTS:
             add_key_rate_overlay(fig, symbols, fd_value, ld_value)
         pp_cards = get_purchasing_power_cards(objects)
-        stats_df = build_describe_table([obj.describe() for obj in objects])
-        stats_df = stats_df[stats_df["property"].isin(["max 12m inflation", "compound inflation", "annual inflation"])]
+        stats_df = _full_period_stats(build_describe_table([obj.describe() for obj in objects]))
         grid = build_stats_grid(stats_df, "infl-describe-table-grid", value_format="percent")
         store_json = df.to_json(orient="split", default_handler=str)
         fig, config = adopt_small_screens(fig, screen)

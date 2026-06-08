@@ -71,6 +71,26 @@ class TestMainCallback:
         properties = {row["property"] for row in grid.rowData}
         assert properties == {"max 12m inflation", "compound inflation", "annual inflation"}
 
+    def test_full_period_stats_keeps_last_row_per_metric(self, infl_page):
+        # okama describe() lists each metric for YTD/1/5/10y/full in order;
+        # keep only the 3 headline metrics, each for the FULL period (last row).
+        import pandas as pd
+
+        df = pd.DataFrame(
+            {
+                "property": [
+                    "compound inflation", "1000 purchasing power", "annual inflation",
+                    "compound inflation", "annual inflation", "max 12m inflation",
+                ],
+                "period": ["1 years", "1 years", "1 years", "16 years", "16 years", "2022-04"],
+                "RUB.INFL": [0.05, 947.0, 0.05, 2.11, 0.072, 0.178],
+            }
+        )
+        out = infl_page._full_period_stats(df)
+        assert set(out["property"]) == {"compound inflation", "annual inflation", "max 12m inflation"}
+        assert out.loc[out["property"] == "compound inflation", "period"].iloc[0] == "16 years"
+        assert out.loc[out["property"] == "annual inflation", "period"].iloc[0] == "16 years"
+
     def test_main_callback_emits_chart_store_json(self, infl_page, patched_objects):
         fig, config, pp, store, grid = infl_page.update_inflation_page(None, ["RUB.INFL"], "annual", [], None, None)
         assert isinstance(store, str) and "columns" in store
