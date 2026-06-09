@@ -41,7 +41,7 @@ okama-dash/
 │   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export, submit spinner)
 │
 ├── tools/                   # Dev-only scripts, not deployed (dump_callbacks.py — greppable callback wiring map; bench_server.py — server load/timing benchmark, see .claude/skills/test_server_load)
-├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards; grids.css — compact wrapText line-height in AG Grid cells; chart_yrescale.js — global plotly_relayout listener that auto-rescales the Y axis to the visible X window when the range slider zooms, shared across every chart, #26)
+├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards; grids.css — compact wrapText line-height in AG Grid cells; chart_yrescale.js — global plotly_relayout listener that auto-rescales the Y axis to the visible X window when the range slider zooms, shared across every chart, #26; select_tab_complete.js — global keydown listener: Tab on an open searchable dmc.Select/MultiSelect picks the top match; MultiSelect (multi-ticker) keeps the cursor in the search box for the next ticker, single Select moves focus on; shared across every ticker selector, #25)
 ├── cache-directory/         # Runtime file-system cache (Flask-Caching fallback)
 ├── tmp/                     # Scratch space for temporary files (contents gitignored)
 ├── docs/                    # Specs and plans (not deployed)
@@ -158,7 +158,7 @@ Rules for this repo:
 
 ## Test suite
 
-889 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+892 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -198,8 +198,8 @@ Rough grouping:
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 300 | ~2s |
 | `poetry run pytest -m component` | Dash callbacks | 550 | ~9s |
-| `poetry run pytest -m e2e` | Playwright browser | 39 | ~98s |
-| `poetry run pytest -q` | Everything | 889 | ~107s |
+| `poetry run pytest -m e2e` | Playwright browser | 42 | ~100s |
+| `poetry run pytest -q` | Everything | 892 | ~118s |
 | `poetry run pytest -m "not e2e"` | Fast suite | 850 | ~10s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
