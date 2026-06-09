@@ -41,7 +41,7 @@ okama-dash/
 │   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export, submit spinner)
 │
 ├── tools/                   # Dev-only scripts, not deployed (dump_callbacks.py — greppable callback wiring map; bench_server.py — server load/timing benchmark, see .claude/skills/test_server_load)
-├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards; grids.css — compact wrapText line-height in AG Grid cells)
+├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards; grids.css — compact wrapText line-height in AG Grid cells; chart_yrescale.js — global plotly_relayout listener that auto-rescales the Y axis to the visible X window when the range slider zooms, shared across every chart, #26)
 ├── cache-directory/         # Runtime file-system cache (Flask-Caching fallback)
 ├── tmp/                     # Scratch space for temporary files (contents gitignored)
 ├── docs/                    # Specs and plans (not deployed)
@@ -170,94 +170,27 @@ tests/
 ├── mocks/okama_mock.py      # Picklable + MagicMock mocks for Portfolio, AssetList, symbols
 ├── fixtures/symbols_data.json
 ├── unit/                    # @pytest.mark.unit — pure logic, no Dash
-│   ├── conftest.py                  # session-scoped Dash app (for unit tests importing pages/ modules)
-│   ├── test_validators.py           # validate_integer bounds, types, error messages; validate_integer_bool (21 tests)
-│   ├── test_math.py                 # round_list rounding & sum preservation (8 tests)
-│   ├── test_create_link.py          # URL builder, filename builder, list size check; param grouping (base→identity→rebal→cashflow); inactive-strategy params omitted; scope_cashflow_params; cf_ts owned by every strategy + zero-primary-with-cf_ts counts as active; "" (cleared dmc.NumberInput) treated as unset by skip_if_default; pf_* portfolio handoff group (#23: emitted, defaults omitted, empty tickers= omitted, pf_abs_dev/pf_rel_dev rebalancing deviations emitted). NOTE: MC params are deliberately NOT in shareable links — none are emitted/parsed (80 tests)
-│   ├── test_url_portfolio.py         # pf_* URL portfolio handoff (#23): parse_url_portfolio_group (validation mirrors EF, defaults, symbol normalization, abs_dev/rel_dev parsed + bad-deviation guard), split_portfolio_from_selection (single chip-recognition point), portfolio_option, pf_link_kwargs (default symbol omitted, deviations carried), pf_cache_token (filename-safe — sanitized for the pickle cache key; deviations appended only when present so deviation-less tokens stay byte-identical), get_or_create_url_portfolio (cached ok.Portfolio constructor wiring, ok.Rebalance abs/rel deviation ÷100) (27 tests)
-│   ├── test_symbols.py              # symbol lists, search index, search (prefix, name-token, case-insensitive) (23 tests)
-│   ├── test_symbols_cache_isolation.py  # mocked (TESTING) symbol index must not poison real cache (4 tests)
-│   ├── test_object_cache.py         # object cache: key building, get_or_create, cleanup, filename-length guard; TESTING flag isolation (env poisoning guard) (25 tests)
-│   ├── test_ef_grid.py              # adaptive grid step: predicted points, resolve (Auto), options, parse (7 tests)
-│   ├── test_ef_label_padding.py     # EF x-range label padding: centered labels reserve half width on both sides (2 tests)
-│   ├── test_chart_helpers.py        # add_return_type_subtitle: CAGR note, default, left-aligned title; format_points (integer points, space thousands separator) (6 tests)
-│   ├── test_inflation.py            # resolve_url_currency (case-insensitive, validated, page-default fallback); currency list memoized 30 days with TESTING-token cache isolation (9 tests)
-│   ├── test_mc_distribution_parameters.py  # build_distribution_parameters: norm/lognorm/t mapping, empty→None, lognorm loc=-1; reactive-estimation gates: _portfolio_is_complete (sum=100, tolerance), _valid_mc_date (18 tests)
-│   ├── test_ef_portfolio_card.py    # EF portfolio card builder: stat blocks, title/badge, allocation rows with percent + stacked bar (plotly palette colors, zero-weight segments skipped), None-weights note (9 tests)
-│   ├── test_find_withdrawal_helpers.py  # Find result helpers (#22): _map_find_result sign/units per strategy (abs amount for indexation/cwd, -rel% for percentage/vds), _format_find_result display strings (space thousands separator, accuracy from error_rel) (7 tests)
-│   ├── test_dump_callbacks.py       # tools/dump_callbacks formatter: file:line via inspect.unwrap of the dash wrapper, single/multi Output, dict (pattern-matching) ids, clientside entries (no Python "callback" key), state omitted when empty, sorted by location (6 tests)
-│   ├── test_macro_data.py           # curated macro catalog integrity: namespaces, overlay mapping covers all 6 INFL currencies (ECB=MRO), defaults ⊆ catalogs, filter_known URL guard; rates groups registry (key only — deposit+money-market hidden), RE catalog; 25 CAPE countries (Russia suspended); RATE_TO_INFLATION real-rate map (rate→currency INFL, mm→RUB) (20 tests)
-│   ├── test_macro_mocks.py          # PicklableInflation/Rate/Indicator/Asset API surface (all data members are attributes, only describe() a method), rolling_inflation starts at the 12th month (window alignment regression), pickle round-trips; AssetList inflation column only when inflation=True (compare/benchmark regression guard) + private price-converter mirror (11 tests)
-│   ├── test_macro_objects.py        # cached accessors wire get_or_create: obj_type per class, date bounds into ctor, TTL_ASSET_LIST; stage-2: Asset (full-history, no dates) + AssetList (5-param key shared with benchmark/compare pickles) + okama private-API upgrade guard (_adjust_price_to_currency_monthly) (6 tests)
-│   ├── test_macro_stats.py          # describe-table outer merge on (property, period) incl. mismatched full-period rows; stats grid percent/decimal formatter wiring, sortable=False, suppressFieldDotNotation (6 tests)
-│   └── test_macro_link.py           # macro shareable links: defaults omitted, (value, default) extra params, rates flag (4 tests)
 ├── component/               # @pytest.mark.component — Dash callbacks with mocked okama
-│   ├── conftest.py                  # session-scoped Dash app + patched_okama_portfolio
-│   ├── test_portfolio_callbacks.py  # pie chart, deviation toggle, cashflow strategies (6 types),
-│   │                                # _resolve_indexation + _resolve_discount_rate (percent ÷100),
-│   │                                # survival stats visibility,
-│   │                                # CWD threshold validation, disable Add button logic,
-│   │                                # percentage input lives in cash-flow frequency row,
-│   │                                # custom cash flows in all strategies: _build_ts_dict parsing,
-│   │                                # _apply_custom_time_series on every strategy, Find-style collapse block
-│   │                                # (chevron header + dbc.Collapse, mirrors Find max withdrawal; closed
-│   │                                # default, closed on switch to non-TS, open for TS/URL prefill; TS keeps
-│   │                                # the headerless plain bordered body — toggle hidden, body border/bg
-│   │                                # unchanged; set_ts_collapse_for_strategy + toggle_ts_collapse; row
-│   │                                # container empty while collapsed, on expand one example withdrawal row
-│   │                                # for the TS strategy / one blank row for every other strategy),
-│   │                                # MC limits validation: check_validity_monte_carlo (n≤MC_PORTFOLIO_MAX,
-│   │                                # years 1..MC_PORTFOLIO_YEARS_MAX, n×years≤MC_PORTFOLIO_BUDGET, out-of-range
-│   │                                # string flagged not crashed) + submit gated on mc-years validity,
-│   │                                # amount inputs (#17): Initial/Cash flow amount are dmc.NumberInput
-│   │                                # (thousandSeparator=" ", min=1 kept, MantineProvider wrap, URL string
-│   │                                # prefill coerced to number, bad prefill → default),
-│   │                                # big-amount fields follow suit: CWD Withdrawal amount (max=0 kept),
-│   │                                # VDS min/max withdrawal (min=0 kept), custom cash-flow row amounts —
-│   │                                # all dmc.NumberInput(thousandSeparator=" ") with float prefill,
-│   │                                # print_weights_sum returns one plain string (single children Output —
-│   │                                # a (text, flag) tuple leaks True into children, invalid ReactNode) (126 tests)
-│   ├── test_ef_callbacks.py         # normalize_plot_types, resolve_return_column,
-│   │                                # portfolio_weights, expand_weights, show/hide callbacks,
-│   │                                # copy-link carries rebal / omits default month,
-│   │                                # layout guard: no Y-axis (mean type) selector — EF always plots CAGR (28 tests)
-│   ├── test_ef_click_find.py        # display_click_data (incl. backtest link carries the EF object's rebalancing period; clicked point renders a Selected portfolio card with trace-name badge + Sharpe from rf-rate; re-submit resets the section — stale clickData must not meet a changed ticker set; length-mismatch guard renders the unavailable note), find_portfolio (renders an Optimized portfolio card, None stats skipped) (25 tests)
-│   ├── test_ef_url_portfolio.py     # URL portfolio handoff: _parse_url_portfolio (weights+symbol → store), get_portfolio_point (cached ok.Portfolio → percent risk/CAGR), prepare_ef star trace (label, JSON-list customdata), update_ef_cards wiring (payload on ticker match, None on mismatch, failure isolation) (17 tests)
-│   ├── test_portfolio_go_to_links.py  # "Go to" dropdown (#23): menu markup (3 link items EF/Compare/Benchmark, new-tab props), update_go_to_links (EF page-level vocabulary unchanged; Compare/Benchmark carry the pf_* group + ccy/dates only — no page tickers, no cash-flow, no benchmark; defaults omitted; string/empty weights tolerated without crashing; rebalancing deviations pf_abs_dev/pf_rel_dev reach Compare/Benchmark but NOT EF) + menu gating (Copy-Link conditions OR <2 unique tickers) (11 tests)
-│   ├── test_compare_url_portfolio.py  # Compare pf_* handoff (#23): layout store + chip prefill (coexists with page tickers, broken group → no chip), chip-aware search injection, copy-link round-trip (pf_* with chip, plain without), EF-link/info token exclusion, main callback joins the cached portfolio into the AssetList with a pf-aware cache key (deviations flow into the pf token) (16 tests)
-│   ├── test_benchmark_url_portfolio.py  # Benchmark pf_* handoff (#23): layout store + chip prefill (benchmark default kept, broken group → no chip), chip-aware search/copy-link/info, main callback puts the portfolio AFTER the benchmark ([benchmark, pf, …tickers]) with a pf-aware cache key (deviations flow into the pf token) (10 tests)
-│   ├── test_find_withdrawal_callbacks.py  # Find max withdrawal (#22): collapse toggle + chevron, Target-SP visibility per goal, block hidden for the TS strategy (toggle_strategy_panels 6th output), percentile/target-SP validation (dcc string values), button gating + first-failing-condition hint (positional Inputs-order contract test), find_max_withdrawal solver callback (per-strategy fill + no_update on the rest, solver kwargs incl. conditional target_survival_period, set_mc_parameters mirrors Submit, backtest initial_investment override + wealth_index-not-called guard, depleted-backtest message, success=False warning, ValueError passthrough, generic-error path), result reset on strategy switch (41 tests)
-│   ├── test_database_callbacks.py   # db_search: search results, empty, namespace routing; dag.AgGrid assertions (6 tests)
-│   ├── test_dump_callbacks_script.py  # tools/dump_callbacks.py runs by path as a subprocess and dumps the full wiring map (sys.path guard) (1 test)
-│   ├── test_compare_data_callback.py  # update_graf_compare: wealth/cumulative_return/annual_return(bar, CAGR subtitle)/cagr/correlation, stats (dag.AgGrid), errors; wealth annotations in points vs cumulative_return percent; stats grid suppressFieldDotNotation + formatPercentGuarded wiring (13 tests)
-│   ├── test_benchmark_data_callback.py  # update_graf_benchmark: 6 plot types, bar chart, errors (10 tests)
-│   ├── test_ef_data_callback.py       # update_ef_cards: figures, ef_points×100, mobile, errors, grid trace, grid/MC mode resolution, return_type always Geometric (no mean-type State), trace-names store for the click badge; customdata must serialize as JSON lists, not numpy/base64 — plotly>=6 drops numpy customdata from clickData (11 tests)
-│   ├── test_ef_grid_callbacks.py     # sim-mode visibility, dynamic grid step options, grid↔pairwise exclusivity, submit gating (6 tests)
-│   ├── test_portfolio_data_callback.py  # _update_graf_portfolio_inner: figure, y-titles (incl. annual_return, cumulative_return), weights, discount-rate wiring to dcf (÷100), errors; get_pf_figure annual_return bar chart (bars + CAGR return_type/subtitle); cumulative_return ts plot (percent annotations, title); wealth last-value annotations in balance points (zip-strict guard); update_graf_portfolio outer (toast, arity); show_graf_and_statistics_rows (reveal on submit); MC forecast scenarios end at zero then break; statistics grid: dag.AgGrid, suppressFieldDotNotation, formatPercentGuarded wiring; MC survival/wealth stats sections tabbed (#18): Table + Distribution tabs (renamed builders get_forecast_*_statistics_section), histograms of the MC series (survival offset series, FV/PV overlay with shared bins, constant-series bin guard), export grid ids preserved, mobile config routing via adopt_small_screens, empty-forecast stays table-only, wealth series fetched with include_negative_values=False (depleted balance is 0, never negative); compact single column on mobile (is_small_screen), desktop two-pane preserved; CashFlow IRR section (#19): percentiles + Min/Max/Mean/Std of monte_carlo_irr() + Historical IRR row (NaN→None), NaN paths excluded with an "n of N paths" note, all-NaN renders a graceful note (no tabs), percent formatter wiring, histogram of the non-NaN series with .1% ticks, inner returns the section before chart data (arity 7; outer toast at 7/8) (51 tests)
-│   ├── test_mc_params_callbacks.py   # MC distribution parameters: set_mc_parameters wiring, submit tuple build, show_hide_param_groups, collapse toggle, hide_monte_carlo_rows (6 rows, incl. cumulative_return), reactive auto_estimate_distribution_parameters (gates, norm/lognorm/t fit, VaR-level df optimize + reset-on-clear, errors), df>2 validation; URL params prefill and survive reactive auto-estimate, dcc.Store round-trip (25 tests)
-│   ├── test_grid_export.py           # xlsx export: button, rowdata_to_xlsx_download (PreventUpdate on empty rows AND on n_clicks=None — dynamically rendered export buttons fire their callback on first mount, must not auto-download), page callbacks return dcc.send_bytes dict; Excel number formats mirror grid formatters (column_formats percent/decimal/int, percent_column_formats helper, all 5 export callbacks wired — read back via openpyxl) (24 tests)
-│   ├── test_grid_sorting.py          # column sorting disabled in every AG Grid: defaultColDef wiring asserted on all 13 grids across 6 files (database ×2, assets names/info, compare stats, pf stats, K-S distribution, MC survival/wealth/cash-flow-IRR desktop+compact) (9 tests)
-│   ├── test_url_ccy_normalization.py # ccy in shared URLs prefills the currency dropdown on all 4 page forms: lowercase → uppercase, unknown → page default via resolve_url_currency (dcc.Dropdown silently clears values missing from options → ccy=None → okama "None.FX" 404) (7 tests)
-│   ├── test_submit_spinner.py        # all 4 main data callbacks + the Find solver toggle their spinner via the `running` spec (chart's dcc.Loading is below the fold on mobile); Find case keyed on a solver-unique output — duplicate outputs register earlier and would substring-match (5 tests)
-│   ├── test_compare_benchmark_callbacks.py  # change_style_for_hidden_row, show/hide,
-│   │                                        # get_y_title (6 plot types), rolling-window disabled for annual_return + cumulative_return (compare + portfolio) (21 tests)
-│   ├── test_macro_cards.py          # shared card factories: page-prefixed ids, multiselect defaults, copy-link guard, dates_ready keystroke guard, chart-card class + Download-data block ids (7 tests)
-│   ├── test_macro_download.py       # per-chart Download-data helper: download_from_store guards (no clicks / no data → PreventUpdate), returns xlsx dict (benchmark pattern, shared by all macro pages) (3 tests)
-│   ├── test_macro_inflation_figures.py  # inflation figure builders: annual grouped bars / rolling / cumulative / monthly ×100, key-rate overlay (step-dot traces via catalog mapping), purchasing-power cards (7 tests)
-│   ├── test_macro_inflation_page.py  # /macro/inflation page: REACTIVE main callback (every control an Input, no Submit; figure+PP cards+chart-store+grid), overlay gating, stats trimmed to 3 headline metrics at the full period only (max 12m/compound/annual, drop_duplicates keep=last), EUR purchasing-power NaN fallback, half-typed-date guard, URL prefill, link/export/copy-link/download callbacks (17 tests)
-│   ├── test_macro_rates_page.py     # /macro/rates (key central-bank rates only — money-market/deposit groups unexposed, no group selector): 3 plot types — Rates (step-lines hv ×100), Real rates (nominal − 12m rolling inflation via RATE_TO_INFLATION; empty-pairs guard), Current snapshot (nominal bar); charts clipped to 2000-01; prefill, link carries plot, copy-link/download (17 tests)
-│   ├── test_macro_cape10_page.py    # /macro/cape10: Current snapshot DEFAULT (25-country bar, Russia suspended; sorted, cached per month, highlight, x-range headroom, mobile ticks outside) + history lines via URL, no stats table/dates, chart-store + download, reactive Inputs (series/plot only), PreventUpdate guard (14 tests)
-│   ├── test_macro_real_estate_figures.py  # RE figure builders: trim_future (future-date insurance after the 2026-06-07 source incident), price-per-m² labels + ccy y-title, wealth-vs-inflation lines (5 tests)
-│   └── test_macro_real_estate_page.py  # /macro/real-estate (hidden from navbar, reachable by URL): reactive main callback (price RUB/USD via okama private converter, wealth+inflation line, date masks, chart-store), ccy case-normalized prefill, link plot/ccy params, export/copy-link/download guards (13 tests)
-└── e2e/                     # @pytest.mark.e2e — Playwright browser tests (Chromium)
-    ├── conftest.py                  # Gunicorn server (TESTING=1, 2 workers) + Playwright
-    ├── test_portfolio_page.py       # page load (5 controls), navigation (5 pages),
-    │                                # mobile viewport 375px (Portfolio + EF),
-    │                                # EF info panel renders assets names + info for URL tickers (#13 guard) (9 tests)
-    ├── test_shareable_links.py      # shareable links: tickers + dates for all 4 pages; Portfolio fresh link (no MC URL params) → reactive estimation auto-fills the MC distribution fields (dead-callback regression guard); Portfolio Go to EF link → EF prefill; pf_* handoff to Compare and Benchmark (#23: chip in form → Submit → portfolio trace in the chart) (8 tests)
-    ├── test_submit_interaction.py   # Submit → chart with real traces for all 4 pages; Portfolio stats grid: dotted column renders values, percent-formatted (6 tests)
-    └── test_macro_pages.py          # macro pages render reactively without Submit (counts scoped to .cartesianlayer — rangeslider duplicates traces), inflation stats-grid percent + download-button via real DOM, navbar dropdown navigation (RE hidden), URL prefill, mobile; RE price/wealth autorender by direct URL, reactive rates group switch (key→mm) 3→1 traces (11 tests)
+└── e2e/                     # @pytest.mark.e2e — Playwright/Chromium (Gunicorn server, TESTING=1)
 ```
+
+The exhaustive per-test-file inventory used to live here but was removed: it drifted on every
+test change and only restated what the tests already document. **The test files are the source
+of truth** — list and read them directly (the default `rg` skips `tests/`, so name the path):
+
+```bash
+ls tests/unit tests/component tests/e2e        # what test files exist
+rg <behavior-or-id> tests/                     # find the test(s) for a behavior/id (e.g. pf_*, #23)
+```
+
+Rough grouping:
+- **unit/** — `common/` + `tools/` pure logic: validators, math, create_link, symbols, object_cache,
+  ef_grid, chart_helpers, inflation, MC distribution params, find-withdrawal helpers, dump_callbacks,
+  and the macro catalog/mocks/objects/stats/link tests.
+- **component/** — one `*_callbacks.py` / `*_data_callback.py` per page (portfolio, ef, compare,
+  benchmark, database, macro) plus cross-cutting: grid_export, grid_sorting, submit_spinner,
+  url_ccy_normalization, mc_params.
+- **e2e/** — page load, shareable links, submit→chart, macro reactive render (4 files).
 
 ### Run commands
 
@@ -275,18 +208,6 @@ pipes, so once app logging fills the 64 KiB buffer (~17 navigations, since react
 estimation logs per page load) gunicorn blocks on write and every later request times out
 (the 2026-06-04 "5 e2e timeouts" incident). If you need server logs for debugging, redirect
 to a file in `tmp/` instead of `PIPE`.
-
-### What's covered per page
-
-| Page | Unit | Component | E2E |
-|------|------|-----------|-----|
-| **Portfolio** | create_link (cf_ts owned by all strategies + activity rule, inactive-strategy omission; MC params deliberately NOT in links), symbols, build_distribution_parameters, reactive-estimation gates, MC limits validation (n/years/budget), Find result mapping/formatting helpers (#22: sign/units per strategy, display strings) | callbacks (pie chart, cashflow×6, rebalancing, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), update_graf_portfolio, annual_return bar chart, cumulative_return plot type, wealth last-value annotations in points, rolling-window gating, percent rate inputs (discount/indexation ÷100), discount-rate wiring to dcf, amount inputs as dmc.NumberInput with space thousands separator (#17: type, min, provider wrap, URL prefill coercion; extended to CWD Withdrawal amount with max=0, VDS min/max withdrawal with min=0, and custom cash-flow row amounts), custom cash flows in all strategies (_build_ts_dict, _apply_custom_time_series per strategy, Find-style collapse block — chevron header + dbc.Collapse mirroring Find max withdrawal; TS keeps the headerless plain block), MC distribution parameters (groups show/hide, collapse toggle, reactive background estimation + VaR-level df optimization, df>2 validation, set_mc_parameters wiring, URL prefill + store round-trip), MC survival/wealth stats sections tabbed: table + distribution histograms (#18), CashFlow IRR section: percentile table + IRR histogram, NaN-safe (#19), compact tables on mobile, xlsx export n_clicks guard + Excel number formats (describe percent, survival decimal, wealth grouped int), "Go to" dropdown (#23: 3 link items; update_go_to_links builds EF page-level link + Compare/Benchmark pf_* handoff links; one gate disables the whole menu), Find max withdrawal (#22: collapse UI, hidden for TS, validation + gating with hint, solver callback mirroring the Submit dcf state incl. backtest override, per-strategy fill, error paths, result reset) | load, controls, mobile, shareable link (no MC params; reactive auto-estimate fills MC fields), submit→traces, Go to EF link → EF prefill, pf_* handoff to Compare/Benchmark |
-| **Efficient Frontier** | adaptive grid step (ef_grid), chart label padding (centered labels), portfolio card builder (stat blocks, allocation bars) | helpers (normalize, resolve, weights, expand), show/hide, display_click_data, find_portfolio (both render portfolio cards — Selected with trace-name badge / Optimized with None-stat skipping — Sharpe from the rf-rate input; backtest link carries the EF object's rebalancing period, omits default month, tolerates legacy pickles), update_ef_cards (return_type hardwired to Geometric — Y-axis selector removed, chart always plots CAGR), simulation mode (visibility, grid step options, grid↔pairwise exclusivity, submit gating), grid trace, customdata JSON-list serialization (plotly>=6 clickData regression), URL portfolio handoff (store parse, cached point, star trace, ticker-match rule, error isolation) | load, mobile, shareable link, submit→chart, info panel (assets names + info, #13 guard) |
-| **Compare** | — | show/hide, update_graf_compare (wealth/cumulative_return/annual_return bar/cagr/correlation, stats table → dag.AgGrid with dot-notation + percent-formatter wiring), wealth annotations in points, rolling-window gating, xlsx export percent formats, pf_* portfolio handoff (#23: store + chip prefill, chip-aware search/copy-link/EF-link/info, cached portfolio joins the AssetList with a pf-aware cache key) | load, shareable link, submit→traces, pf_* handoff (chip → submit → portfolio trace) |
-| **Benchmark** | — | show/hide, get_y_title, update_graf_benchmark (6 plot types), pf_* portfolio handoff (#23: store + chip prefill, chip-aware search/copy-link/info, portfolio joins the AssetList after the benchmark with a pf-aware cache key) | load, shareable link, submit→traces, pf_* handoff (chip → submit → portfolio trace) |
-| **Database** | — | db_search (results, empty, namespace routing, ticker drop) → dag.AgGrid | load |
-| **Macro (Inflation / Rates / CAPE10 / Real Estate*)** | catalog integrity + overlay map (ECB=MRO) + rates groups (key/mm) + RATE_TO_INFLATION + RE catalog (25 CAPE, Russia suspended), cached accessors (Asset full-history + AssetList shared keyspace + private-API upgrade guard), describe-merge + grid formatters, link builder, Download-data helper, mocks | per-page REACTIVE callbacks (every control an Input, no Submit) + error annotation, inflation monthly-bar (last published month highlighted per country) + EUR pp-NaN fallback + 3-row stats, rates 3 plot types (Rates/Real rates/Current snapshot, group inferred for snapshot, empty-pairs guard, charts clipped to 2000-01 — no date controls, avoids RU 1990s hyperinflation), CAPE10/Rates no stats/dates, snapshot (monthly cache, mobile outside ticks), chart-data store on every page, copy-link guard | reactive render w/o Submit, inflation stats+download via DOM, navbar (RE hidden), prefill, rates group switch, mobile (*Real Estate hidden from navbar, reachable by URL) |
-| **common/ & tools/** | validators, math, create_link, symbols, object_cache (incl. TESTING isolation), chart_helpers (add_return_type_subtitle, format_points), dump_callbacks (callback wiring map formatter) | change_style_for_hidden_row, grid_export (xlsx via dcc.Download + rowdata_to_xlsx_download; Excel number formats mirror the on-page grid formatters), grid sorting disabled on every AG Grid (all 6 grid-building files) | — |
 
 ### Known gaps
 
@@ -358,7 +279,7 @@ After any code changes, follow this checklist:
    targeted `# noqa: <CODE>` comment on the offending line and include a brief rationale.
    Never disable rules globally or use a bare `# noqa`.
 6. After finishing a batch of changes, verify that `AGENTS.md` (test counts, structure
-   tree, coverage table, gaps section) and project memory are still accurate. Update any
+   tree skeleton, gaps section) and project memory are still accurate. Update any
    stale numbers, descriptions, or file listings before committing.
 
 ## Recording findings in memory
@@ -520,36 +441,19 @@ such work as done:
 
 ## Layout decomposition (no monolithic layouts)
 
-A layout — a function that builds a Dash component tree, or a card/page module that pairs
-a layout with its callbacks — must not grow into one giant blob. Split it into parts across
-modules instead.
+A layout — a builder function, or a card/page module pairing a layout with its callbacks —
+must not grow into one giant blob. Split it by **feature** into a package: a thin `layout.py`
+assembler plus one submodule per feature (its sub-layout + callbacks + helpers together, high
+cohesion), with `__init__.py` re-exporting the public names so every existing import and every
+callback wiring (by string id) keeps working unchanged. Signal to split: a builder function over
+~150–200 lines, or a module mixing a large layout with many callbacks (guideline, use judgement).
+It is a behavior-preserving refactor — carve sections verbatim, change only imports — so it needs
+no new test; the existing suite (+ `poetry run python tools/dump_callbacks.py`) is the safety net.
 
-- **Decompose a large builder function into per-section builders.** When one
-  component-building function spans many panels/rows, extract each visual section into its
-  own small builder (`_strategy_selector()`, `_vds_panel()`, `_find_block()`, …) and have the
-  top function just assemble them. The assembler should read as a short list of sections, not
-  a hundreds-of-lines literal.
-- **When a card/page module gets large, split it into a feature package.** Turn `foo.py` into
-  a `foo/` package: a thin `layout.py` assembler plus one submodule per feature, each owning
-  *its* sub-layout, *its* callbacks and *its* helpers together (high cohesion). Keep genuinely
-  shared pieces in `constants.py` / `helpers.py` / `common.py`.
-- **Preserve the import surface with `__init__` re-exports.** The package `__init__.py`
-  re-exports the public names so every existing `from …foo import <name>` (production *and*
-  tests) keeps working unchanged. Importing the feature submodules also registers their Dash
-  `@callback`s (registration is an import side effect), and callback wiring is by string id —
-  so splitting never breaks wiring as long as the submodules are imported from the package.
-- **Guideline, not a hard limit.** Treat a builder function over ~150–200 lines, or a module
-  mixing a large layout with many callbacks, as a signal to split. Cohesion matters more than
-  the exact line count — use judgement.
-- **It is a behavior-preserving refactor.** Carve sections verbatim, change only imports. Per
-  the TDD-skip rule it needs no new test (pure move, no logic change), but the existing suite
-  is the safety net: run `poetry run pytest -q` and confirm the same green, plus
-  `poetry run python tools/dump_callbacks.py` to confirm every callback still registers from
-  its new file.
-
-Reference implementation: `pages/portfolio/cards_portfolio/cashflow_controls/` (split out of a
-1265-line single file into constants / helpers / common / vds / cwd / find / timeseries /
-layout).
+**Full procedure → the `split_large_layout` skill** (mapping the import surface incl. `tests/`,
+verbatim-carve pitfalls, `__init__` re-exports, the `dump_callbacks` + e2e verification gates).
+Reference: `pages/portfolio/cards_portfolio/cashflow_controls/` (a 1265-line file split into
+constants / helpers / common / vds / cwd / find / timeseries / layout).
 
 ## Release gate (master)
 
@@ -582,42 +486,15 @@ complements the per-change checklist in "Code change workflow".
 
 ## Worktree — уборка после мерджа в dev
 
-**Сначала спаси проектную память worktree, потом удаляй.** Память сессии привязана
-к namespace из абсолютного `cwd` (`/`→`-`), поэтому у worktree он **другой**, чем у
-главного checkout. Главный checkout: `~/.claude/projects/-home-…-okama-dash/memory`
-— это симлинк на синкаемый `~/claude/memory/okama-dash`. А worktree пишет память в
-**свой** namespace `~/.claude/projects/-home-…-okama-dash-<task>/memory/` — отдельную,
-**не** синкаемую директорию, которой нет в репозитории `~/claude`. При мердже ветки
-worktree в `dev` эту память легко потерять (она не в синкаемом месте, а worktree вот-вот
-удалят). Поэтому **перед `git worktree remove`**:
+Когда ветка задачи смерджена в `dev`, её worktree удаляется вместе с директорией
+(`git worktree remove <path>`, запуск из другой директории — не изнутри worktree; не `rm -rf`)
+— не оставляй отработавшие worktree висеть.
 
-1. Проверь, писала ли сессия worktree память:
-   `ls ~/.claude/projects/-home-…-okama-dash-<task>/memory/` (namespace = abs-путь
-   worktree с `/`→`-`).
-2. Если да — перенеси новые/обновлённые файлы в синкаемую `~/claude/memory/okama-dash/`
-   (сверяя с уже лежащими там — не затирай более свежие записи вслепую), обнови
-   `MEMORY.md`-указатели, затем закоммить и запушь `~/claude` (правило
-   `claude_repo_auto_commit`).
-3. Только после этого удаляй worktree.
+**Критично: сначала спаси проектную память worktree, потом удаляй.** Worktree пишет память в
+свой namespace (`~/.claude/projects/-home-…-okama-dash-<task>/memory/`) — отдельную, **не**
+синкаемую директорию, которой нет в `~/claude`. При удалении worktree она теряется. Перед
+`git worktree remove` перенеси новые/обновлённые файлы в синкаемую `~/claude/memory/okama-dash/`
+(не затирая более свежие), обнови `MEMORY.md`, закоммить+запушь `~/claude`.
 
-Задача разрабатывается в выделенном git worktree (например, `okama-dash-macro`
-для макро-раздела). Как только ветка задачи **смерджена в `dev`**, её worktree
-**удаляется вместе с локальной директорией** — не оставляй отработавшие worktree
-висеть:
-
-```bash
-git worktree remove /path/to/okama-dash-<task>
-```
-
-- `git worktree remove` сносит и регистрацию worktree (в `.git/worktrees/`), и
-  саму рабочую директорию за один шаг. Не удаляй директорию вручную (`rm -rf`) —
-  останется висящая регистрация, требующая `git worktree prune`.
-- Команда **откажется**, если в дереве есть незакоммиченные или неотслеживаемые
-  файлы (документированное поведение git, предохранитель от потери работы).
-  Сначала убедись, что всё нужное закоммичено/перенесено, и только тогда удаляй
-  (при осознанной необходимости — `--force`).
-- Запускай удаление **из другого worktree/директории**, не изнутри удаляемого:
-  иначе твой текущий каталог окажется снесён.
-- Удаление worktree само по себе **не** удаляет ветку. Ветка уже в `dev`, так что
-  локальную ветку задачи можно убрать отдельно (`git branch -d <task>`), если она
-  больше не нужна.
+**Полный workflow → скилл `cleanup_worktree`** (точные пути namespace, перенос памяти, почему
+`git worktree remove` (а не `rm -rf`), запуск из другой директории, удаление ветки).

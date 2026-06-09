@@ -110,8 +110,9 @@ Rules while carving:
   "attributes" `Div`), the section builder returns a Python list of those rows and
   the assembler splats it: `html.Div([_dates_row(...), *options_section(),
   *monte_carlo_section()])`. Wrapping the rows in a new `Div` to return "one
-  component" adds a DOM element and breaks CSS/spacing — that is a behavior change,
-  not a pure move. Only the accordion case (cashflow_controls) had a single
+  component" adds a DOM element and breaks CSS/spacing (it steals the gap from the
+  container — see `AGENTS.md` → "UI layout & form design" → "wrapper owns the
+  rhythm") — that is a behavior change, not a pure move. Only the accordion case (cashflow_controls) had a single
   self-contained child per section; cards (portfolio_controls, ef_controls) do not.
 - **Module-level side-effect calls move with their section.** Top-level statements
   like `register_date_validation("pf-first-date")` run on import, same as
