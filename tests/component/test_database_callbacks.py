@@ -76,3 +76,13 @@ class TestDbSearch:
             db_search(1, "apple", "US")
 
         mock_search.assert_called_once_with("apple", namespace="US")
+
+
+class TestDatabaseLayout:
+    def test_layout_tolerates_arbitrary_query_params(self, mock_okama_symbols, null_cache):
+        # Dash passes URL query params as kwargs to layout(); campaign links
+        # like /database?utm_source=... must not 500 the page (prod 2026-06-11).
+        from pages.database.database import layout
+
+        page = layout(utm_source="rostsber", utm_medium="email", utm_campaign="x")
+        assert page is not None

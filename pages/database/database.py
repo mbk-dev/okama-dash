@@ -17,7 +17,7 @@ dash.register_page(
 )
 
 
-def layout():
+def layout(**kwargs):  # Dash passes URL query params (e.g. utm_*) as kwargs
     page = dbc.Container(
         [
             dbc.Row(dbc.Col(card_db_search_controls, width=12), align="center"),
