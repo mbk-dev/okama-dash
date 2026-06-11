@@ -103,8 +103,8 @@ class TestBenchmarkInfoTokenFilter:
 
         with (
             patch("pages.benchmark.cards_benchmark.benchmark_info.ok.AssetList") as mock_al_cls,
-            patch("pages.benchmark.cards_benchmark.benchmark_info.get_assets_names", return_value="names"),
-            patch("pages.benchmark.cards_benchmark.benchmark_info.get_info", return_value="info"),
+            patch("common.html_elements.info_ag_grid.get_assets_names", return_value="names"),
+            patch("common.html_elements.info_ag_grid.get_info", return_value="info"),
         ):
             benchmark_info.pf_update_asset_names_info(["MyPF.PF", "AAPL.US"], "SP500TR.INDX", "USD", PF_DEF)
 

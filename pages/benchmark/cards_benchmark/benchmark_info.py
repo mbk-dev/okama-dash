@@ -6,7 +6,7 @@ from dash.exceptions import PreventUpdate
 
 import okama as ok
 
-from common.html_elements.info_ag_grid import get_assets_names, get_info
+from common.html_elements.info_ag_grid import names_and_info_tables
 from common.url_portfolio import split_portfolio_from_selection
 
 card_benchmark_info = dbc.Card(
@@ -40,7 +40,4 @@ def pf_update_asset_names_info(
     assets = [benchmark] + assets_to_compare if benchmark else assets_to_compare
     if not assets:
         raise PreventUpdate
-    al_object = ok.AssetList(assets, ccy=ccy, inflation=False)
-    names_table = get_assets_names(al_object)
-    info_table = get_info(al_object)
-    return names_table, info_table
+    return names_and_info_tables(lambda: ok.AssetList(assets, ccy=ccy, inflation=False))

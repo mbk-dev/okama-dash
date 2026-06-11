@@ -1,6 +1,29 @@
+from collections.abc import Callable
+
 import dash_ag_grid as dag
 import okama
 import pandas as pd
+import requests
+from dash import html
+
+INFO_UNAVAILABLE_TEXT = "Information is unavailable for the selected symbols."
+
+
+def names_and_info_tables(al_factory: Callable[[], okama.AssetList]) -> tuple:
+    """Build the (names, info) panel tables, degrading gracefully.
+
+    Tickers arriving from shareable links can be unknown to okama (delisted
+    symbols, a ticker without a namespace) — ok.AssetList then raises an
+    HTTPError 404 or a ValueError. Show a short message instead of a 500.
+    """
+    try:
+        al_object = al_factory()
+        return get_assets_names(al_object), get_info(al_object)
+    except (ValueError, requests.exceptions.HTTPError):
+        return (
+            html.P(INFO_UNAVAILABLE_TEXT, className="text-muted"),
+            html.P(INFO_UNAVAILABLE_TEXT, className="text-muted"),
+        )
 
 
 def get_assets_names(al_object: okama.AssetList) -> dag.AgGrid:

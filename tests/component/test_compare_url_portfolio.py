@@ -143,8 +143,8 @@ class TestCompareAssetsInfoTokenFilter:
 
         with (
             patch("pages.compare.cards_compare.assets_info.ok.AssetList") as mock_al_cls,
-            patch("pages.compare.cards_compare.assets_info.get_assets_names", return_value="names"),
-            patch("pages.compare.cards_compare.assets_info.get_info", return_value="info"),
+            patch("common.html_elements.info_ag_grid.get_assets_names", return_value="names"),
+            patch("common.html_elements.info_ag_grid.get_info", return_value="info"),
         ):
             assets_info.pf_update_asset_names_info(["MyPF.PF", "AAPL.US"], "USD", False, PF_DEF)
 

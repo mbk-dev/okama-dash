@@ -6,7 +6,7 @@ from dash.exceptions import PreventUpdate
 
 import okama as ok
 
-from common.html_elements.info_ag_grid import get_assets_names, get_info
+from common.html_elements.info_ag_grid import names_and_info_tables
 
 card_ef_info = dbc.Card(
     dbc.CardBody(
@@ -31,7 +31,4 @@ def pf_update_asset_names_info(assets: list) -> tuple[dag.AgGrid, dag.AgGrid]:
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate
-    al_object = ok.AssetList(assets)
-    names_table = get_assets_names(al_object)
-    info_table = get_info(al_object)
-    return names_table, info_table
+    return names_and_info_tables(lambda: ok.AssetList(assets))

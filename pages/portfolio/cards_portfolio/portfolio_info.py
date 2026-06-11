@@ -8,7 +8,7 @@ import plotly.express as px
 from dash.exceptions import PreventUpdate
 import okama as ok
 
-from common.html_elements.info_ag_grid import get_assets_names, get_info
+from common.html_elements.info_ag_grid import names_and_info_tables
 from common.mobile_screens import adopt_small_screens
 
 card_assets_info = dbc.Card(
@@ -98,10 +98,7 @@ def pf_update_asset_names_info(assets: list, ccy: str, inflation: bool) -> tuple
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate
-    al_object = ok.AssetList(assets, ccy=ccy, inflation=inflation)
-    names_table = get_assets_names(al_object)
-    info_table = get_info(al_object)
-    return names_table, info_table
+    return names_and_info_tables(lambda: ok.AssetList(assets, ccy=ccy, inflation=inflation))
 
 
 @callback(
