@@ -59,8 +59,10 @@ app = dash.Dash(
 server = app.server
 
 import common  # noqa: E402 — must be after TESTING block patches okama
+from common.stale_callbacks import register_stale_callback_guard  # noqa: E402
 
 common.cache.init_app(server)  # centralised; previously called per-controls-file
+register_stale_callback_guard(server)  # stale post-deploy clients get 204, not 500
 
 app.layout = html.Div([dcc.Store(id="store"), navigation.navbar, dash.page_container, footer.footer()])
 
