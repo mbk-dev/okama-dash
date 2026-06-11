@@ -37,6 +37,13 @@ class TestCreateLink:
         # Default ccy=USD is omitted
         assert "&ccy=" not in url
 
+    def test_none_href_yields_relative_link(self):
+        # dcc.Location can fire the link callback with href=None (bots,
+        # interrupted page loads) — must not crash, falls back to a
+        # page-relative "?query" link.
+        url = create_link(**{**BASE_PARAMS, "href": None})
+        assert url.startswith("?tickers=AAPL.US,MSFT.US")
+
     def test_strips_existing_query_string(self):
         url = create_link(**{**BASE_PARAMS, "href": "/portfolio?old=param"})
         assert "old=param" not in url

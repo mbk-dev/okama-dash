@@ -239,7 +239,9 @@ def create_link(
 
     # tickers= is omitted for an empty list: handoff links to Compare/Benchmark
     # carry only the pf_* group, and "?tickers=&pf_tickers=..." would be noise.
-    reset_href = href.split("?")[0]
+    # href is None when dcc.Location hasn't populated yet (bots, interrupted
+    # loads) — fall back to a page-relative "?query" link instead of crashing.
+    reset_href = (href or "").split("?")[0]
     query_parts = []
     if tickers_list:
         query_parts.append("tickers=" + ",".join(_quote_value(s) for s in tickers_list))
