@@ -34,6 +34,7 @@ okama-dash/
 │   ├── update_style.py      # Dynamic style manipulation
 │   ├── mobile_screens.py    # Responsive layout adapters
 │   ├── object_cache.py      # Unified file-based pickle cache for okama objects
+│   ├── stale_callbacks.py   # 204-guard: stale post-deploy callback POSTs (old ids/arity) answer 204, not 500
 │   ├── math.py              # Financial calculations
 │   ├── inflation.py         # Inflation data helpers
 │   ├── xlsx.py              # Excel export utilities
@@ -158,7 +159,7 @@ Rules for this repo:
 
 ## Test suite
 
-894 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+900 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -197,10 +198,10 @@ Rough grouping:
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
 | `poetry run pytest -m unit` | Pure logic | 301 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 551 | ~9s |
+| `poetry run pytest -m component` | Dash callbacks | 557 | ~9s |
 | `poetry run pytest -m e2e` | Playwright browser | 42 | ~100s |
-| `poetry run pytest -q` | Everything | 894 | ~118s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 852 | ~10s |
+| `poetry run pytest -q` | Everything | 900 | ~118s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 858 | ~10s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
