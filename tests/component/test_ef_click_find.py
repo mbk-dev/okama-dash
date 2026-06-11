@@ -396,6 +396,25 @@ class TestFindPortfolio:
         assert "No solution was found." in _texts(children)
         assert link is None
 
+    def test_runtime_error_returns_no_solution(self):
+        # okama's minimize_risk raises RuntimeError when the target CAGR is
+        # unreachable — must render "No solution", not crash with a 500.
+        from pages.efficient_frontier.frontier import find_portfolio
+
+        mock_ef = _make_mock_ef_object()
+
+        with (
+            patch(f"{FRONTIER_MODULE}.load_ef_object", return_value=mock_ef),
+            patch(
+                f"{FRONTIER_MODULE}.get_minimized_risk_portfolio",
+                side_effect=RuntimeError("No solution found for target CAGR value: 0.1395."),
+            ),
+        ):
+            children, link = find_portfolio(1, 13.95, "file.pkl", 0.0)
+
+        assert "No solution was found." in _texts(children)
+        assert link is None
+
     def test_none_stats_are_skipped(self):
         from pages.efficient_frontier.frontier import find_portfolio
 

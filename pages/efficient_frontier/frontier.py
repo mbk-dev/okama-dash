@@ -451,7 +451,8 @@ def find_portfolio(n_clicks, ror, file_name, rf_rate):
             rebal=_ef_rebalancing_period(ef_object),
         )
         return card, link
-    except RecursionError:
+    except (RecursionError, RuntimeError):
+        # okama raises RuntimeError when no portfolio reaches the target CAGR
         return no_solution, None
 
 
