@@ -10,7 +10,12 @@ def make_list_from_string(symbols: Optional[str], char_type: str = "str") -> Opt
     """
     if symbols:
         tickers_io = io.StringIO(symbols)
-        df = pd.read_csv(tickers_io, header=None, dtype=char_type)
+        try:
+            df = pd.read_csv(tickers_io, header=None, dtype=char_type)
+        except ValueError:
+            # Malformed value in a hand-edited link (e.g. weights=34.33.33):
+            # fall back to defaults instead of crashing the page layout.
+            return None
         result = df.iloc[0, :].to_list()
     else:
         result = None
