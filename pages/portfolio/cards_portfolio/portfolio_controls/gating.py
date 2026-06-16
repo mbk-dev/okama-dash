@@ -24,7 +24,12 @@ def print_withdrawal_rate(initial_amount, cf_amount, cwd_amount, strategy, frequ
     amount = cwd_amount if strategy == "cwd" else cf_amount
     if initial_amount and amount:
         periods_per_year = freq_multiplier.get(frequency, 12)
-        withdrawal_rate = abs(float(amount)) * periods_per_year / float(initial_amount) * 100
+        try:
+            # A field mid-typing can be a non-numeric string (e.g. a lone '-'
+            # while a negative number is being entered) — read it as 0%, not 500.
+            withdrawal_rate = abs(float(amount)) * periods_per_year / float(initial_amount) * 100
+        except (ValueError, TypeError):
+            withdrawal_rate = 0
     else:
         withdrawal_rate = 0
     return f"{withdrawal_rate:.0f}%"
