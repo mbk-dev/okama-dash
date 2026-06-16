@@ -64,7 +64,7 @@ app = dash.Dash(
 # into the served HTML. This is a JS-disabled fallback only; it does NOT duplicate the JS
 # counter (a <noscript> body renders solely when JavaScript is off).
 app.index_string = """<!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         {%metas%}
         <title>{%title%}</title>
@@ -74,6 +74,16 @@ app.index_string = """<!DOCTYPE html>
     <body>
         <noscript><div><img src="https://mc.yandex.ru/watch/52900222"
         style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+        <script type="application/ld+json">
+        {"@context":"https://schema.org","@graph":[
+        {"@type":"Organization","name":"okama","url":"https://okama.io/",
+        "logo":"https://okama.io/assets/logo.png"},
+        {"@type":"WebApplication","name":"okama","url":"https://okama.io/",
+        "applicationCategory":"FinanceApplication","operatingSystem":"Web",
+        "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
+        "description":"Investment portfolio analysis: efficient frontier, backtesting, asset comparison, macro data."}
+        ]}
+        </script>
         <!--[if IE]><script>
         alert("Dash v2.7+ does not support Internet Explorer. Please use a newer browser.");
         </script><![endif]-->
@@ -90,9 +100,11 @@ server = app.server
 
 import common  # noqa: E402 — must be after TESTING block patches okama
 from common.stale_callbacks import register_stale_callback_guard  # noqa: E402
+from common.seo import register_seo_head  # noqa: E402
 
 common.cache.init_app(server)  # centralised; previously called per-controls-file
 register_stale_callback_guard(server)  # stale post-deploy clients get 204, not 500
+register_seo_head(server)  # per-page <title>/canonical/og:image in static HTML for crawlers
 
 app.layout = html.Div([dcc.Store(id="store"), navigation.navbar, dash.page_container, footer.footer()])
 
