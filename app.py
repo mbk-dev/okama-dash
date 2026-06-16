@@ -56,6 +56,36 @@ app = dash.Dash(
     # constructor rows), so callbacks legitimately reference ids absent at load time.
     suppress_callback_exceptions=True,
 )
+
+# Yandex.Metrika <noscript> pixel. The live counter is the JS in assets/yandex.js, but the
+# Yandex installation validator fetches the raw HTML without running JS and only sees
+# <script src=".../yandex.js"> — the counter number 52900222 is absent from the static markup,
+# so it reports CS_ERR_UNKNOWN. Embedding the standard noscript pixel here puts the counter id
+# into the served HTML. This is a JS-disabled fallback only; it does NOT duplicate the JS
+# counter (a <noscript> body renders solely when JavaScript is off).
+app.index_string = """<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+    </head>
+    <body>
+        <noscript><div><img src="https://mc.yandex.ru/watch/52900222"
+        style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+        <!--[if IE]><script>
+        alert("Dash v2.7+ does not support Internet Explorer. Please use a newer browser.");
+        </script><![endif]-->
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>"""
+
 server = app.server
 
 import common  # noqa: E402 — must be after TESTING block patches okama
