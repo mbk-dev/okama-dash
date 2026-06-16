@@ -20,18 +20,37 @@ pytestmark = pytest.mark.component
 # Mirrors the static HTML Dash serves for a page route. og:image/twitter:image
 # carry the URL Dash auto-infers from assets/logo.png (its generic site-wide
 # image) — the hook must override that square logo with the 1200x630 share card.
+# The <div id="react-entry-point"> is the React mount point Dash emits via
+# {%app_entry%}; the hook injects crawler body content as its first child.
 DASH_INDEX_HTML = (
     '<!DOCTYPE html>\n<html lang="en">\n    <head>\n'
     '        <meta name="description" content="x">\n'
     '      <meta property="twitter:image" content="http://localhost/assets/logo.png">\n'
     '      <meta property="og:image" content="http://localhost/assets/logo.png">\n'
-    "        <title>Dash</title>\n    </head>\n    <body>app</body>\n</html>"
+    "        <title>Dash</title>\n    </head>\n    <body>\n"
+    '<div id="react-entry-point">\n    <div class="_dash-loading">\n'
+    "        Loading...\n    </div>\n</div>\n    </body>\n</html>"
 )
 
 FAKE_REGISTRY = {
-    "pages.portfolio.portfolio": {"path": "/portfolio", "title": "Investment Portfolio : okama"},
-    "pages.efficient_frontier.frontier": {"path": "/", "title": "Efficient Frontier : okama"},
+    "pages.portfolio.portfolio": {
+        "path": "/portfolio",
+        "title": "Investment Portfolio : okama",
+        "name": "Investment Portfolio",
+        "description": "Okama.io widget for Investment Portfolio analysis",
+    },
+    "pages.efficient_frontier.frontier": {
+        "path": "/",
+        "title": "Efficient Frontier : okama",
+        "name": "Efficient Frontier",
+        "description": "Efficient Frontier for the investment portfolios",
+    },
 }
+
+
+# Rendered crawler body per route; "/" deliberately omitted to exercise the
+# fallback to the registry description.
+FAKE_BODY = {"/portfolio": "<p>RICH PORTFOLIO BODY</p>"}
 
 
 @pytest.fixture()
@@ -39,6 +58,8 @@ def client(monkeypatch):
     # The hook reads dash.page_registry at request time; a fake keeps the test
     # isolated from the real pages (and from polluting the global registry).
     monkeypatch.setattr(dash, "page_registry", FAKE_REGISTRY)
+    # Isolate the body source from the real rendered section descriptions.
+    monkeypatch.setattr("common.seo.SEO_BODY_HTML", FAKE_BODY)
     server = flask.Flask("seo_test")
 
     def _html_page():
@@ -85,6 +106,30 @@ class TestShareImage:
         assert "logo.png" not in html
         assert html.count("og:image") == 1
         assert html.count("twitter:image") == 1
+
+
+class TestBodyContent:
+    def test_injects_h1_and_rendered_body_into_mount(self, client):
+        # Crawlers with no JS must see real body text; React replaces the mount's
+        # children on hydration, so the injected block is non-cloaking.
+        html = client.get("/portfolio").get_data(as_text=True)
+        assert "<h1>Investment Portfolio</h1>" in html
+        assert "<p>RICH PORTFOLIO BODY</p>" in html
+        # Injected as the first child of the React mount (before the loading div).
+        assert html.index('id="react-entry-point"') < html.index('id="seo-content"') < html.index(
+            'class="_dash-loading"'
+        )
+
+    def test_falls_back_to_meta_description_when_no_rendered_body(self, client):
+        # "/" has no rendered body in the map -> use the registry description.
+        html = client.get("/").get_data(as_text=True)
+        assert "<h1>Efficient Frontier</h1>" in html
+        assert "<p>Efficient Frontier for the investment portfolios</p>" in html
+
+    def test_unknown_path_gets_no_injection(self, client):
+        html = client.get("/unknown").get_data(as_text=True)
+        assert 'id="seo-content"' not in html
+        assert "<h1>" not in html
 
 
 class TestScope:

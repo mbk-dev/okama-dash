@@ -159,7 +159,7 @@ Rules for this repo:
 
 ## Test suite
 
-933 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+949 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -187,7 +187,7 @@ rg <behavior-or-id> tests/                     # find the test(s) for a behavior
 Rough grouping:
 - **unit/** — `common/` + `tools/` pure logic: validators, math, create_link, symbols, object_cache,
   ef_grid, chart_helpers, inflation, MC distribution params, find-withdrawal helpers, dump_callbacks,
-  and the macro catalog/mocks/objects/stats/link tests.
+  seo_content (crawler-body Markdown renderer), and the macro catalog/mocks/objects/stats/link tests.
 - **component/** — one `*_callbacks.py` / `*_data_callback.py` per page (portfolio, ef, compare,
   benchmark, database, macro) plus cross-cutting: grid_export, grid_sorting, submit_spinner,
   url_ccy_normalization, mc_params, seo_head (server-side <title>/canonical/og:image rewrite).
@@ -197,11 +197,11 @@ Rough grouping:
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 309 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 582 | ~9s |
+| `poetry run pytest -m unit` | Pure logic | 322 | ~2s |
+| `poetry run pytest -m component` | Dash callbacks | 585 | ~9s |
 | `poetry run pytest -m e2e` | Playwright browser | 42 | ~100s |
-| `poetry run pytest -q` | Everything | 933 | ~118s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 891 | ~10s |
+| `poetry run pytest -q` | Everything | 949 | ~118s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 907 | ~10s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the

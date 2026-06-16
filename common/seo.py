@@ -10,8 +10,16 @@ weak-JS crawler (notably Yandex) and every unfurler see "Dash" with no preview.
 This Flask after_request hook rewrites the served HTML of page routes so the
 static markup already carries the per-page <title> (from dash.page_registry), a
 canonical URL for the clean section (query string stripped, so shareable links
-with ?tickers=... canonicalize onto the bare section), and a default share
-image. Callback POSTs (application/json) and static assets are left untouched.
+with ?tickers=... canonicalize onto the bare section), a default share image,
+and per-page crawler body content (issue #29). Callback POSTs (application/json)
+and static assets are left untouched.
+
+Crawler body content: the SPA serves a near-empty <body> (just the React mount
+placeholder), so a weak-JS crawler indexes no section text. Dash has no native
+SSR, but the React renderer replaces the children of <div id="react-entry-point">
+on hydration — so injecting the page heading + description there is seen only by
+no-JS clients and overwritten for real users. It is not cloaking: the same text
+appears in the page's on-screen description card.
 
 Why set og:image here instead of passing meta_tags to Dash(): Dash always
 emits its own og:image/twitter:image from the page registry, and app-level
@@ -24,9 +32,12 @@ card. So the hook overrides og:image/twitter:image in place with the dedicated
 """
 
 import re
+from html import escape
 
 import dash
 from flask import Flask
+
+from common.seo_content import SEO_BODY_HTML
 
 SITE_ORIGIN = "https://okama.io"
 DEFAULT_SHARE_IMAGE = f"{SITE_ORIGIN}/assets/og-image.png"
@@ -34,6 +45,21 @@ DEFAULT_SHARE_IMAGE = f"{SITE_ORIGIN}/assets/og-image.png"
 _TITLE_RE = re.compile(r"<title>.*?</title>", re.S)
 _OG_IMAGE_RE = re.compile(r'(<meta property="og:image" content=")[^"]*(">)')
 _TW_IMAGE_RE = re.compile(r'(<meta property="twitter:image" content=")[^"]*(">)')
+
+
+def _crawler_body(page: dict) -> str:
+    """Build the no-JS crawler content injected into the React mount point.
+
+    Heading (the page name) + the section's rendered description (common.seo_content,
+    reused from the on-screen description card); falls back to the short registry
+    description for routes without a rendered body. React overwrites it on
+    hydration, so it is visible only to clients that don't run JS.
+    """
+    heading = escape(page.get("name") or page.get("title") or "okama")
+    body = SEO_BODY_HTML.get(page.get("path", "")) or (
+        f"<p>{escape(' '.join((page.get('description') or '').split()))}</p>"
+    )
+    return f'<div id="seo-content"><h1>{heading}</h1>{body}</div>'
 
 
 def _page_for_path(path: str) -> dict | None:
@@ -83,6 +109,14 @@ def register_seo_head(server: Flask) -> None:
         # lambda replacement keeps the URL literal regardless of its content.
         html = _OG_IMAGE_RE.sub(lambda m: f"{m.group(1)}{DEFAULT_SHARE_IMAGE}{m.group(2)}", html)
         html = _TW_IMAGE_RE.sub(lambda m: f"{m.group(1)}{DEFAULT_SHARE_IMAGE}{m.group(2)}", html)
+
+        # Crawler body content: inject heading + description as the first child of
+        # the React mount; React overwrites it on hydration (see module docstring).
+        html = html.replace(
+            '<div id="react-entry-point">',
+            f'<div id="react-entry-point">{_crawler_body(page)}',
+            1,
+        )
 
         response.set_data(html)
         return response
