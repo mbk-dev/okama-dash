@@ -20,10 +20,10 @@ jobs:
     name: Full test suite (incl. e2e)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python 3.14
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.14"          # matches the secondvds runtime (3.14.5) and local dev
 
