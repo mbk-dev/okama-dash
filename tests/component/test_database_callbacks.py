@@ -77,6 +77,19 @@ class TestDbSearch:
 
         mock_search.assert_called_once_with("apple", namespace="US")
 
+    @pytest.mark.parametrize("blank", [None, "", "   "])
+    def test_blank_query_is_not_searched(self, blank):
+        # An untouched search box sends value=None; ok.search(None) → pandas
+        # .str.contains(None) → re.compile(None) → TypeError (prod 500, 2026-06).
+        # A blank query must short-circuit to a prompt, never reaching okama.
+        from pages.database.cards_database.db_search_results import db_search
+
+        with patch(f"{SEARCH_MODULE}.ok.search") as mock_search:
+            result = db_search(1, blank, "ANY")
+
+        mock_search.assert_not_called()
+        assert isinstance(result, str)
+
 
 class TestDatabaseLayout:
     def test_layout_tolerates_arbitrary_query_params(self, mock_okama_symbols, null_cache):

@@ -26,7 +26,11 @@ card_db_search_results = dbc.Card(
     State("db-search-namespace", "value"),  # namespace
     prevent_initial_call=True,
 )
-def db_search(n_clicks: int, text_to_search: str, namespace: str) -> dag.AgGrid:
+def db_search(n_clicks: int, text_to_search: str, namespace: str) -> str | dag.AgGrid:
+    if not text_to_search or not text_to_search.strip():
+        # A blank query (untouched field → value is None) must not reach okama:
+        # ok.search(None) does df[...].str.contains(None) → re.compile(None) → TypeError.
+        return "Enter a search query ..."
     search_df = ok.search(text_to_search, namespace=namespace if namespace != "ANY" else None).drop(
         columns=["ticker"], errors="ignore"
     )
