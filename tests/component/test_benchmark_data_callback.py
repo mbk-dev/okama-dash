@@ -58,6 +58,22 @@ class TestUpdateGrafBenchmark:
         assert isinstance(fig, go.Figure)
         assert any(isinstance(t, go.Bar) for t in fig.data)
 
+    def test_annual_td_bar_bars_anchored_at_year_start(self, mock_al):
+        # Regression: bars must sit at Jan 1 so each aligns under its own year tick
+        # (dtick="M12" + instant ticks anchor on Jan 1). Year-end placement read every
+        # bar one year too high — the latest YTD bar showed as a future year.
+        import pandas as pd
+
+        from pages.benchmark.benchmark import get_benchmark_figure
+
+        fig, _ = get_benchmark_figure(mock_al, "annual_td_bar", "rolling", 2)
+        bars = [t for t in fig.data if isinstance(t, go.Bar)]
+        assert bars
+        for trace in bars:
+            x = pd.DatetimeIndex(trace.x)
+            assert list(x.month) == [1] * len(x)
+            assert list(x.day) == [1] * len(x)
+
     def test_empty_symbols_raises_prevent_update(self):
         from pages.benchmark.benchmark import update_graf_benchmark
         import dash.exceptions

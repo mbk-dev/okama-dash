@@ -29,6 +29,7 @@ from common.chart_helpers import (
     add_last_value_annotations,
     add_sharpe_ratio_row,
     add_return_type_subtitle,
+    annual_bar_figure,
     format_points,
 )
 from common.html_elements.submit_spinner import submit_spinner_running
@@ -1983,9 +1984,7 @@ def get_pf_figure(
 
     if plot_type == "annual_return":
         df = pf_object.annual_return_ts(return_type="cagr").to_frame() * 100
-        ind = df.index.to_timestamp(freq="Y")
-        fig = px.bar(df, x=ind, y=df.columns, barmode="group", title="Portfolio Annual Return", height=800)
-        fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
+        fig = annual_bar_figure(df, title="Portfolio Annual Return", height=800)
         fig.update_layout(xaxis_title=None, legend_title="Portfolio")
         add_return_type_subtitle(fig)
         return fig, pd.DataFrame(), pd.DataFrame(), df

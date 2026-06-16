@@ -2,6 +2,7 @@ import logging
 
 import dash_bootstrap_components as dbc
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import okama as ok
 
@@ -12,6 +13,28 @@ import common.crisis.crisis_data as cr
 def make_error_alert(error: Exception) -> dbc.Alert:
     logging.exception("Callback error")
     return dbc.Alert(f"Error: {error}", color="danger", dismissable=True)
+
+
+def annual_bar_figure(df: pd.DataFrame, *, barmode: str = "group", **px_kwargs) -> go.Figure:
+    """Grouped/relative bar chart over an annual (Y) PeriodIndex, with year ticks.
+
+    Bars are anchored at the year START (Jan 1 — ``to_timestamp``'s default
+    ``how="start"``), and the x-axis draws one tick per year via ``dtick="M12"`` +
+    ``ticklabelmode="instant"``, which plotly anchors on Jan 1. Placement and tick
+    anchor therefore coincide, so every bar sits under its own year label.
+
+    This pairing MUST stay together: the older inline form placed bars at year END
+    (``to_timestamp(freq="Y")`` → Dec 31), one day before the NEXT year's Jan-1 tick,
+    so every bar read one year too high and the latest year-to-date bar appeared under
+    a not-yet-finished future year. Centralising both halves here keeps them from
+    drifting apart again as this chart is copied across pages.
+
+    ``px_kwargs`` are forwarded to ``px.bar`` (e.g. ``title``, ``height``).
+    """
+    ind = df.index.to_timestamp()  # Jan 1 of each annual period
+    fig = px.bar(df, x=ind, y=df.columns, barmode=barmode, **px_kwargs)
+    fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
+    return fig
 
 
 def add_inflation_trace(fig: go.Figure, ind, df: pd.DataFrame) -> None:

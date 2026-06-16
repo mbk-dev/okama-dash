@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from dash import callback, dcc, html
 from dash.dependencies import Input, Output, State
 
+from common.chart_helpers import annual_bar_figure
 from common.date_input import register_date_validation
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.html_elements.grid_export import (
@@ -61,10 +62,12 @@ def get_inflation_figure(objects: list, plot_type: str) -> tuple[go.Figure, pd.D
         attr = "annual_inflation_ts" if plot_type == "annual" else "values_monthly"
         df = pd.concat([getattr(obj, attr) for obj in objects], axis=1) * 100
         df.columns = [labels[col] for col in df.columns]
-        freq = "Y" if plot_type == "annual" else "M"
-        ind = df.index.to_timestamp(freq=freq)
-        fig = px.bar(df, x=ind, y=df.columns, barmode="group", title=_Y_TITLES[plot_type].rsplit(",", 1)[0], height=600)
-        if plot_type == "monthly":
+        title = _Y_TITLES[plot_type].rsplit(",", 1)[0]
+        if plot_type == "annual":
+            fig = annual_bar_figure(df, title=title, height=600)
+        else:
+            ind = df.index.to_timestamp(freq="M")
+            fig = px.bar(df, x=ind, y=df.columns, barmode="group", title=title, height=600)
             # Highlight each country's last PUBLISHED month. Using its last valid
             # bar (not the global last row) keeps the accent on the real value
             # when a country trails the others — e.g. EUR.INFL whose current
@@ -76,8 +79,6 @@ def get_inflation_figure(objects: list, plot_type: str) -> tuple[go.Figure, pd.D
                 if last_valid is not None:
                     colors[last_valid] = _HIGHLIGHT_COLOR
                 trace.marker.color = colors
-        else:
-            fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
     else:
         attr = _SERIES_ATTRS[plot_type]
         df = pd.concat([getattr(obj, attr) for obj in objects], axis=1) * 100

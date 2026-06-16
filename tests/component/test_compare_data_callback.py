@@ -109,6 +109,30 @@ class TestUpdateGrafCompareInner:
         assert len(fig.data) > 0
         assert all(trace.type == "bar" for trace in fig.data)
 
+    def test_annual_return_bars_anchored_at_year_start(self, mock_al):
+        # Regression: bars must sit at Jan 1 so each aligns under its own year tick
+        # (dtick="M12" + instant ticks anchor on Jan 1). Year-end placement read every
+        # bar one year too high — the latest YTD bar showed as a future year.
+        import pandas as pd
+
+        from pages.compare.compare import _update_graf_compare_inner
+
+        fig, *_ = _update_graf_compare_inner(
+            screen=None,
+            log_on=False,
+            selected_symbols=["AAPL.US", "MSFT.US"],
+            ccy="USD",
+            fd_value="2020-01",
+            ld_value="2024-12",
+            plot_type="annual_return",
+            inflation_on=False,
+            rolling_window=2,
+        )
+        for trace in fig.data:
+            x = pd.DatetimeIndex(trace.x)
+            assert list(x.month) == [1] * len(x)
+            assert list(x.day) == [1] * len(x)
+
     def test_annual_return_chart_annotates_cagr_return_type(self, mock_al):
         from pages.compare.compare import _update_graf_compare_inner
 

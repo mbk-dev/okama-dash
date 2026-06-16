@@ -13,7 +13,7 @@ import okama as ok
 import common.settings as settings
 from common.object_cache import get_or_create, TTL_ASSET_LIST
 import common.update_style
-from common.chart_helpers import add_last_value_annotations
+from common.chart_helpers import add_last_value_annotations, annual_bar_figure
 from common.html_elements.submit_spinner import submit_spinner_running
 from common.mobile_screens import adopt_small_screens
 import plotly.graph_objects as go
@@ -217,9 +217,7 @@ def get_benchmark_figure(
             gridcolor="lightgrey",
         )
     else:
-        ind = df.index.to_timestamp(freq="Y")
-        fig = px.bar(df, x=ind, y=df.columns, barmode="relative")
-        fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
+        fig = annual_bar_figure(df, barmode="relative")
 
     # X and Y-axis titles
     y_title = get_y_title(plot_type)

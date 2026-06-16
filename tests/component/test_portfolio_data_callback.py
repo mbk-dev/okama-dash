@@ -436,6 +436,32 @@ class TestGetPfFigureAnnualReturn:
         pf.annual_return_ts.assert_called_once_with(return_type="cagr")
         assert "CAGR" in fig.layout.title.subtitle.text
 
+    def test_annual_return_bars_anchored_at_year_start(self):
+        # Regression: bars must sit at Jan 1 so each aligns under its own year tick
+        # (dtick="M12" + instant ticks anchor on Jan 1). Year-end placement read every
+        # bar one year too high — the latest YTD bar showed as a future year.
+        import pandas as pd
+
+        from pages.portfolio.portfolio import get_pf_figure
+
+        pf = make_mock_portfolio()
+        fig, *_ = get_pf_figure(
+            pf,
+            plot_type="annual_return",
+            inflation_on=False,
+            rolling_window=2,
+            n_monte_carlo=0,
+            years_monte_carlo=0,
+            distribution_monte_carlo="norm",
+            show_backtest="no",
+            log_scale=False,
+            cf_strategy="indexation",
+        )
+        for trace in fig.data:
+            x = pd.DatetimeIndex(trace.x)
+            assert list(x.month) == [1] * len(x)
+            assert list(x.day) == [1] * len(x)
+
 
 class TestGetPfFigureWealthAnnotations:
     def test_wealth_plot_annotates_each_trace_with_balance_points(self):

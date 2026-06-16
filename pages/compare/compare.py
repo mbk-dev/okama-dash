@@ -23,6 +23,7 @@ from common.chart_helpers import (
     add_last_value_annotations,
     add_sharpe_ratio_row,
     add_return_type_subtitle,
+    annual_bar_figure,
     format_points,
     make_error_alert,
 )
@@ -264,9 +265,7 @@ def get_al_figure(
     # Select Plot Type
     if plot_type == "annual_return":
         df = al_object.annual_return_ts * 100
-        ind = df.index.to_timestamp(freq="Y")
-        fig = px.bar(df, x=ind, y=df.columns, barmode="group", title=titles[plot_type], height=800)
-        fig.update_xaxes(dtick="M12", tickformat="%Y", ticklabelmode="instant")
+        fig = annual_bar_figure(df, title=titles[plot_type], height=800)
         fig.update_layout(xaxis_title=None, legend_title="Assets")
         add_return_type_subtitle(fig)
         return fig, df

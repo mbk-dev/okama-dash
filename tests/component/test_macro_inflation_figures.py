@@ -24,6 +24,22 @@ class TestInflationFigure:
         assert {trace.name for trace in fig.data} == {"Russia", "USA"}
         assert fig.layout.barmode == "group"
 
+    def test_annual_bars_anchored_at_year_start_to_align_with_year_ticks(self, objects):
+        # The annual axis draws year ticks with dtick="M12" + ticklabelmode="instant",
+        # which plotly anchors on Jan 1. A bar placed at year END (Dec 31) sits one day
+        # before the NEXT year's tick, so every bar reads one year too high — the latest
+        # YTD bar showed up under a not-yet-finished future year. Bars must therefore sit
+        # at the START of their year (Jan 1) so each lands exactly under its own tick.
+        from pages.macro.inflation import get_inflation_figure
+
+        fig, df = get_inflation_figure(objects, "annual")
+        expected_years = list(df.index.year)
+        for trace in fig.data:
+            x = pd.DatetimeIndex(trace.x)
+            assert list(x.month) == [1] * len(x), "annual bars must be anchored at January (year start)"
+            assert list(x.day) == [1] * len(x)
+            assert list(x.year) == expected_years
+
     def test_rolling_plot_is_lines_in_percent(self, objects):
         from pages.macro.inflation import get_inflation_figure
 
