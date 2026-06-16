@@ -1,0 +1,58 @@
+name: Deploy to secondvds
+
+# Auto-deploy okama.io on every push to master, gated by the FULL test suite
+# (incl. e2e) per the "Release gate (master)" rule in AGENTS.md: the deploy job
+# runs only if the test job is green. The server-side step connects over SSH and
+# runs a forced command (okama-dash-deploy) — see deploy/README.md.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+concurrency:
+  # Never let two deploys race; queue them instead of cancelling a running one.
+  group: deploy-secondvds
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Full test suite (incl. e2e)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"          # matches the secondvds runtime (3.14.5) and local dev
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Install Playwright Chromium
+        run: poetry run playwright install --with-deps chromium
+
+      - name: Run full test suite
+        run: poetry run pytest -q
+
+  deploy:
+    name: Deploy over SSH
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger server-side deploy (SSH forced command)
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          # The trailing "deploy" arg is ignored by the server-side forced command
+          # (authorized_keys command="okama-dash-deploy"); ssh just needs a command.
+          ssh -i ~/.ssh/id_deploy \
+              -o IdentitiesOnly=yes \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" deploy
