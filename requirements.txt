@@ -5,4 +5,4 @@ dash_daq
 dash-bootstrap-components
 plotly
 flask_caching
-okama>=2.2.1
+okama>=2.2.2
