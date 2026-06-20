@@ -78,9 +78,6 @@ def test_pf_statistics_grid_sorting_disabled():
     _assert_sorting_disabled([grid], expected_count=1)
 
 
-# scipy's lognorm.fit explores invalid loc values internally on sign-mixed
-# returns; the RuntimeWarning is benign and data-dependent.
-@pytest.mark.filterwarnings("ignore:invalid value encountered in log:RuntimeWarning")
 def test_distribution_ks_grid_sorting_disabled():
     from pages.portfolio.portfolio import get_statistics_for_distribution
 

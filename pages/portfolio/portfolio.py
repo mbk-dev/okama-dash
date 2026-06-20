@@ -16,7 +16,13 @@ import plotly.graph_objects as go
 
 import pandas as pd
 import numpy as np
-from scipy.stats import t, norm, lognorm, kstest, jarque_bera, skew, kurtosis as scipy_kurtosis
+# scipy's t/norm/lognorm distribution objects are kept ONLY for the fitted-PDF
+# overlay curves in _get_distribution_figure (.fit + .pdf on a custom x-grid),
+# which okama does not expose. The goodness-of-fit tests (kstest/jarque_bera) and
+# the moments (skewness/kurtosis) go through okama's Frame helpers below — that
+# path is what the scipy 1.18 ks_1samp regression broke; .fit/.pdf are unaffected.
+from scipy.stats import t, norm, lognorm
+from okama.common.helpers.helpers import Frame
 
 import okama as ok
 
@@ -1387,21 +1393,42 @@ def _format_find_result(strategy_type: str, result) -> str:
     return f"Withdrawal: {format_points(float(result.withdrawal_abs))} ({rel_pct:.1f}% of initial) · {accuracy}"
 
 
-def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
-    data = pf_object.ror.dropna()
-    mu, std = norm.fit(data)
-    df_t, loc_t, scale_t = t.fit(data)
-    std_ln, loc_ln, scale_ln = lognorm.fit(data)
+def compute_distribution_stats(pf_object: ok.Portfolio) -> dict:
+    """Distribution moments and goodness-of-fit tests for the portfolio's monthly
+    rate of return, computed through okama's Frame helpers instead of scipy.stats
+    directly.
 
-    ks_norm = kstest(data, "norm", args=(mu, std))
-    ks_lognorm = kstest(data, "lognorm", args=(std_ln, loc_ln, scale_ln))
-    ks_t = kstest(data, "t", args=(df_t, loc_t, scale_t))
-    jb_stat, jb_pvalue = jarque_bera(data)
+    Frame wraps scipy in a version-safe way: kstest_series passes a frozen-distribution
+    CDF, sidestepping the scipy 1.18 ks_1samp/ndtr regression, and fits the lognormal
+    on gross returns (1 + r) with floc=0 so sign-mixed monthly returns are handled
+    correctly. Expanding skewness/kurtosis need >= 12 observations; for a shorter
+    series they are reported as NaN.
+    """
+    data = pf_object.ror.dropna()
+    skew_series = Frame.skewness(data)
+    kurt_series = Frame.kurtosis(data)
+    return {
+        "mean": data.mean(),
+        "std": data.std(),
+        "skewness": skew_series.iloc[-1] if not skew_series.empty else float("nan"),
+        "kurtosis": kurt_series.iloc[-1] if not kurt_series.empty else float("nan"),
+        "jarque_bera": Frame.jarque_bera_series(data),
+        "kstest": {
+            "Normal": Frame.kstest_series(data, distr="norm"),
+            "Lognormal": Frame.kstest_series(data, distr="lognorm"),
+            "Student's T": Frame.kstest_series(data, distr="t"),
+        },
+    }
+
+
+def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
+    stats = compute_distribution_stats(pf_object)
+    ks = stats["kstest"]
+    jb = stats["jarque_bera"]
 
     table_list = [
-        {"distribution": "Normal", "statistics": ks_norm.statistic, "p-value": ks_norm.pvalue},
-        {"distribution": "Lognormal", "statistics": ks_lognorm.statistic, "p-value": ks_lognorm.pvalue},
-        {"distribution": "Student's T", "statistics": ks_t.statistic, "p-value": ks_t.pvalue},
+        {"distribution": label, "statistics": ks[label]["statistic"], "p-value": ks[label]["p-value"]}
+        for label in ("Normal", "Lognormal", "Student's T")
     ]
     guarded_decimal_formatter = {"function": "formatDecimalGuarded(params.value)"}
     column_defs = [
@@ -1417,16 +1444,16 @@ def get_statistics_for_distribution(pf_object: ok.Portfolio) -> html.Div:
                 All values correspond to the monthly rate of return.
                 """
             ),
-            html.P(f"Mean: {data.mean() * 100:.2f}"),
-            html.P(f"Standard deviation: {data.std() * 100:.2f}"),
-            html.P(f"Skewness: {skew(data):.2f}"),
-            html.P(f"Kurtosis: {scipy_kurtosis(data):.2f}"),
+            html.P(f"Mean: {stats['mean'] * 100:.2f}"),
+            html.P(f"Standard deviation: {stats['std'] * 100:.2f}"),
+            html.P(f"Skewness: {stats['skewness']:.2f}"),
+            html.P(f"Kurtosis: {stats['kurtosis']:.2f}"),
             dcc.Markdown(
                 """
                 **Popular distributions tests**
                 """
             ),
-            html.P(f"Jarque-Bera test statistic: {jb_stat:.2f}, p-value: {jb_pvalue:.2f}"),
+            html.P(f"Jarque-Bera test statistic: {jb['statistic']:.2f}, p-value: {jb['p-value']:.2f}"),
             dcc.Markdown(
                 """
                 **Kolmogorov-Smirnov test**
