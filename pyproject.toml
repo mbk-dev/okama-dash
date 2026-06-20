@@ -38,7 +38,12 @@ dash-mantine-components = "*"
 plotly = "*"
 Flask-Caching = "*"
 pandas = "^3.0.0"
-#scipy = "1.12"  # https://github.com/numpy/numpy/issues/27135
+# TEMPORARY: cap scipy below 1.18 — scipy 1.18.0 broke scipy.stats.kstest/ks_1samp
+# ("ndtr() takes from 1 to 2 positional arguments but 3 were given"), which crashes
+# the Portfolio "Distribution test" (common get_statistics_for_distribution).
+# Prod runs 1.17.1 (unaffected). Remove this cap once scipy ships a fix (1.18.1+) or
+# the distribution test moves to an okama built-in. See findings-to-fix #37.
+scipy = ">=1.17,<1.18"
 redis = "*"
 xlsxwriter = "*"
 dash-ag-grid = "^35.2.0"
