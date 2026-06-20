@@ -38,12 +38,12 @@ dash-mantine-components = "*"
 plotly = "*"
 Flask-Caching = "*"
 pandas = "^3.0.0"
-# TEMPORARY: cap scipy below 1.18 — scipy 1.18.0 broke scipy.stats.kstest/ks_1samp
-# ("ndtr() takes from 1 to 2 positional arguments but 3 were given"), which crashes
-# the Portfolio "Distribution test" (common get_statistics_for_distribution).
-# Prod runs 1.17.1 (unaffected). Remove this cap once scipy ships a fix (1.18.1+) or
-# the distribution test moves to an okama built-in. See findings-to-fix #37.
-scipy = ">=1.17,<1.18"
+# scipy is a direct dependency: _get_distribution_figure uses scipy.stats t/norm/lognorm
+# .fit/.pdf for the fitted-PDF overlay curves (okama exposes no PDF-curve API). The scipy
+# 1.18.0 kstest/ks_1samp (ndtr) regression no longer affects us — goodness-of-fit tests
+# go through okama's Frame helpers (compute_distribution_stats). Verified green on 1.18.0,
+# so the earlier temporary <1.18 cap is removed. See findings-to-fix #37.
+scipy = "*"
 redis = "*"
 xlsxwriter = "*"
 dash-ag-grid = "^35.2.0"

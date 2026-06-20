@@ -6,5 +6,5 @@ dash-bootstrap-components
 plotly
 flask_caching
 okama>=2.2.2
-# TEMPORARY cap: scipy 1.18.0 broke kstest/ks_1samp (Distribution test). See findings #37.
-scipy>=1.17,<1.18
+# scipy: direct dep for the fitted-PDF overlay (t/norm/lognorm .fit/.pdf). See findings #37.
+scipy
