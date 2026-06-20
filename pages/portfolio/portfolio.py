@@ -1852,7 +1852,12 @@ def _get_distribution_figure(pf_object: ok.Portfolio) -> go.Figure:
     data = pf_object.ror
     df_t, loc, scale = t.fit(data)
     mu, std = norm.fit(data)
-    std_ln, loc_ln, scale_ln = lognorm.fit(data)
+    # Fit the lognormal on gross returns (1 + r) with floc=0 — the same basis as the
+    # KS test (okama Frame.kstest_series). Monthly returns are sign-mixed, so fitting
+    # lognorm on raw r explores invalid (negative) support ("invalid value in log").
+    # The PDF is evaluated on the gross grid (x + 1) below; since r = R - 1 is a pure
+    # location shift, the density plotted against r is unchanged.
+    std_ln, loc_ln, scale_ln = lognorm.fit(data + 1.0, floc=0)
     xmin, xmax = data.min(), data.max()
     x = np.linspace(xmin, xmax, 100)
     bins_number = 50 if data.shape[0] >= 120 else 10
@@ -1861,7 +1866,7 @@ def _get_distribution_figure(pf_object: ok.Portfolio) -> go.Figure:
         {
             "Student’s t": t.pdf(x, loc=loc, scale=scale, df=df_t) * bin_size,
             "Normal": norm.pdf(x, mu, std) * bin_size,
-            "Lognormal": lognorm.pdf(x, std_ln, loc_ln, scale_ln) * bin_size,
+            "Lognormal": lognorm.pdf(x + 1.0, std_ln, loc_ln, scale_ln) * bin_size,
         },
         index=x + bin_size / 2,
     )

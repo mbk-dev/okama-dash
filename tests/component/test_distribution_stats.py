@@ -47,3 +47,29 @@ def test_moments_and_jarque_bera_delegate_to_okama_frame():
     expected_jb = Frame.jarque_bera_series(ror)
     assert stats["jarque_bera"]["statistic"] == pytest.approx(expected_jb["statistic"])
     assert stats["jarque_bera"]["p-value"] == pytest.approx(expected_jb["p-value"])
+
+
+def test_distribution_figure_lognormal_fit_on_gross_returns():
+    """The fitted-PDF overlay fits the lognormal on gross returns (1 + r) with
+    floc=0 — the same way the KS test does (okama Frame.kstest_series) — instead of
+    on raw sign-mixed returns. Keeps the plotted curve consistent with the test and
+    avoids 'invalid value encountered in log' from fitting lognorm on negative data.
+    """
+    import numpy as np
+    from scipy.stats import lognorm
+
+    from pages.portfolio.portfolio import _get_distribution_figure
+
+    pf = make_mock_portfolio()
+    data = pf.ror
+    fig = _get_distribution_figure(pf)
+
+    xmin, xmax = data.min(), data.max()
+    x = np.linspace(xmin, xmax, 100)
+    bins_number = 50 if data.shape[0] >= 120 else 10
+    bin_size = (xmax - xmin) / bins_number
+    shape, loc, scale = lognorm.fit(data + 1.0, floc=0)
+    expected = lognorm.pdf(x + 1.0, shape, loc, scale) * bin_size
+
+    lognorm_trace = next(tr for tr in fig.data if getattr(tr, "name", None) == "Lognormal")
+    np.testing.assert_allclose(np.asarray(lognorm_trace.y, dtype=float), expected, rtol=1e-9)
