@@ -1,6 +1,18 @@
 import dash
 import dash_bootstrap_components as dbc
+import pandas as pd
 from dash.dependencies import Input, Output
+
+
+def current_month() -> str:
+    """Current month as ``YYYY-MM``, evaluated at call time.
+
+    Use this as the default for a 'Last Date' input instead of a module-level
+    constant: a Gunicorn worker process is long-lived and a constant captured at
+    import would freeze the default to the month the worker started in, silently
+    truncating the freshest month of data once the calendar rolls over.
+    """
+    return pd.Timestamp.today().strftime("%Y-%m")
 
 _CLIENTSIDE_JS = """
 function(value) {

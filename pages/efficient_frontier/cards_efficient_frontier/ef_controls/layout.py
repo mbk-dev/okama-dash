@@ -7,18 +7,13 @@ from typing import Optional
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 
-import pandas as pd
-
 from common import inflation as inflation
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.html_elements.submit_spinner import create_submit_spinner
-from common.date_input import date_input, register_date_validation
+from common.date_input import current_month, date_input, register_date_validation
 import pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt as tl
 from .symbols import symbols_select
 from .options import options_section
-
-
-today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
 def _currency_rebal_section(ccy, rebal_value, currency_list):
@@ -63,7 +58,7 @@ def _dates_row(first_date, last_date):
             ),
             dbc.Col(
                 [html.Label("Last Date")]
-                + date_input("ef-last-date", last_date if last_date else today_str),
+                + date_input("ef-last-date", last_date if last_date else current_month()),
             ),
         ]
     )

@@ -42,8 +42,6 @@ _PLOT_VALUES = {opt["value"] for opt in _PLOT_OPTIONS}
 _HIGHLIGHT_COLOR = "#636efa"
 _MUTED_COLOR = "#c8d0dd"
 
-today_str = pd.Timestamp.today().strftime("%Y-%m")
-
 
 def get_cape_history_figure(objects: list) -> tuple[go.Figure, pd.DataFrame]:
     df = pd.concat([obj.values_monthly for obj in objects], axis=1)

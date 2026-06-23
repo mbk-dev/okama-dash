@@ -16,7 +16,7 @@ import plotly.graph_objects as go
 from dash import callback, dcc, html
 from dash.dependencies import Input, Output, State
 
-from common.date_input import register_date_validation
+from common.date_input import current_month, register_date_validation
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.html_elements.grid_export import (
     create_grid_header_with_export,
@@ -96,8 +96,6 @@ _PLOT_OPTIONS = [
 _PLOT_VALUES = {opt["value"] for opt in _PLOT_OPTIONS}
 _CCY_OPTIONS = ["RUB", "USD"]
 
-today_str = pd.Timestamp.today().strftime("%Y-%m")
-
 
 def layout(tickers=None, first_date=None, last_date=None, plot=None, ccy=None, **kwargs):
     selected = filter_known(make_list_from_string(tickers), RE_SERIES) or RE_DEFAULTS
@@ -129,7 +127,7 @@ def layout(tickers=None, first_date=None, last_date=None, plot=None, ccy=None, *
                             md=2,
                             sm=4,
                         ),
-                        *date_columns("re", first_date or MACRO_FIRST_DATE_DEFAULT, last_date or today_str),
+                        *date_columns("re", first_date or MACRO_FIRST_DATE_DEFAULT, last_date or current_month()),
                     ],
                     class_name="g-2",
                     # Top-aligned: every column starts with a one-line Label, so

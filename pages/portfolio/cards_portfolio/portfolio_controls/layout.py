@@ -12,22 +12,17 @@ from typing import Optional
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 
-import pandas as pd
-
 from common import inflation as inflation
 from common.html_elements.submit_spinner import create_submit_spinner
 from common.html_elements.copy_link_div import create_copy_link_div
 from common.parse_query import make_list_from_string
-from common.date_input import date_input, register_date_validation
+from common.date_input import current_month, date_input, register_date_validation
 import pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt as tl
 from pages.portfolio.cards_portfolio.rebalancing_controls import rebalancing_accordion_item
 from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion_item
 from .constructor import tickers_weights_block
 from .options import options_section
 from .monte_carlo import monte_carlo_section
-
-
-today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
 def _accordion_active_items(abs_dev, rel_dev, cf_strategy, cf_amount, cf_pct, vds_pct, cwd_amount, cf_ts):
@@ -76,7 +71,7 @@ def _dates_row(first_date, last_date):
                 [html.Label("First Date")] + date_input("pf-first-date", first_date if first_date else "2000-01")
             ),
             dbc.Col(
-                [html.Label("Last Date")] + date_input("pf-last-date", last_date if last_date else today_str)
+                [html.Label("Last Date")] + date_input("pf-last-date", last_date if last_date else current_month())
             ),
         ]
     )

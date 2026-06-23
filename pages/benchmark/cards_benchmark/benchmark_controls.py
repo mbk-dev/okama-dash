@@ -7,8 +7,6 @@ import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback
 
-import pandas as pd
-
 from common import settings as settings, inflation as inflation
 from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
@@ -17,16 +15,13 @@ from common.html_elements.submit_spinner import create_submit_spinner
 from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
 import common.validators as validators
-from common.date_input import date_input, register_date_validation
+from common.date_input import current_month, date_input, register_date_validation
 from common.url_portfolio import pf_link_kwargs, portfolio_option, split_portfolio_from_selection
 from pages.benchmark.cards_benchmark.eng.benchmark_tooltips_options_txt import (
     benchmark_options_tooltip_plot,
     benchmark_options_tooltip_window_size,
     benchmark_options_tooltip_type,
 )
-
-
-today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
 def benchmark_card_controls(
@@ -122,7 +117,7 @@ def benchmark_card_controls(
                                 ),
                                 dbc.Col(
                                     [html.Label("Last Date")]
-                                    + date_input("benchmark-last-date", last_date if last_date else today_str)
+                                    + date_input("benchmark-last-date", last_date if last_date else current_month())
                                 ),
                             ]
                         ),

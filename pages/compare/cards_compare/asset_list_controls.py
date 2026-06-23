@@ -5,8 +5,6 @@ import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, callback
 
-import pandas as pd
-
 from common import settings as settings, inflation as inflation
 from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
@@ -16,14 +14,12 @@ from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
 from common.url_portfolio import pf_link_kwargs, portfolio_option, split_portfolio_from_selection
 import common.validators as validators
-from common.date_input import date_input, register_date_validation
+from common.date_input import current_month, date_input, register_date_validation
 from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
     al_options_tooltip_inflation,
     al_options_tooltip_cagr,
     al_options_window,
 )
-
-today_str = pd.Timestamp.today().strftime("%Y-%m")
 
 
 def card_controls(
@@ -87,7 +83,7 @@ def card_controls(
                                 ),
                                 dbc.Col(
                                     [html.Label("Last Date")]
-                                    + date_input("al-last-date", last_date if last_date else today_str)
+                                    + date_input("al-last-date", last_date if last_date else current_month())
                                 ),
                             ]
                         ),

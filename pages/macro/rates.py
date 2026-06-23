@@ -44,8 +44,6 @@ dash.register_page(
     ),
 )
 
-today_str = pd.Timestamp.today().strftime("%Y-%m")
-
 
 _PLOT_OPTIONS = [
     {"label": "Rates", "value": "history"},
