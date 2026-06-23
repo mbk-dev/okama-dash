@@ -31,4 +31,8 @@ def pf_update_asset_names_info(assets: list) -> tuple[dag.AgGrid, dag.AgGrid]:
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate
-    return names_and_info_tables(lambda: ok.AssetList(assets))
+    # inflation=False matches the frontier (also built inflation=False) and the
+    # benchmark page's info panel. With okama's default inflation=True the
+    # default-currency inflation series (e.g. USD.INFL), published ~1 month late,
+    # would cap "Last available date" a month behind the actual asset data.
+    return names_and_info_tables(lambda: ok.AssetList(assets, inflation=False))
