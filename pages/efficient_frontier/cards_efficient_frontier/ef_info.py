@@ -7,6 +7,7 @@ from dash.exceptions import PreventUpdate
 import okama as ok
 
 from common.html_elements.info_ag_grid import names_and_info_tables
+from pages.efficient_frontier.ef_cache import EF_INFLATION
 
 card_ef_info = dbc.Card(
     dbc.CardBody(
@@ -25,14 +26,16 @@ card_ef_info = dbc.Card(
     Output("ef-assets-names", "children"),
     Output("ef-info", "children"),
     Input("ef-symbols-list", "value"),  # tickers
+    Input("ef-base-currency", "value"),  # currency — same control the frontier uses
     prevent_initial_call=False,
 )
-def pf_update_asset_names_info(assets: list) -> tuple[dag.AgGrid, dag.AgGrid]:
+def pf_update_asset_names_info(assets: list, ccy: str) -> tuple[dag.AgGrid, dag.AgGrid]:
     assets = [i for i in assets if i is not None]
     if not assets:
         raise PreventUpdate
-    # inflation=False matches the frontier (also built inflation=False) and the
-    # benchmark page's info panel. With okama's default inflation=True the
-    # default-currency inflation series (e.g. USD.INFL), published ~1 month late,
-    # would cap "Last available date" a month behind the actual asset data.
-    return names_and_info_tables(lambda: ok.AssetList(assets, inflation=False))
+    # Build the info panel from the same settings as the frontier: the page
+    # currency (ef-base-currency) and the shared EF_INFLATION source. Keeping a
+    # single source prevents the panel and the frontier from drifting — they did
+    # once, when the panel kept okama's default inflation=True and reported a
+    # "Last available date" a month behind the frontier (inflation publishes late).
+    return names_and_info_tables(lambda: ok.AssetList(assets, ccy=ccy, inflation=EF_INFLATION))

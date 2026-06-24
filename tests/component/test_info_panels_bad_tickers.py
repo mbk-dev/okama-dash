@@ -60,7 +60,7 @@ class TestInfoPanelsSurviveBadTickers:
         with patch(
             "pages.efficient_frontier.cards_efficient_frontier.ef_info.ok.AssetList", side_effect=error
         ):
-            names, info = ef_info.pf_update_asset_names_info(["BAD.PIF"])
+            names, info = ef_info.pf_update_asset_names_info(["BAD.PIF"], "USD")
 
         assert INFO_UNAVAILABLE_TEXT in _texts(names)
         assert INFO_UNAVAILABLE_TEXT in _texts(info)

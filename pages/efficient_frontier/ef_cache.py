@@ -15,6 +15,13 @@ from common.object_cache import (
 CACHE_TIMEOUT = 2592000
 DERIVED_CACHE_VERSION = f"ef-derived-v1-okv={get_okama_version()}"
 
+# The Efficient Frontier is always computed without inflation (the page has no
+# inflation control). This is the single source for that setting: both the
+# frontier (below) and the info panel (ef_info.py) read it, so the two cannot
+# drift — they did once, when the info panel kept okama's default inflation=True
+# and reported a "Last available date" a month behind the frontier.
+EF_INFLATION = False
+
 
 def get_or_create_ef_object(
     symbols: list[str],
@@ -28,7 +35,7 @@ def get_or_create_ef_object(
             "first_date": first_date,
             "last_date": last_date,
             "ccy": ccy,
-            "inflation": False,
+            "inflation": EF_INFLATION,
             "n_points": settings.EF_POINTS,
             "full_frontier": True,
         }
@@ -81,7 +88,7 @@ def get_portfolio_point(
             ccy=ccy,
             first_date=first_date,
             last_date=last_date,
-            inflation=False,
+            inflation=EF_INFLATION,
             rebalancing_strategy=ok.Rebalance(period=rebalancing_period),
         )
 
