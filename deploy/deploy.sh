@@ -41,9 +41,13 @@ echo "[deploy] restart ${SERVICE}"
 sudo systemctl restart "${SERVICE}"
 
 # Health check: poll the gunicorn unix socket for HTTP 200 (bypasses nginx/DNS).
+# Cold start can take ~30s — systemctl restart drains the old workers, then the new
+# workers each run a heavy okama import before the socket serves 200 — so poll up to
+# ~60s. The loop exits early on the first 200, so a fast boot is not slowed down; the
+# larger ceiling only prevents false-negative failures when the boot is slow.
 echo "[deploy] health check on ${SOCK}"
 code=""
-for _ in $(seq 1 15); do
+for _ in $(seq 1 60); do
     code=$(curl -s -o /dev/null -w '%{http_code}' --unix-socket "${SOCK}" http://localhost/ || true)
     if [ "${code}" = "200" ]; then
         echo "[deploy] OK: / returned 200 at ${after}"
