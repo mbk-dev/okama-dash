@@ -228,8 +228,14 @@ def update_re_page(screen, symbols, plot_type, ccy, fd_value, ld_value):
         )
         stats_df = stats_al.describe()
         # Crop service rows by NAME (robust to row-count differences between
-        # the real okama frame and the mock shape).
-        stats_df = stats_df[~stats_df["property"].isin(["Inception date", "Last asset date", "Common last data date"])]
+        # the real okama frame and the mock shape). "Max drawdowns dates" holds
+        # pandas Period cells that Dash cannot JSON-serialize in the grid rowData
+        # (GitHub #30); Compare drops the same row via describe().iloc[:-4].
+        stats_df = stats_df[
+            ~stats_df["property"].isin(
+                ["Max drawdowns dates", "Inception date", "Last asset date", "Common last data date"]
+            )
+        ]
         grid = build_stats_grid(stats_df, "re-describe-table-grid", value_format="percent")
         store_json = store_df.to_json(orient="split", default_handler=str)
         fig, config = adopt_small_screens(fig, screen)

@@ -78,6 +78,88 @@ class TestMainCallback:
         assert grid is None
 
 
+class TestStatsGridSerialization:
+    """Regression for the /macro/real-estate 500 (GitHub #30).
+
+    okama's real ``AssetList.describe()`` carries a ``Max drawdowns dates`` row
+    whose per-asset cells are pandas ``Period`` objects. The page crops only the
+    three inception/last-date rows by name, so that ``Period`` reaches the AG Grid
+    ``rowData`` and Dash fails to JSON-serialize the callback return with
+    ``TypeError: Object of type Period is not JSON serializable``. The shared mock
+    uses numeric drawdown-date columns, so it never reproduced this — hence a
+    local describe() frame that mirrors the real okama shape.
+    """
+
+    @staticmethod
+    def _describe_with_period_dates(symbols):
+        import pandas as pd
+
+        data = {
+            "property": [
+                "CAGR",
+                "Risk",
+                "CVAR",
+                "Max drawdowns",
+                "Max drawdowns dates",
+                "Inception date",
+                "Last asset date",
+                "Common last data date",
+            ],
+            "period": ["5 years"] * 5 + [pd.NA] * 3,
+        }
+        for symbol in symbols:
+            data[symbol] = [
+                0.10,
+                0.05,
+                -0.15,
+                -0.20,
+                pd.Period("2023-03", freq="M"),  # the offending cell
+                pd.Period("2000-04", freq="M"),
+                pd.Period("2026-03", freq="M"),
+                pd.Period("2026-03", freq="M"),
+            ]
+        return pd.DataFrame(data)
+
+    @pytest.fixture
+    def patched_period_describe(self, re_page):
+        class _DescribeOnlyAL:
+            def __init__(self, symbols):
+                self._symbols = symbols
+
+            def describe(self):
+                return TestStatsGridSerialization._describe_with_period_dates(self._symbols)
+
+        with (
+            patch.object(re_page.macro_objects, "get_asset_object", side_effect=lambda s: PicklableAsset(s)),
+            patch.object(
+                re_page.macro_objects,
+                "get_asset_list_object",
+                side_effect=lambda symbols, ccy, first_date=None, last_date=None, inflation=False: _DescribeOnlyAL(
+                    symbols
+                ),
+            ),
+        ):
+            yield
+
+    def test_stats_grid_rowdata_is_json_serializable(self, re_page, patched_period_describe):
+        import json
+
+        _fig, _config, _store, grid = re_page.update_re_page(
+            None, ["MOW_PR.RE", "MOW_SEC.RE"], "price", "RUB", None, None
+        )
+        # This is exactly what Dash does with the callback return value; before
+        # the fix it raises "Object of type Period is not JSON serializable".
+        json.dumps(grid.rowData)
+
+    def test_stats_grid_drops_max_drawdown_dates_row(self, re_page, patched_period_describe):
+        _fig, _config, _store, grid = re_page.update_re_page(
+            None, ["MOW_PR.RE", "MOW_SEC.RE"], "price", "RUB", None, None
+        )
+        properties = {row["property"] for row in grid.rowData}
+        # Cropped by name like Compare's describe().iloc[:-4] "crop from Max drawdown date".
+        assert "Max drawdowns dates" not in properties
+
+
 class TestReactiveWiring:
     def test_every_control_is_an_input(self, re_page):
         from dash._callback import GLOBAL_CALLBACK_LIST
