@@ -109,7 +109,15 @@ from common.auth import init_auth  # noqa: E402
 
 init_auth(server)  # personal cabinet: session auth, SQLite user DB, /cabinet guard, /logout
 
-app.layout = html.Div([dcc.Store(id="store"), navigation.navbar, dash.page_container, footer.footer()])
+app.layout = html.Div(
+    [
+        dcc.Store(id="store"),
+        dcc.Location(id="auth-url", refresh=False),
+        navigation.navbar,
+        dash.page_container,
+        footer.footer(),
+    ]
+)
 
 app.clientside_callback(
     """
