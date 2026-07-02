@@ -19,7 +19,10 @@ okama-dash/
 │   ├── benchmark/           # "/benchmark" — performance vs benchmark index
 │   ├── portfolio/           # "/portfolio" — portfolio analysis, rebalancing, cashflows
 │   ├── database/            # "/database" — search financial DB (stocks, ETFs, currencies)
-│   └── macro/               # "/macro/*" — macro indicators: inflation, rates (key rates), CAPE10, real estate
+│   ├── macro/               # "/macro/*" — macro indicators: inflation, rates (key rates), CAPE10, real estate
+│   ├── login/               # "/login" — user authentication
+│   ├── register/            # "/register" — new user registration
+│   └── cabinet/             # "/cabinet" — saved config list/open/rename/delete
 │
 ├── common/                  # Shared modules used across pages
 │   ├── settings.py          # App-wide constants (max tickers, MC limits, defaults)
@@ -38,8 +41,9 @@ okama-dash/
 │   ├── math.py              # Financial calculations
 │   ├── inflation.py         # Inflation data helpers
 │   ├── xlsx.py              # Excel export utilities
+│   ├── auth/                # Flask-Login cabinet: models, service, guard, init_auth
 │   ├── crisis/              # Crisis period data (shaded chart regions)
-│   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export, submit spinner)
+│   └── html_elements/       # Custom HTML/Dash components (copy-link, info tables, grid export, submit spinner, save-config)
 │
 ├── tools/                   # Dev-only scripts, not deployed (dump_callbacks.py — greppable callback wiring map; bench_server.py — server load/timing benchmark, see .claude/skills/test_server_load)
 ├── assets/                  # Static files served by Dash (CSS, JS, images; dashAgGridFunctions.js — AG Grid formatter functions; charts.css — full-bleed mobile chart cards; grids.css — compact wrapText line-height in AG Grid cells; chart_yrescale.js — global plotly_relayout listener that auto-rescales the Y axis to the visible X window when the range slider zooms, shared across every chart, #26; select_tab_complete.js — global keydown listener: Tab on an open searchable dmc.Select/MultiSelect picks the top match; MultiSelect (multi-ticker) keeps the cursor in the search box for the next ticker, single Select moves focus on; shared across every ticker selector, #25)
@@ -112,6 +116,8 @@ launched through the harness's background mechanism (`run_in_background`), with 
 |----------|---------|-------------|
 | `OKAMA_CACHE_BACKEND` | `redis` | Cache backend: `redis` or `filesystem` |
 | `OKAMA_REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL (only when backend is `redis`) |
+| `OKAMA_SECRET_KEY` | dev fallback (insecure, warns) | Flask session signing key for the cabinet auth |
+| `OKAMA_AUTH_DB_URI` | `sqlite:///okama.db` (instance folder) | Auth/saved-config SQLite database |
 
 When `OKAMA_CACHE_BACKEND=filesystem`, caching falls back to `cache-directory/` — no Redis needed.
 
@@ -159,7 +165,7 @@ Rules for this repo:
 
 ## Test suite
 
-962 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
+1014 tests, three-level pyramid (unit → component → E2E). All tests mock okama —
 no external API calls, no Redis needed, fully reproducible. (Known exception:
 `ok.EfficientFrontier` is not patched by the TESTING block — see "Known gaps" below.)
 
@@ -187,21 +193,21 @@ rg <behavior-or-id> tests/                     # find the test(s) for a behavior
 Rough grouping:
 - **unit/** — `common/` + `tools/` pure logic: validators, math, create_link, symbols, object_cache,
   ef_grid, chart_helpers, inflation, MC distribution params, find-withdrawal helpers, dump_callbacks,
-  seo_content (crawler-body Markdown renderer), and the macro catalog/mocks/objects/stats/link tests.
+  seo_content (crawler-body Markdown renderer), auth models/service/helpers, and the macro catalog/mocks/objects/stats/link tests.
 - **component/** — one `*_callbacks.py` / `*_data_callback.py` per page (portfolio, ef, compare,
-  benchmark, database, macro) plus cross-cutting: grid_export, grid_sorting, submit_spinner,
-  url_ccy_normalization, mc_params, seo_head (server-side <title>/canonical/og:image rewrite).
-- **e2e/** — page load, shareable links, submit→chart, macro reactive render (4 files).
+  benchmark, database, macro, login, register, cabinet) plus cross-cutting: grid_export, grid_sorting, submit_spinner,
+  url_ccy_normalization, mc_params, seo_head (server-side <title>/canonical/og:image rewrite), auth guard, navbar auth, save-config, link-submit wiring.
+- **e2e/** — page load, shareable links, submit→chart, macro reactive render, cabinet flow (6 files).
 
 ### Run commands
 
 | Command | Scope | Tests | Duration |
 |---------|-------|-------|----------|
-| `poetry run pytest -m unit` | Pure logic | 322 | ~2s |
-| `poetry run pytest -m component` | Dash callbacks | 598 | ~9s |
-| `poetry run pytest -m e2e` | Playwright browser | 42 | ~100s |
-| `poetry run pytest -q` | Everything | 962 | ~118s |
-| `poetry run pytest -m "not e2e"` | Fast suite | 920 | ~10s |
+| `poetry run pytest -m unit` | Pure logic | 344 | ~6s |
+| `poetry run pytest -m component` | Dash callbacks | 627 | ~22s |
+| `poetry run pytest -m e2e` | Playwright browser | 43 | ~100s |
+| `poetry run pytest -q` | Everything | 1014 | ~135s |
+| `poetry run pytest -m "not e2e"` | Fast suite | 971 | ~28s |
 
 **E2E server output must stay on DEVNULL.** The Gunicorn subprocess in `tests/e2e/conftest.py`
 redirects stdout/stderr to `subprocess.DEVNULL` deliberately: with `PIPE` nobody drains the
