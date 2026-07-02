@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from common.auth.db import db
-from common.auth.models import User
+from common.auth.models import SavedConfig, User
 
 PAGE_TYPES = {"portfolio", "ef", "compare", "benchmark"}
 MIN_PASSWORD_LENGTH = 8
@@ -54,3 +54,49 @@ def verify_credentials(email: str, password: str) -> User | None:
     if user is None or not check_password_hash(user.password_hash, password or ""):
         return None
     return user
+
+
+def save_config(user_id: int, name: str, page_type: str, url: str) -> tuple[SavedConfig | None, str | None]:
+    name = (name or "").strip()
+    if not name:
+        return None, "Name is required."
+    if len(name) > MAX_NAME_LENGTH:
+        return None, f"Name is too long (max {MAX_NAME_LENGTH} characters)."
+    if page_type not in PAGE_TYPES:
+        return None, "Unknown page type."
+    if not (url or "").strip():
+        return None, "Nothing to save yet — press Submit first."
+    config = SavedConfig(user_id=user_id, name=name, page_type=page_type, url=url.strip())
+    db.session.add(config)
+    error = _commit()
+    if error:
+        return None, error
+    return config, None
+
+
+def list_configs(user_id: int) -> list[SavedConfig]:
+    query = db.select(SavedConfig).filter_by(user_id=user_id).order_by(SavedConfig.id.desc())
+    return list(db.session.scalars(query))
+
+
+def _get_owned(user_id: int, config_id: int) -> SavedConfig | None:
+    return db.session.scalar(db.select(SavedConfig).filter_by(id=config_id, user_id=user_id))
+
+
+def rename_config(user_id: int, config_id: int, new_name: str) -> bool:
+    new_name = (new_name or "").strip()
+    if not new_name or len(new_name) > MAX_NAME_LENGTH:
+        return False
+    config = _get_owned(user_id, config_id)
+    if config is None:
+        return False
+    config.name = new_name
+    return _commit() is None
+
+
+def delete_config(user_id: int, config_id: int) -> bool:
+    config = _get_owned(user_id, config_id)
+    if config is None:
+        return False
+    db.session.delete(config)
+    return _commit() is None
