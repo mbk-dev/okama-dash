@@ -5,6 +5,8 @@ dash_daq
 dash-bootstrap-components
 plotly
 flask_caching
+flask-login
+flask-sqlalchemy
 okama>=2.2.3
 # scipy: direct dep for the fitted-PDF overlay (t/norm/lognorm .fit/.pdf). See findings #37.
 scipy

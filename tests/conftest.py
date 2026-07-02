@@ -31,3 +31,19 @@ def null_cache():
     common.cache.init_app(app, config={"CACHE_TYPE": "NullCache"})
     with app.app_context():
         yield common.cache
+
+
+@pytest.fixture
+def auth_app():
+    """Bare Flask app with the auth DB bound to in-memory SQLite (fresh per test)."""
+    from flask import Flask
+
+    from common.auth.db import db
+
+    app = Flask(__name__)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()

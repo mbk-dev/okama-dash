@@ -47,6 +47,8 @@ scipy = "*"
 redis = "*"
 xlsxwriter = "*"
 dash-ag-grid = "^35.2.0"
+flask-login = "*"
+flask-sqlalchemy = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
