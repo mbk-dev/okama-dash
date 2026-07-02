@@ -64,3 +64,21 @@ def test_missing_secret_key_falls_back_with_warning():
         init_auth(server)
     assert server.secret_key  # a fallback secret was set
     warn.assert_called_once()
+
+
+def test_samesite_lax_is_set_by_default():
+    server = Flask(__name__)
+    server.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    with patch.dict("os.environ", {"OKAMA_ENV": ""}, clear=False):
+        init_auth(server)
+    assert server.config["SESSION_COOKIE_SAMESITE"] == "Lax"
+    assert not server.config.get("SESSION_COOKIE_SECURE")
+
+
+def test_production_env_enables_secure_cookies():
+    server = Flask(__name__)
+    server.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    with patch.dict("os.environ", {"OKAMA_ENV": "production"}, clear=False):
+        init_auth(server)
+    assert server.config["SESSION_COOKIE_SECURE"] is True
+    assert server.config["REMEMBER_COOKIE_SECURE"] is True

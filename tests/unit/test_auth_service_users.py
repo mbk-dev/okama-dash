@@ -30,6 +30,11 @@ class TestCreateUser:
         assert user is None
         assert "already registered" in error
 
+    def test_rejects_overlong_password(self, auth_app):
+        user, error = create_user("a@b.co", "x" * 129)
+        assert user is None
+        assert "128" in error
+
 
 class TestVerifyCredentials:
     def test_valid_credentials_return_user(self, auth_app):

@@ -21,6 +21,14 @@ def init_auth(server: Flask) -> None:
         secret = _DEV_SECRET
     server.secret_key = secret
 
+    # Session cookie hardening
+    # SameSite=Lax blunts CSRF on callback POSTs; unconditional (Flask default is None).
+    server.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    # Secure flag only on production: e2e suite uses real secret over plain http://localhost.
+    if os.environ.get("OKAMA_ENV") == "production":
+        server.config["SESSION_COOKIE_SECURE"] = True
+        server.config["REMEMBER_COOKIE_SECURE"] = True
+
     # setdefault: tests pre-set an in-memory URI before calling init_auth.
     # Default is relative to the Flask instance folder -> <project>/instance/okama.db,
     # which Flask-SQLAlchemy creates automatically.

@@ -88,6 +88,26 @@ class TestDelete:
 
 
 class TestRename:
+    def test_open_rename_returns_modal_state(self):
+        from pages.cabinet.cabinet import open_rename
+
+        token = context_value.set(
+            AttributeDict(
+                triggered_inputs=[{"prop_id": '{"index":3,"type":"cabinet-rename"}.n_clicks', "value": 1}]
+            )
+        )
+        try:
+            with (
+                patch("pages.cabinet.cabinet.current_user_id", return_value=7),
+                patch("pages.cabinet.cabinet.list_configs", return_value=[_make_config(3, "My pf")]),
+            ):
+                is_open, config_id, name = open_rename([1])
+        finally:
+            context_value.reset(token)
+        assert is_open is True
+        assert config_id == 3
+        assert name == "My pf"
+
     def test_confirm_rename_calls_service_and_closes_modal(self):
         from pages.cabinet.cabinet import confirm_rename
 

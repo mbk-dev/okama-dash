@@ -15,6 +15,7 @@ from common.auth.models import SavedConfig, User
 
 PAGE_TYPES = {"portfolio", "ef", "compare", "benchmark"}
 MIN_PASSWORD_LENGTH = 8
+MAX_PASSWORD_LENGTH = 128
 MAX_NAME_LENGTH = 100
 GENERIC_DB_ERROR = "Something went wrong. Please try again."
 
@@ -38,6 +39,8 @@ def create_user(email: str, password: str) -> tuple[User | None, str | None]:
         return None, "Invalid email address."
     if len(password or "") < MIN_PASSWORD_LENGTH:
         return None, f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
+    if len(password or "") > MAX_PASSWORD_LENGTH:
+        return None, f"Password must be at most {MAX_PASSWORD_LENGTH} characters."
     if db.session.scalar(db.select(User).filter_by(email=email)) is not None:
         return None, "This email is already registered."
     user = User(email=email, password_hash=generate_password_hash(password))
