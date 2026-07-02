@@ -79,7 +79,15 @@ class TestBenchmarkCopyLinkRoundTrip:
         from pages.benchmark.cards_benchmark.benchmark_controls import update_link_benchmark
 
         link = update_link_benchmark(
-            1, "https://okama.io/benchmark", "SP500TR.INDX", ["MyPF.PF", "GOOG.US"], "EUR", "2015-01", "2020-12", PF_DEF
+            1,
+            1,
+            "https://okama.io/benchmark",
+            "SP500TR.INDX",
+            ["MyPF.PF", "GOOG.US"],
+            "EUR",
+            "2015-01",
+            "2020-12",
+            PF_DEF,
         )
         assert "benchmark=SP500TR.INDX" in link
         assert "tickers=GOOG.US" in link
@@ -92,7 +100,7 @@ class TestBenchmarkCopyLinkRoundTrip:
         from pages.benchmark.cards_benchmark.benchmark_controls import update_link_benchmark
 
         link = update_link_benchmark(
-            1, "https://okama.io/benchmark", "SP500TR.INDX", ["GOOG.US"], "EUR", "2015-01", "2020-12", PF_DEF
+            1, 1, "https://okama.io/benchmark", "SP500TR.INDX", ["GOOG.US"], "EUR", "2015-01", "2020-12", PF_DEF
         )
         assert "pf_tickers" not in link
 

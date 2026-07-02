@@ -15,16 +15,14 @@ def test_register_save_open_logout(page, dash_server_url):
     page.wait_for_selector("text=No saved configurations yet", timeout=10000)
     assert page.locator("text=No saved configurations yet").is_visible()
 
-    # --- portfolio: submit, copy link to fill URL div, then save ---
+    # --- portfolio: submit (fills URL div), then save ---
     page.goto(
         f"{dash_server_url}/portfolio?tickers=AAPL.US,MSFT.US&weights=50,50&first_date=2020-01&last_date=2024-06",
         wait_until="domcontentloaded",
     )
     page.click("#pf-submit-button")
-    # Wait for charts to render
+    # Wait for charts to render AND the URL div to populate (Submit now fires the link callback)
     page.locator("#pf-graf-row").wait_for(state="visible", timeout=15000)
-    # Click Copy link to fill the hidden URL div (required for Save)
-    page.click("#pf-copy-link-button")
     page.wait_for_function(
         "() => (document.getElementById('pf-show-url')?.textContent || '').length > 0",
         timeout=15000,

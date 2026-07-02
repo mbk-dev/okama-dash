@@ -12,6 +12,7 @@ from common.create_link import create_link, scope_cashflow_params
 @callback(
     Output("pf-show-url", "children"),
     Input("pf-copy-link-button", "n_clicks"),
+    Input("pf-submit-button", "n_clicks"),
     State("pf-url", "href"),
     State({"type": "pf-dynamic-dropdown", "index": ALL}, "value"),  # tickers
     State({"type": "pf-dynamic-input", "index": ALL}, "value"),  # weights
@@ -48,6 +49,7 @@ from common.create_link import create_link, scope_cashflow_params
 )
 def update_link_pf(
     n_clicks: int,
+    submit_n_clicks: int,  # Dash passes Inputs first; unused — callback rebuilds URL from States
     href: str,
     tickers_list: Optional[list],
     weights_list: Optional[list],

@@ -283,6 +283,7 @@ def disable_rolling_expanding_switch(plot_options: str, radio_switch_value):
 @callback(
     Output("benchmark-show-url", "children"),
     Input("benchmark-copy-link-button", "n_clicks"),
+    Input("benchmark-submit-button", "n_clicks"),
     State("benchmark-url", "href"),
     State("select-benchmark", "value"),  # benchmark
     State("benchmark-assets-list", "value"),  # selected tickers
@@ -293,6 +294,7 @@ def disable_rolling_expanding_switch(plot_options: str, radio_switch_value):
 )
 def update_link_benchmark(
     n_clicks,
+    submit_n_clicks,  # Dash passes Inputs first; unused — callback rebuilds URL from States
     href: str,
     benchmark: str,
     tickers_list: list,

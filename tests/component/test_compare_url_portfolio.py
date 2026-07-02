@@ -96,7 +96,7 @@ class TestCompareCopyLinkRoundTrip:
         from pages.compare.cards_compare.asset_list_controls import update_link_al
 
         link = update_link_al(
-            1, "https://okama.io/compare", ["MyPF.PF", "GOOG.US"], "EUR", "2015-01", "2020-12", PF_DEF
+            1, 1, "https://okama.io/compare", ["MyPF.PF", "GOOG.US"], "EUR", "2015-01", "2020-12", PF_DEF
         )
         assert "tickers=GOOG.US" in link
         assert "pf_tickers=AAPL.US,MSFT.US" in link
@@ -108,14 +108,14 @@ class TestCompareCopyLinkRoundTrip:
         from pages.compare.cards_compare.asset_list_controls import update_link_al
 
         pf_def = dict(PF_DEF, symbol="PORTFOLIO.PF")
-        link = update_link_al(1, "https://okama.io/compare", ["PORTFOLIO.PF"], "EUR", "2015-01", "2020-12", pf_def)
+        link = update_link_al(1, 1, "https://okama.io/compare", ["PORTFOLIO.PF"], "EUR", "2015-01", "2020-12", pf_def)
         assert "pf_symbol=" not in link
         assert "pf_tickers=AAPL.US,MSFT.US" in link
 
     def test_chip_removed_emits_plain_link(self, mock_okama_symbols, null_cache):
         from pages.compare.cards_compare.asset_list_controls import update_link_al
 
-        link = update_link_al(1, "https://okama.io/compare", ["GOOG.US"], "EUR", "2015-01", "2020-12", PF_DEF)
+        link = update_link_al(1, 1, "https://okama.io/compare", ["GOOG.US"], "EUR", "2015-01", "2020-12", PF_DEF)
         assert "pf_tickers" not in link
         assert "tickers=GOOG.US" in link
 

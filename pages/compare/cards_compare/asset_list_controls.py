@@ -268,6 +268,7 @@ def update_inflation_switch(plot_options: str, inflation_switch_value):
 @callback(
     Output("al-show-url", "children"),
     Input("al-copy-link-button", "n_clicks"),
+    Input("al-submit-button", "n_clicks"),
     State("al-url", "href"),
     State("al-symbols-list", "value"),  # get selected tickers
     State("al-base-currency", "value"),
@@ -277,7 +278,14 @@ def update_inflation_switch(plot_options: str, inflation_switch_value):
     prevent_initial_call=True,
 )
 def update_link_al(
-    n_clicks, href: str, tickers_list: Optional[list], ccy: str, first_date: str, last_date: str, pf_def: Optional[dict]
+    n_clicks,
+    submit_n_clicks,  # Dash passes Inputs first; unused — callback rebuilds URL from States
+    href: str,
+    tickers_list: Optional[list],
+    ccy: str,
+    first_date: str,
+    last_date: str,
+    pf_def: Optional[dict],
 ):
     tickers, has_pf = split_portfolio_from_selection(tickers_list, pf_def)
     # While the chip is in the selection the link carries the pf_* group:
