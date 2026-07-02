@@ -27,7 +27,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.12, <4.0.0"
-okama = "^2.2.2"
+okama = "^2.2.3"
 dash = "*"
 dash-daq = "*"
 dash-bootstrap-components = "*"
