@@ -9,6 +9,7 @@ from common import settings as settings, inflation as inflation
 from common.mantine import search_provider
 from common.create_link import create_link, check_if_list_empty_or_big
 from common.html_elements.copy_link_div import create_copy_link_div
+from common.html_elements.save_config_div import create_save_config_div, register_save_config
 from common.html_elements.submit_spinner import create_submit_spinner
 from common.parse_query import make_list_from_string
 from common.symbols import get_selected_symbol_options, search_symbol_options
@@ -20,6 +21,8 @@ from pages.compare.cards_compare.eng.al_tooltips_options_txt import (
     al_options_tooltip_cagr,
     al_options_window,
 )
+
+register_save_config("al", "compare")
 
 
 def card_controls(
@@ -115,6 +118,10 @@ def card_controls(
                                         ],
                                         style={"textAlign": "left"},
                                     )
+                                ),
+                                dbc.Col(
+                                    # save to cabinet button (hidden for anonymous users)
+                                    create_save_config_div("al", "asset list"),
                                 ),
                             ]
                         ),

@@ -15,6 +15,7 @@ from dash import html, dcc
 from common import inflation as inflation
 from common.html_elements.submit_spinner import create_submit_spinner
 from common.html_elements.copy_link_div import create_copy_link_div
+from common.html_elements.save_config_div import create_save_config_div, register_save_config
 from common.parse_query import make_list_from_string
 from common.date_input import current_month, date_input, register_date_validation
 import pages.portfolio.cards_portfolio.eng.pf_tooltips_options_txt as tl
@@ -23,6 +24,8 @@ from pages.portfolio.cards_portfolio.cashflow_controls import cashflow_accordion
 from .constructor import tickers_weights_block
 from .options import options_section
 from .monte_carlo import monte_carlo_section
+
+register_save_config("pf", "portfolio")
 
 
 def _accordion_active_items(abs_dev, rel_dev, cf_strategy, cf_amount, cf_pct, vds_pct, cwd_amount, cf_ts):
@@ -124,8 +127,11 @@ def _copy_link_row():
                     hidden_div_with_url_id="pf-show-url",
                     button_id="pf-copy-link-button",
                     card_name="Portfolio",
-                    # style={"textAlign": "right"}
                 ),
+            ),
+            dbc.Col(
+                # save to cabinet button (hidden for anonymous users)
+                create_save_config_div("pf", "Portfolio"),
             ),
         ]
     )

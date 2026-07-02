@@ -9,11 +9,14 @@ from dash import html, dcc
 
 from common import inflation as inflation
 from common.html_elements.copy_link_div import create_copy_link_div
+from common.html_elements.save_config_div import create_save_config_div, register_save_config
 from common.html_elements.submit_spinner import create_submit_spinner
 from common.date_input import current_month, date_input, register_date_validation
 import pages.efficient_frontier.cards_efficient_frontier.eng.ef_tooltips_options_txt as tl
 from .symbols import symbols_select
 from .options import options_section
+
+register_save_config("ef", "ef")
 
 
 def _currency_rebal_section(ccy, rebal_value, currency_list):
@@ -66,13 +69,21 @@ def _dates_row(first_date, last_date):
 
 def _copy_link_row():
     return dbc.Row(
-        # copy link to clipboard button
-        create_copy_link_div(
-            location_id="ef-url",
-            hidden_div_with_url_id="ef-show-url",
-            button_id="ef-copy-link-button",
-            card_name="Efficient Frontier",
-        )
+        [
+            dbc.Col(
+                # copy link to clipboard button
+                create_copy_link_div(
+                    location_id="ef-url",
+                    hidden_div_with_url_id="ef-show-url",
+                    button_id="ef-copy-link-button",
+                    card_name="Efficient Frontier",
+                )
+            ),
+            dbc.Col(
+                # save to cabinet button (hidden for anonymous users)
+                create_save_config_div("ef", "Efficient Frontier"),
+            ),
+        ]
     )
 
 
