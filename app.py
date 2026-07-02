@@ -105,6 +105,9 @@ from common.seo import register_seo_head  # noqa: E402
 common.cache.init_app(server)  # centralised; previously called per-controls-file
 register_stale_callback_guard(server)  # stale post-deploy clients get 204, not 500
 register_seo_head(server)  # per-page <title>/canonical/og:image in static HTML for crawlers
+from common.auth import init_auth  # noqa: E402
+
+init_auth(server)  # personal cabinet: session auth, SQLite user DB, /cabinet guard, /logout
 
 app.layout = html.Div([dcc.Store(id="store"), navigation.navbar, dash.page_container, footer.footer()])
 
