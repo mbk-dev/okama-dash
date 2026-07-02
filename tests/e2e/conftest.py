@@ -28,10 +28,15 @@ def _wait_for_server(port: int, timeout: float = 30.0):
 
 
 @pytest.fixture(scope="session")
-def dash_server_url():
+def dash_server_url(tmp_path_factory):
     port = _find_free_port()
     env = os.environ.copy()
     env["TESTING"] = "1"
+    # Auth: deterministic secret (2 workers must share it) + a session-temp SQLite file,
+    # so e2e runs never touch <project>/instance/okama.db.
+    env["OKAMA_SECRET_KEY"] = "e2e-test-secret"
+    auth_db_dir = tmp_path_factory.mktemp("auth-db")
+    env["OKAMA_AUTH_DB_URI"] = f"sqlite:///{auth_db_dir}/okama-e2e.db"
 
     proc = subprocess.Popen(
         [
